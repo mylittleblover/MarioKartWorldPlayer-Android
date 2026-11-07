@@ -1,0 +1,31 @@
+# Visible local changes applied only to extracted sources, never the archive.
+function(player2_gme_replace file before after)
+    file(READ "${file}" content)
+    string(REPLACE "\r\n" "\n" content "${content}")
+    string(FIND "${content}" "${before}" old_position)
+    if(old_position LESS 0)
+        string(FIND "${content}" "${after}" new_position)
+        if(new_position LESS 0)
+            message(FATAL_ERROR "Pinned GME patch no longer matches ${file}")
+        endif()
+    else()
+        string(REPLACE "${before}" "${after}" content "${content}")
+    endif()
+    file(READ "${file}" previous)
+    if(NOT previous STREQUAL content)
+        file(WRITE "${file}" "${content}")
+    endif()
+endfunction()
+set(nsf "${source_root}/gme/Nsf_Emu.cpp")
+player2_gme_replace("${nsf}" "static int const types [] = {"
+    "// PLAYER2: bound type lookup for every supported expansion voice.\n\tstatic int const types [count_total > 16 ? count_total : 16] = {")
+player2_gme_replace("${nsf}" "Nsf_Emu::Nsf_Emu()\n{\n\tvrc6"
+    "Nsf_Emu::Nsf_Emu()\n{\n\t// PLAYER2: failed early NSFe loads still reach tempo setup.\n\tpal_only = false;\n\tmemset( &header_, 0, sizeof header_ );\n\tvrc6")
+set(nsfe "${source_root}/gme/Nsfe_Emu.cpp")
+player2_gme_replace("${nsfe}" "Nsfe_Info::Nsfe_Info() { playlist_disabled = false; }"
+    "Nsfe_Info::Nsfe_Info() { playlist_disabled = false; actual_track_count_ = 0; memset( &info, 0, sizeof info ); }")
+player2_gme_replace("${nsfe}" "check( phase == 0 );" "if ( phase != 0 ) return \"Corrupt NSFe INFO order\";")
+player2_gme_replace("${nsfe}" "check( phase == 1 );" "if ( phase != 1 ) return \"Corrupt NSFe DATA order\";")
+player2_gme_replace("${nsfe}" "check( phase == 2 );" "if ( phase != 2 || size != 0 ) return \"Corrupt NSFe NEND\";")
+player2_gme_replace("${nsfe}" "check( islower( (tag >> 24) & 0xFF ) );"
+    "if ( !islower( tag & 0xFF ) ) return \"Unsupported required NSFe chunk\";")

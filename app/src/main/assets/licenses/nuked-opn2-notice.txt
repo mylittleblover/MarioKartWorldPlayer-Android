@@ -1,0 +1,17 @@
+Nuked OPN2 (Yamaha YM3438/YM2612 emulator), version 1.0.7
+Copyright (C) 2017 Alexey Khokholov (Nuke.YKT)
+Licensed under GNU LGPL version 2.1 or, at your option, any later version.
+Full license: game-music-emu-lgpl-2.1.txt in this directory.
+
+Included inside the replaceable libgme.so, not statically linked into PLAYER2.
+Pinned upstream source and the original notices are in
+third_party/game-music-emu/game-music-emu-0.6.5.tar.gz in the source repository.
+PLAYER2's visible prepare-fm.cmake patch gives each instance its own initialized
+chip-model state and selects YM2612 silicon for bare YM2612 VGM clock declarations.
+No MAME or GENS GPL backend is compiled. The YM2413 adapter separately uses the
+MIT emu2413 component; see emu2413-mit.txt.
+
+Source and local patches:
+https://github.com/mylittleblover/player2-android-new/tree/codex/player2-core/third_party/game-music-emu
+Replacement rights and build instructions are described in that directory's
+README.md. Preserve the LGPL notices, source availability and replacement rights.

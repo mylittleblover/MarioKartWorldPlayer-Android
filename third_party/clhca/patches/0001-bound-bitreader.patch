@@ -1,0 +1,52 @@
+--- a/clhca.c
++++ b/clhca.c
+@@ -211,16 +211,26 @@
+     const unsigned int bit_rem = bit_pos & 7;
+     const unsigned int bit_size = br->size;
+     unsigned int v = 0;
+-    unsigned int bit_offset, bits_left;
+-
+-    if (bit_pos + bits_read > bit_size)
++    unsigned int bit_offset, aligned_left;
++
++    if (bits_read < 0 || bits_read > 32 || bit_pos > bit_size ||
++            (unsigned int)bits_read > bit_size - bit_pos)
+         return v;
+     if (bits_read == 0) /* may happen when resolution is 0 (dequantize_coefficients) */
+         return v;
+ 
+     bit_offset = bits_read + bit_rem;
+-    bits_left = bit_size - bit_pos;
+-    if (bits_left >= 32 && bit_offset >= 25) {
++    aligned_left = bit_size - (bit_pos & ~7u);
++    /* A non-byte-aligned 32-bit request can span five bytes. */
++    if (bit_offset > 32) {
++        unsigned int i;
++        for (i = 0; i < (unsigned int)bits_read; ++i) {
++            unsigned int p = bit_pos + i;
++            v = (v << 1) | ((br->data[p >> 3] >> (7 - (p & 7))) & 1u);
++        }
++        return v;
++    }
++    if (aligned_left >= 32 && bit_offset >= 25) {
+         static const unsigned int mask[8] = {
+                 0xFFFFFFFF,0x7FFFFFFF,0x3FFFFFFF,0x1FFFFFFF,
+                 0x0FFFFFFF,0x07FFFFFF,0x03FFFFFF,0x01FFFFFF
+@@ -233,7 +243,7 @@
+         v &= mask[bit_rem];
+         v >>= 32 - bit_rem - bits_read;
+     }
+-    else if (bits_left >= 24 && bit_offset >= 17) {
++    else if (aligned_left >= 24 && bit_offset >= 17) {
+         static const unsigned int mask[8] = {
+                 0xFFFFFF,0x7FFFFF,0x3FFFFF,0x1FFFFF,
+                 0x0FFFFF,0x07FFFF,0x03FFFF,0x01FFFF
+@@ -245,7 +255,7 @@
+         v &= mask[bit_rem];
+         v >>= 24 - bit_rem - bits_read;
+     }
+-    else if (bits_left >= 16 && bit_offset >= 9) {
++    else if (aligned_left >= 16 && bit_offset >= 9) {
+         static const unsigned int mask[8] = {
+                 0xFFFF,0x7FFF,0x3FFF,0x1FFF,0x0FFF,0x07FF,0x03FF,0x01FF
+         };

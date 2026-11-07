@@ -1,9 +1,9 @@
-# 字体/音频/压缩包等二进制大文件规则，见 .gitignore
-* text=auto
-*.py text eol=lf
-*.md text eol=lf
-*.json text eol=lf
-*.csv text eol=lf
-*.toml text eol=lf
-*.yml text eol=lf
-*.gitignore text eol=lf
+# Vendored sources are pinned by SHA256 and must never be line-ending converted.
+# Without these rules a Windows checkout (core.autocrlf=true) rewrites CRLF and
+# breaks the pinned digests in third_party/*/CMakeLists.txt.
+third_party/** -text
+app/src/main/cpp/** -text
+
+*.tar.gz binary
+*.png binary
+*.7z binary

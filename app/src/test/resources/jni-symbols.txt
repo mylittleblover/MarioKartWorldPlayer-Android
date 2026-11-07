@@ -1,0 +1,44 @@
+# Exported JNI symbols of libmkw_native.so, class NativeAudioLibrary.
+# Captured from the arm64-v8a Debug artifact with llvm-nm -D --defined-only.
+# Regenerate when a native function is added or removed; a mismatch fails the test.
+albumFlowSnapshot
+automaticSnapshot
+bindSource
+bindSourceInput
+busSnapshot
+command
+createEngine
+createOutput
+destroyEngine
+destroyOutput
+effectSnapshot
+enableCueSearchMonitorV9
+engineSampleRate
+entryStateSnapshot
+gameSyncSnapshot
+layerGainSnapshot
+loadCompiledGraph
+loadLinear
+loadLinearInput
+musicalLoopSnapshot
+outputSnapshot
+outputTimingSnapshot
+parameterSnapshot
+pauseDecodeWorkerHarness
+performanceSnapshot
+playlistDecisionSnapshot
+playlistGroupSnapshot
+rebuildOutput
+render
+renderRealtime
+seek
+setLinearModuleChannels
+setLinearRepeat
+setLinearStreamGroups
+snapshot
+sourceSnapshot
+startOutput
+stopOutput
+streamingSnapshot
+transitionSnapshotV9
+transportSampleRate

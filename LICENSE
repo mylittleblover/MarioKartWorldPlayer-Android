@@ -1,0 +1,57 @@
+PLAYER2 Android Native Audio Runtime
+======================================
+
+This project is the MKW standalone music player. Its audio engine is derived
+from PLAYER2 (https://github.com/mylittleblover/player2-android-new), which is a
+private repository owned by the same copyright holder as this project.
+
+Authorization
+=============
+
+The repository owner (mylittleblover) explicitly authorized copying PLAYER2
+source into this repository on 2026-11-07, choosing option B of three offered
+options ("copy PLAYER2 sources into the new repository with an explicit license
+and recorded authorization"). This file records that authorization.
+
+Because the copyright holder of PLAYER2 and of this project is the same legal
+person, no third-party grant is required for the PLAYER2 portions.
+
+License status of this project
+==============================
+
+As of 2026-11-07 the project owner has NOT chosen a public distribution license.
+The default is therefore: All Rights Reserved. No permission is granted to copy,
+modify, or redistribute this project's own source code except by the copyright
+holder.
+
+If a public license is chosen later, it applies only to code owned by this
+project and never overrides the third-party licenses listed below.
+
+Third-party components
+======================
+
+These are used unmodified or with documented patches and carry their own terms.
+Their notices must be preserved. See NOTICE-THIRD-PARTY.md for the full list and
+app/src/main/assets/licenses/ for the redistributed texts.
+
+  - clHCA (vgmstream)        ISC
+  - libopenmpt               BSD-3-Clause
+  - minimp3                  CC0 1.0 Universal
+  - dr_flac / dr_mp3         MIT-0
+  - stb_vorbis               MIT
+  - Opus                     BSD-3-Clause
+  - Game_Music_Emu           LGPL-2.1-or-later (built as a replaceable shared
+                             library, gme_shared -> libgme.so)
+  - Oboe                     Apache-2.0
+  - AndroidX / Jetpack       Apache-2.0
+  - Kotlin standard library  Apache-2.0
+
+The LGPL Game_Music_Emu component is deliberately linked as a separate shared
+object (libgme.so) so it stays replaceable, as LGPL requires.
+
+No game assets are included
+===========================
+
+This repository contains no Nintendo audio, no .bars/.bwav/.bfstm files, and no
+extracted game data. It is a player; the user supplies their own legally obtained
+files at runtime. Nothing here circumvents a technical protection measure.
