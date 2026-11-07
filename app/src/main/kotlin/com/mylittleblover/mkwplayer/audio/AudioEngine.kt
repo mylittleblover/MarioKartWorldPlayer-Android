@@ -19,6 +19,9 @@ internal class AudioEngine private constructor(private val handle: Long) {
 
     private var closed = false
 
+    /** Exposed only for constructing the output, which must reference the engine. */
+    internal fun nativeHandle(): Long = if (closed) 0 else handle
+
     val sampleRate: Int
         get() = if (closed) 0 else NativeAudioLibrary.engineSampleRate(handle)
 
