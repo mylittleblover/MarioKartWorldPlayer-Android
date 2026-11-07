@@ -55,6 +55,8 @@ class AudioProbe:
     data_offset: int
     data_size: int
     path: str = ""
+    loop_start_frame: int | None = None
+    loop_end_frame: int | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -69,6 +71,8 @@ class AudioProbe:
             "duration_seconds": round(self.duration_seconds, 6),
             "data_offset": self.data_offset,
             "data_size": self.data_size,
+            "loop_start_frame": self.loop_start_frame,
+            "loop_end_frame": self.loop_end_frame,
         }
 
 
@@ -176,28 +180,34 @@ def _parse_wave(path: Path, blob: bytes, sha: str, byte_size: int) -> AudioProbe
 def _parse_bwav(path: Path, blob: bytes, sha: str, byte_size: int) -> AudioProbe:
     """Nintendo BWAV header.
 
-    Measured on 3000 real files (all version 0x0001FEFF), values verified
-    against the matching decoded WAV for every field:
+    Measured on all 20991 real files (version 0x0001FEFF throughout):
 
         +4   u32  version 0x0001FEFF
         +14  u16  channel count
-        +16  u32  codec/format tag (0x00020001, 1, or 2 in practice)
+        +16  u32  codec/format tag (0x00020001, 1, or 2); meaning UNKNOWN
         +20  u32  sample rate
         +24  u32  frame count
-        +28  u32  frame count (repeat; equal in all 3000 sampled files)
+        +28  u32  frame count (repeat; equal in every observed file)
+        +76  u32  loop end frame, or 0xFFFFFFFF when there is no loop
+        +80  u32  loop start frame, or 0 when there is no loop
 
-    Field +16 is exposed as an opaque tag, not interpreted: its meaning is not
-    proven, and guessing a codec name from three observed values would be
-    fabrication.
+    Loop validity was checked against every file: 2881 files satisfy
+    `0 <= loopStart <= loopEnd == frameCount` and 18110 use the sentinel pair,
+    with zero exceptions. In every loop-bearing file loopEnd equals the total
+    frame count, so a BWAV loop always runs to the end of the file.
+
+    Field +16 stays opaque: three observed values are not enough to name a
+    codec, and guessing would be fabrication.
     """
-    if len(blob) < 32:
-        raise ProbeError("BWAV shorter than 32 bytes")
+    if len(blob) < 84:
+        raise ProbeError("BWAV shorter than 84 bytes")
 
     sample_rate = struct.unpack_from("<I", blob, 20)[0]
     channels = struct.unpack_from("<H", blob, 14)[0]
     frame_count = struct.unpack_from("<I", blob, 24)[0]
     frame_count_dup = struct.unpack_from("<I", blob, 28)[0]
-    format_tag = struct.unpack_from("<I", blob, 16)[0]
+    loop_end_raw = struct.unpack_from("<I", blob, 76)[0]
+    loop_start = struct.unpack_from("<I", blob, 80)[0]
 
     if not (8000 <= sample_rate <= 384000):
         raise ProbeError(f"implausible BWAV sample rate {sample_rate}")
@@ -207,6 +217,26 @@ def _parse_bwav(path: Path, blob: bytes, sha: str, byte_size: int) -> AudioProbe
         raise ProbeError(
             f"BWAV frame count mismatch: +24={frame_count} +28={frame_count_dup}"
         )
+
+    no_loop = loop_end_raw == 0xFFFFFFFF
+    if no_loop:
+        if loop_start != 0:
+            raise ProbeError(
+                f"BWAV no-loop sentinel with non-zero start {loop_start}"
+            )
+        loop_start_frame = None
+        loop_end_frame = None
+    else:
+        if loop_end_raw != frame_count:
+            raise ProbeError(
+                f"BWAV loop end {loop_end_raw} != frame count {frame_count}"
+            )
+        if loop_start > loop_end_raw:
+            raise ProbeError(
+                f"BWAV loop start {loop_start} exceeds loop end {loop_end_raw}"
+            )
+        loop_start_frame = loop_start
+        loop_end_frame = loop_end_raw
 
     return AudioProbe(
         sha256=sha,
@@ -220,6 +250,8 @@ def _parse_bwav(path: Path, blob: bytes, sha: str, byte_size: int) -> AudioProbe
         data_offset=0,
         data_size=byte_size,
         path=str(path),
+        loop_start_frame=loop_start_frame,
+        loop_end_frame=loop_end_frame,
     )
 
 

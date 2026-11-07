@@ -38,7 +38,7 @@ def _wave(path: Path, *, rate: int, channels: int, bits: int, frames: int,
 
 def _bwav(path: Path, *, rate: int, channels: int, frames: int,
           version: int = 0x0001FEFF, dup_frames: int | None = None) -> Path:
-    head = bytearray(48)
+    head = bytearray(160)
     head[0:4] = b"BWAV"
     struct.pack_into("<I", head, 4, version)
     struct.pack_into("<H", head, 14, channels)
@@ -46,6 +46,9 @@ def _bwav(path: Path, *, rate: int, channels: int, frames: int,
     struct.pack_into("<I", head, 20, rate)
     struct.pack_into("<I", head, 24, frames)
     struct.pack_into("<I", head, 28, frames if dup_frames is None else dup_frames)
+    # no-loop sentinel: +76 = 0xFFFFFFFF, +80 = 0 (see test_bwav_loops.py)
+    struct.pack_into("<I", head, 76, 0xFFFFFFFF)
+    struct.pack_into("<I", head, 80, 0)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(bytes(head) + b"\x00" * 64)
     return path
