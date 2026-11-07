@@ -232,6 +232,59 @@ def test_transition_labels_are_not_mistaken_for_assets(tmp_path: Path) -> None:
     assert read_bars(str(p))[0].internal_name == ""
 
 
+def test_apostrophe_in_asset_name_is_preserved(tmp_path: Path) -> None:
+    """Nine real JukeBox covers contain apostrophes, e.g. Rosalina'sIceWorld."""
+    name = "BGM_JukeBox_M488_MK7_Rosalina'sIceWorld_OutroFull"
+    p = tmp_path / "apos.bars"
+    p.write_bytes(build_simple([name], fade=(0.15, 0.04, -23.5, -27.0)))
+
+    assert read_bars(str(p))[0].internal_name == name
+
+
+def test_transition_entry_exposes_source_and_target(tmp_path: Path) -> None:
+    """An entry is a transition: source asset, label, target asset, label."""
+    p = tmp_path / "pair.bars"
+    block = make_amta(name="BGM_Stage_PeachBeach_Outro.yu.48", fade=(0.15, 0.04, -23.5, -27.0))
+    # Append the target asset + its label, mirroring the real string table.
+    block = block[: len(block)] + b"Outro_ToNextPre\x00BGM_Stage_PeachBeach_Outro06\x00Outro_ToNextPre\x00"
+    # Patch the declared size so the reader accepts the longer block.
+    size = len(block)
+    block = block[:8] + struct.pack("<I", size) + block[12:]
+    p.write_bytes(build(Archive(entries=[Entry(amta=block)])))
+
+    entry = read_bars(str(p))[0]
+
+    assert entry.source_asset == "BGM_Stage_PeachBeach_Outro.yu.48"
+    assert entry.internal_name == "BGM_Stage_PeachBeach_Outro06"
+    assert entry.assets == (
+        "BGM_Stage_PeachBeach_Outro.yu.48",
+        "BGM_Stage_PeachBeach_Outro06",
+    )
+
+
+def test_shared_source_across_entries_is_normal(tmp_path: Path) -> None:
+    """Eight real entries share one source and each target a different outro."""
+    outs = ["00", "01", "02"]
+    entries = []
+    for o in outs:
+        block = make_amta(name="BGM_Stage_PeachBeach_Outro.yu.48", fade=(0.15, 0.04, -23.5, -27.0))
+        block = block + b"Outro_ToNextPre\x00" + f"BGM_Stage_PeachBeach_Outro{o}\x00Outro_ToNextPre\x00".encode()
+        size = len(block)
+        block = block[:8] + struct.pack("<I", size) + block[12:]
+        entries.append(Entry(amta=block))
+
+    p = tmp_path / "shared.bars"
+    p.write_bytes(build(Archive(entries=entries)))
+
+    got = read_bars(str(p))
+
+    assert {e.source_asset for e in got} == {"BGM_Stage_PeachBeach_Outro.yu.48"}
+    assert [e.internal_name for e in got] == [
+        f"BGM_Stage_PeachBeach_Outro{o}" for o in outs
+    ]
+    assert len({e.internal_name for e in got}) == 3
+
+
 # --------------------------------------------------------- rejection cases
 
 def test_bad_magic_rejected(tmp_path: Path) -> None:

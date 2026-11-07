@@ -79,8 +79,9 @@ MAX_ENTRIES = 1 << 20
 MAX_DECOMPRESSED = 512 * 1024 * 1024
 
 # Asset names are NUL-terminated. Three prefix families appear in real
-# archives: BGM_ (music), Dm_ (cutscene), SE_ (sound effect).
-_NAME_RE = re.compile(rb"([A-Za-z][A-Za-z0-9_.]{3,})\x00")
+# archives: BGM_ (music), Dm_ (cutscene), SE_ (sound effect). Real names also
+# contain apostrophes and hyphens, e.g. `BGM_JukeBox_M488_MK7_Rosalina'sIceWorld`.
+_NAME_RE = re.compile(rb"([A-Za-z][A-Za-z0-9_'.\- ]{3,})\x00")
 _PREFIXED = re.compile(r"^(?:BGM|Dm|SE)_")
 # Transition labels that live in the same string table but are not assets.
 _TRANSITION = re.compile(
@@ -135,6 +136,8 @@ class BarsEntry:
     declared_size: int
     data_offset: int
     header_length: int = AMTA_MIN_HEADER
+    assets: tuple[str, ...] = ()
+    source_asset: str = ""
     marker_names: tuple[str, ...] = ()
     markers: tuple[Marker, ...] = ()
     marker_status: MarkerStatus = MarkerStatus.NONE
@@ -165,29 +168,52 @@ def _decompress(raw: bytes) -> bytes:
         raise BarsFormatError(f"zstd decompression failed: {exc}") from exc
 
 
-def _scan_names(block: bytes) -> tuple[str, ...]:
-    """Recover the asset name from the AMTA string table.
+def _scan_assets(block: bytes) -> tuple[str, ...]:
+    """All prefixed asset names in string-table order, deduplicated.
 
-    Two-tier rule, both tiers verified against real archives:
-      1. Prefer a `BGM_` / `Dm_` / `SE_` prefixed name  (635/650 entries)
-      2. Otherwise take the first non-transition string containing `_`
-         (15/650 entries: JukeBox covers whose asset is e.g. `sIceWorld_OutroFull`)
-    Transition labels (`Bridge_ToFull`, `Outro_ToNextPre`, `Pre_Short`) and
-    bare binary noise are excluded in tier 2.
+    Real entries describe a TRANSITION, not a single sound:
+
+        [source asset] [transition label] [target asset] [transition label]
+
+    e.g. one PeachBeach entry holds
+        'BGM_Stage_PeachBeach_Outro.yu.48' 'Outro_ToNextPre'
+        'BGM_Stage_PeachBeach_Outro06'     'Outro_ToNextPre'
+
+    so eight entries share one source while each targets a different outro.
     """
-    hits: list[str] = []
+    names: list[str] = []
     for raw in _NAME_RE.findall(block):
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        hits.append(text)
+        if _PREFIXED.match(text) and text not in names:
+            names.append(text)
+    return tuple(names)
 
-    for text in hits:
-        if _PREFIXED.match(text):
-            return (text,)
 
-    for text in hits:
+def _scan_names(block: bytes) -> tuple[str, ...]:
+    """Recover the entry's primary asset name.
+
+    Two-tier rule, both tiers verified against real archives:
+      1. The LAST `BGM_` / `Dm_` / `SE_` prefixed name resolves to a WAV file
+         in 650/650 entries, so it is the canonical entry identity.
+      2. When no prefixed name exists (15 JukeBox covers such as
+         `sIceWorld_OutroFull`), take the first non-transition string with an
+         underscore and at least two letters before it.
+
+    Transition labels (`Bridge_ToFull`, `Outro_ToNextPre`, `Pre_Short`) and
+    binary noise stubs (`v_89`) are excluded in tier 2.
+    """
+    assets = _scan_assets(block)
+    if assets:
+        return (assets[-1],)
+
+    for raw in _NAME_RE.findall(block):
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
         if _TRANSITION.match(text) or "_" not in text:
             continue
         head = text.split("_", 1)[0]
@@ -296,6 +322,7 @@ def read_bars(path: str) -> list[BarsEntry]:
             )
 
         block = buf[off:off + declared]
+        assets = _scan_assets(block)
         names = _scan_names(block)
         marker_names = _scan_markers(block)
 
@@ -307,6 +334,8 @@ def read_bars(path: str) -> list[BarsEntry]:
                 declared_size=declared,
                 data_offset=data_off[i],
                 header_length=header_length,
+                assets=assets,
+                source_asset=assets[0] if assets else "",
                 marker_names=marker_names,
                 markers=(),
                 marker_status=MarkerStatus.UNRESOLVED if marker_names else MarkerStatus.NONE,
