@@ -1,0 +1,9 @@
+# 字体/音频/压缩包等二进制大文件规则，见 .gitignore
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.gitignore text eol=lf

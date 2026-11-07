@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "3.0",
+  "note": "真实用户决定与已批准规范登记。assistant 推荐不得升级为用户已批准。",
+  "decisions": [
+    {
+      "id": "D-001",
+      "date": "2026-11-06",
+      "type": "USER_APPROVED",
+      "topic": "独立 Android MKW 播放器复用 PLAYER² Native Runtime",
+      "source": "docs/00_决策与来源优先级.md",
+      "status": "APPROVED"
+    },
+    {
+      "id": "D-002",
+      "date": "2026-10-29",
+      "type": "USER_APPROVED",
+      "topic": "音乐行为权威：音乐规范 v1.0 + 特别杯补充 v1.1",
+      "source": "baseline/authoritative/docs/superpowers/",
+      "status": "APPROVED"
+    },
+    {
+      "id": "D-003",
+      "date": "2026-11-07",
+      "type": "USER_APPROVED",
+      "topic": "开发目标仓库确定为 mylittleblover/MarioKartWorldPlayer-Android",
+      "source": "本轮用户对话",
+      "status": "APPROVED"
+    },
+    {
+      "id": "D-004",
+      "date": "2026-11-07",
+      "type": "USER_APPROVED",
+      "topic": "Android 包名由 DeepSeek 本轮自行确定",
+      "source": "本轮用户对话",
+      "status": "APPROVED"
+    },
+    {
+      "id": "D-005",
+      "date": "2026-11-07",
+      "type": "USER_APPROVED",
+      "topic": "允许顺手修复上游 PLAYER² HEAD 编译问题",
+      "source": "本轮用户对话",
+      "status": "APPROVED"
+    },
+    {
+      "id": "D-006",
+      "date": "2026-11-07",
+      "type": "ASSISTANT_PROVISIONAL",
+      "topic": "applicationId 采用 com.mylittleblover.mkwplayer",
+      "source": "D-004 授权下由 DeepSeek 选定",
+      "status": "PROVISIONAL_PENDING_USER_REVIEW"
+    },
+    {
+      "id": "D-007",
+      "date": "2026-11-07",
+      "type": "ASSISTANT_PROVISIONAL",
+      "topic": "测试 APK 复用 PLAYER² fixedDebug PKCS12 签名",
+      "source": "沿用上游 config/signing/player2-debug.p12 策略",
+      "status": "PROVISIONAL_PENDING_USER_REVIEW"
+    }
+  ]
+}

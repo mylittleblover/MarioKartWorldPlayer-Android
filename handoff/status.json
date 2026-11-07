@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "3.0",
+  "project": "MKW standalone music player",
+  "updatedAt": "2026-11-07T20:15:00+08:00",
+  "worktree": {
+    "repository": "mylittleblover/MarioKartWorldPlayer-Android",
+    "branch": "main",
+    "headSha": null,
+    "dirty": null
+  },
+  "applicationId": "com.mylittleblover.mkwplayer",
+  "upstreamPlayer2": {
+    "repository": "mylittleblover/player2-android-new",
+    "branch": "codex/player2-feature-development-20261028",
+    "observedSha20261107": "396ff6f137b00019384c46511c9136fce2c043c3",
+    "runtimeVerifiedNow": false,
+    "reverifiedAt": "2026-11-07T19:40:00+08:00",
+    "note": "HEAD unchanged since handoff snapshot; HEAD does not compile (see blockers)"
+  },
+  "gates": {
+    "BOOT": "PARTIAL",
+    "INVENTORY": "BLOCKED_NO_FULL_OST",
+    "VERIFICATION": "NOT_RUN",
+    "INDEX_FREEZE": "BLOCKED_NO_FULL_OST",
+    "ANDROID_DEVICE": "NOT_RUN",
+    "TOOLCHAIN": "READY_BUILD_BLOCKED_ON_UPSTREAM_NATIVE",
+    "UI_VISUAL_FINAL_APPROVAL": "PENDING_REVIEW"
+  },
+  "lastTaskId": "OST-01",
+  "lastCommittedSha": null,
+  "lastEvidence": ["evidence/bootstrap/baseline.md"],
+  "nextTaskId": "OST-02",
+  "blockers": [
+    "上游 HEAD 396ff6f1 的 core 模块无法编译（MusicValidation.kt 引用已删除的 quantized）",
+    "上游 native gme_shared 在 Windows+NDK27 下因缺 libc++ 链接失败（正在修复验证）",
+    "全 OST 与特别杯 BGM 尚无完整可核验证据",
+    "尚无 Android 真机，S5/S6 无法执行"
+  ],
+  "notes": "本文档由 DeepSeek 在 2026-11-07 会话中生成；测试数字均来自实际执行。"
+}

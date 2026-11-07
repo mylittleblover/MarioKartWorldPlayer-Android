@@ -1,0 +1,23 @@
+# 不提交用户素材、构建产物与本机私有路径
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+build/
+*.iml
+.idea/
+local.properties
+.gradle/
+.cxx/
+
+# 证据目录只为文档保留，测试真实产物不提交
+evidence/artifacts/
+
+# 用户本地媒体绝不进入仓库
+*.bars
+*.bars.zs
+*.bwav
+*.wav
+*.flac
+*.bfstm
+*.bfstp
