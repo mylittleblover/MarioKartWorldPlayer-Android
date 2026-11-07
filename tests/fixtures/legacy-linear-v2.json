@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "schemaVersion": 15,
+  "id": "old-project",
+  "title": "Legacy linear",
+  "artist": "Original Artist",
+  "album": "Original Album",
+  "assets": [{"id":"old-asset","kind":"audio","fileName":"original.wav"}],
+  "tracks": [{
+    "id":"old-track","title":"Imported music","authoringModel":"wwise",
+    "wwiseRuntimeEnabled":true,"legacyRuntimeReadOnly":true,
+    "tempo":[{"at":{"value":0,"unit":"beats"},"bpm":120,"beats":4,"unit":4}],
+    "rootMusicObjectId":"old-segment",
+    "simpleConfigMap":{"template":"linear"},
+    "musicHierarchy":[{
+      "id":"old-segment","name":"Music","type":"musicSegment","parentId":"",
+      "children":[],"associations":[],"loopEnabled":false,
+      "playback":{"mode":"continuous","loopCount":0},
+      "musicSettings":{"tempoMode":"inherit","bpm":120,"beats":4,"unit":4},
+      "timeSettings":{"entryCue":{"value":0,"unit":"beats"},"exitCue":{"value":0,"unit":"beats"},"customCues":[]},
+      "tracks":[{"id":"old-music-track","name":"Original","type":"musicTrack","assetId":"old-asset","volume":1,"mute":false,
+        "clips":[{"id":"old-clip","assetId":"old-asset","start":{"value":0,"unit":"beats"},"end":{"value":0,"unit":"beats"},"sourceOffset":{"value":0,"unit":"beats"},"volume":1}]}]
+    }]
+  }]
+}

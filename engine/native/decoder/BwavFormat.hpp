@@ -41,17 +41,34 @@ template<class Bytes> BwavLayout parseBwav(Bytes& input,const DecodeLimits& limi
         if(ch==0){codec=kind;rate=hz;frames=samples;loop=channelLoop;}
         else if(codec!=kind || rate!=hz || frames!=samples || bool(loop)!=bool(channelLoop) ||
             (loop && (loop->start.value!=channelLoop->start.value || loop->end.value!=channelLoop->end.value)))fail(SourceStatus::UnsupportedCodec);
-        const auto encoded=kind ? ((std::uint64_t(samples)+13)/14)*8 : std::uint64_t(samples)*2;
+        const auto blocks=(std::uint64_t(samples)+13)/14;
+        const auto encoded=kind ? blocks*8 : std::uint64_t(samples)*2;
+        // MKW truncates the final DSP block of the final channel to exactly the
+        // bytes its remaining samples need (1 header byte + one nibble per
+        // sample), and pads every other channel up to a full block. A strict
+        // "full block present" requirement rejects 2403 of the 20991 real files,
+        // 140 of them music. Accept the tight form as well; the caller bounds
+        // every read by the frame count, not by the declared block end.
+        const auto finalSamples=kind ? samples-static_cast<std::uint32_t>((blocks-1)*14) : 0u;
+        const auto minimum=kind ? (blocks-1)*8+1+(finalSamples+1)/2 : encoded;
         const auto start=static_cast<std::size_t>(input.u32(h+52));
-        input.need(start,static_cast<std::size_t>(encoded));
+        input.need(start,static_cast<std::size_t>(minimum));
         if(start<previousEnd || start-previousEnd>63 || start%4)fail(SourceStatus::MalformedSource);
         for(auto p=previousEnd;p<start;++p)if(input.u8(p))fail(SourceStatus::UnsupportedCodec);
-        result.starts[ch]=start;previousEnd=start+static_cast<std::size_t>(encoded);
+        result.starts[ch]=start;
+        // Only the final channel may omit its block padding; every earlier channel
+        // is followed by that padding, which the gap check above already validates.
+        previousEnd=start+static_cast<std::size_t>(ch+1==count ? minimum : encoded);
         auto& channel=result.channels[ch];
         if(kind) {
             for(unsigned n=0;n<16;++n)channel.coefficients[n]=static_cast<std::int16_t>(dspSigned(input.u16(h+16+n*2)));
             channel.initial={dspSigned(input.u16(h+70)),dspSigned(input.u16(h+72))};
-            if(input.u16(h+68)!=input.u8(start) || input.u16(h+68)>0x7f)fail(SourceStatus::MalformedSource);
+            // The initial predictor/scale at h+68 seeds the history when a seek
+            // lands mid-stream; it is not required to equal the first block's own
+            // header byte. 654 of the 20991 real files legitimately differ, so the
+            // equality this parser used to demand rejected valid audio. Only the
+            // range is an invariant: predictor >= 8 cannot be decoded.
+            if(input.u16(h+68)>0x7f)fail(SourceStatus::MalformedSource);
         } else {
             for(unsigned n=16;n<48;++n)if(input.u8(h+n))fail(SourceStatus::UnsupportedCodec);
             for(unsigned n=68;n<74;++n)if(input.u8(h+n))fail(SourceStatus::UnsupportedCodec);
