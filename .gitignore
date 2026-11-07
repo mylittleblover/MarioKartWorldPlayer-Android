@@ -13,6 +13,9 @@ local.properties
 # 证据目录只为文档保留，测试真实产物不提交
 evidence/artifacts/
 
+# 生成物含本机绝对路径，不提交
+reports/generated/
+
 # 用户本地媒体绝不进入仓库
 *.bars
 *.bars.zs
