@@ -83,21 +83,63 @@ Unresolved reference 'writeByte'
 - `rejectsLoopBeyondTheAsset` 用 `3_373_712`（真的超一帧）
 - 新增 `acceptsLoopEndingExactlyAtTheLastFrame`（真库的形态）
 
-## 6. 仍未做的
+## 6. 设备验证：本生成器产出的图能真实播放
+
+`BuiltGraphPlaybackTest`（设备上运行）**不读 fixture**，而是：
+
+1. 从设备上的 `coaster.bwav` 读真实头部（rate / channels / frames / loop）
+2. 计算该文件的 SHA-256
+3. 用 **Kotlin 生成器**构造图
+4. 先过 `GraphProbe`
+5. `loadCompiledGraph` → `bindSource` → `Play(1)` → 渲染
+
+结果：
+
+```
+PASS builtGraphIsAcceptedAndPlays
+PASS builtGraphCarriesTheFilesOwnRateAndLength
+```
+
+**19 / 19 设备测试全部通过。**
+
+### 这把 §1 的"逻辑等价"补成了"独立验证"
+
+上一版证据里我写过：
+
+> 「逐字节一致意味着与已验证的 Python 输出相同，但**本生成器的输出还没有在设备上单独跑过**。」
+
+**现在跑过了。** Kotlin 生成器发出的字节被原生引擎接受并播放出非静音 PCM。
+
+## 7. 一个环境坑（第二次踩到）
+
+跑设备测试时出现：
+
+```
+Starting 19 tests on FNPlay(AVD) - 11
+Tests on FNPlay(AVD) - 11 failed: There was 12 failure(s).
+```
+
+**原因**：机器上有**别的 AVD 实例**（`FNPlay`、`FNTest`、`FNArm64`），adb 把测试派给了 `FNPlay` 而不是 `mkw_test`，那个实例上没有我推的 fixture，12 个测试找不到文件而失败。
+
+**修复**：杀掉所有 `emulator`/`qemu-system-*` 进程，重启 adb，用 `-port 5554` 单实例启动 `mkw_test`。
+
+**清理后 19/19 全部通过。**
+
+> 这是**第二次**因为多实例导致测试失败（第一次报 `Expected 17 tests, received 11`）。已记入 `and-06`，这次再记一次 —— 说明它不是偶发。
+
+## 8. 仍未做的
 
 | 项 | 状态 |
 |---|---|
 | 生成器接进播放流程 | **未做** |
-| 从真实 bwav 自动读取 sha256/frames/loop | **未做**（生成器接受参数，调用方负责） |
-| 在设备上播放**本生成器**产出的图 | **未做** |
+| 从真实 bwav **自动**读取 sha256/frames/loop | **未做**（测试里手写了读取，生产代码还没有） |
+| 曲线 / 转场 / Cue 等完整图特性 | **未做**（只生成最小图） |
 
-> **明确**：逐字节一致意味着「与已验证的 Python 输出相同」，但**本生成器的输出还没有在设备上单独跑过**。逻辑上等价，证据上未单独验证。
-
-## 7. 测试总数
+## 9. 测试总数
 
 | 套件 | 数量 |
 |---|---|
 | Python | 143 |
 | Kotlin JVM | **102** |
-| Android Instrumentation | 17 |
-| **合计** | **262** |
+| Android Instrumentation | **19** |
+| **合计** | **264** |
