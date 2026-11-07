@@ -206,9 +206,12 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        if (track.playable && !selected) {
-                            Spacer(Modifier.height(4.dp))
-                            OutlinedButton(onClick = { model.select(track.key) }) { Text("Play") }
+                        Spacer(Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (track.playable && !selected) {
+                                OutlinedButton(onClick = { model.select(track.key) }) { Text("Play") }
+                            }
+                            OutlinedButton(onClick = { model.remove(track.key) }) { Text("Remove") }
                         }
                     }
                 }

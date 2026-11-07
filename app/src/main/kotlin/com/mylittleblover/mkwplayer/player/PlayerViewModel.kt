@@ -15,6 +15,7 @@ import com.mylittleblover.mkwplayer.audio.TimingDiagnosis
 import com.mylittleblover.mkwplayer.graph.GraphBuilder
 import com.mylittleblover.mkwplayer.graph.GraphProbe
 import com.mylittleblover.mkwplayer.library.AudioPicker
+import com.mylittleblover.mkwplayer.library.LibraryStore
 import com.mylittleblover.mkwplayer.library.Playability
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -86,6 +87,44 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     private var totalFrames: Long = 0
     private var rate: Int = 0
 
+    private val store = LibraryStore(java.io.File(application.filesDir, "library.json"))
+
+    init {
+        // Restore before the first frame so the list is never briefly empty on launch.
+        val loaded = store.load()
+        if (loaded.rows.isNotEmpty()) {
+            _ui.value = _ui.value.copy(
+                tracks = loaded.rows.map {
+                    Track(
+                        key = it.key,
+                        name = it.name,
+                        frames = it.frames,
+                        sampleRate = it.sampleRate,
+                        playable = it.playable,
+                        reason = it.reason,
+                    )
+                },
+            )
+        }
+        loaded.problem?.let { _ui.value = _ui.value.copy(detail = it) }
+    }
+
+    /** Writes the current list. Storage failing is reported, never fatal. */
+    private fun persist() {
+        val problem = store.save(
+            _ui.value.tracks.map {
+                LibraryStore.Row(
+                    key = it.key,
+                    name = it.name,
+                    frames = it.frames,
+                    sampleRate = it.sampleRate,
+                    playable = it.playable,
+                    reason = it.reason,
+                )
+            },
+        )
+        if (problem != null) _ui.value = _ui.value.copy(detail = problem)
+    }
     /**
      * Adds a picked file to the library. Copies, inspects and prepares it off the
      * main thread, then selects it.
@@ -106,6 +145,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                         status = if (outcome.track.playable) "Ready to play" else "Unsupported codec",
                         detail = outcome.track.reason,
                     )
+                    persist()
                     if (outcome.track.playable) select(outcome.track.key)
                 }
             }
@@ -184,6 +224,33 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             sampleRate = header.sampleRate,
         )
         return Outcome.Added(track)
+    }
+
+    /**
+     * Removes a track from the library and forgets its cached copy.
+     *
+     * Stops playback first when the removed track is the one playing, otherwise the
+     * transport would keep running against a file nobody can see or select.
+     */
+    fun remove(key: String) {
+        val track = _ui.value.tracks.firstOrNull { it.key == key } ?: return
+        val wasSelected = _ui.value.selectedKey == key
+        if (wasSelected) {
+            releaseTransport()
+        }
+        prepared.remove(key)
+        _ui.value = _ui.value.copy(
+            tracks = _ui.value.tracks.filterNot { it.key == key },
+            selectedKey = if (wasSelected) null else _ui.value.selectedKey,
+            status = if (wasSelected) "No track loaded" else _ui.value.status,
+            detail = if (wasSelected) null else _ui.value.detail,
+            canPause = if (wasSelected) false else _ui.value.canPause,
+            canResume = if (wasSelected) false else _ui.value.canResume,
+            canStop = if (wasSelected) false else _ui.value.canStop,
+            progress = if (wasSelected) 0f else _ui.value.progress,
+        )
+        AudioPicker.prune(getApplication(), _ui.value.tracks.map { it.key }.toSet())
+        persist()
     }
 
     /** Starts the track with the given key, or reports why it cannot start. */
