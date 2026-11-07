@@ -56,16 +56,33 @@ fun evaluate(codecKind: Int?): Result =
 | `groupingIsStableForEqualNames` | 排序稳定 |
 | `supportedCodecConstantIsOne` | 常量值 |
 
-## 5. 与索引的对齐
+## 5. 与索引的对齐（实测交叉核对）
 
-索引给出的实际分布（`temporary-index.json`）：
+我拿索引里每条记录的 `assetPath` 反查真实 `.bwav`，读出 codec kind：
 
-```
-COURSE 338 · JUKEBOX 227 · SEQUENCE 34 · CUTSCENE 22
-BATTLE 16 · MISSION 5 · DEMO 4 · SOUND_EFFECT 3 · BOOT 1
-```
+| 类别 | kind=1（可播） | kind=2（不可播） |
+|---|---|---|
+| COURSE | **338** | 0 |
+| JUKEBOX | 0 | **227** |
+| CUTSCENE | 0 | **22** |
+| BATTLE | **16** | 0 |
+| SEQUENCE | **33** | 1 |
+| DEMO | 1 | **3** |
+| MISSION | 5 | 0 |
+| SOUND_EFFECT | 3 | 0 |
+| BOOT | 1 | 0 |
+| **合计** | **397** | **253** |
 
-`TrackCategory` 与之一一对应，`UNCLASSIFIED` 落到 `OTHER`。
+### ⚠️ 这次核对推翻了我的一个假设
+
+我原本以为「JukeBox 大部分不可播，其他类别都能播」。**实际 SEQUENCE 和 DEMO 是混合的**：
+
+- `SEQUENCE`：33 个能播，**1 个不能**
+- `DEMO`：1 个能播，**3 个不能**
+
+**所以「按类别判断能否播放」是错的。** 必须逐条目判断。
+
+这条已经写成测试 `perCategoryRulesWouldBeWrongForMixedCategories`，并把这个实测分布固化成 `MeasuredLibrary` fixture，防止将来有人偷懒按类别批处理。
 
 ## 6. 仍未做的
 
@@ -83,6 +100,6 @@ BATTLE 16 · MISSION 5 · DEMO 4 · SOUND_EFFECT 3 · BOOT 1
 | 套件 | 数量 |
 |---|---|
 | Python | 143 |
-| Kotlin JVM | **57** |
+| Kotlin JVM | **65** |
 | Android Instrumentation | 17 |
-| **合计** | **217** |
+| **合计** | **225** |

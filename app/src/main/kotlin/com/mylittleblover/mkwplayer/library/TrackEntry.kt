@@ -57,9 +57,21 @@ enum class TrackCategory(val label: String) {
  * Decides whether a track can be played by this build.
  *
  * Two facts drive it, both measured rather than assumed:
- *  - 253 files use a BWAV codec (kind 2) this build does not decode, and they are
- *    almost all JukeBox
+ *  - 253 of 650 entries use a BWAV codec (kind 2) this build does not decode
  *  - every course theme is decodable, so a course theme must never be greyed out
+ *
+ * The measured distribution, checked against the real files:
+ *
+ *   COURSE    338 x kind1                     -> fully playable
+ *   JUKEBOX   227 x kind2                     -> fully blocked
+ *   CUTSCENE   22 x kind2                     -> fully blocked
+ *   BATTLE     16 x kind1                     -> fully playable
+ *   SEQUENCE   33 x kind1 + 1 x kind2         -> mixed
+ *   DEMO        1 x kind1 + 3 x kind2         -> mixed
+ *
+ * The mixed groups are why playability must be decided per entry. Grouping by
+ * category and assuming the group's capability would either hide playable tracks
+ * or offer tracks that produce silence.
  *
  * Keeping this rule in one place means the UI cannot drift from the decoder's
  * actual capability: if the decoder gains kind 2, only this function changes.
