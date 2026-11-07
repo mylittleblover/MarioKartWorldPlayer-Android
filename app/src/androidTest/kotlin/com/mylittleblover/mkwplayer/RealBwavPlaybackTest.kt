@@ -206,4 +206,54 @@ class RealBwavPlaybackTest {
             NativeAudioLibrary.destroyEngine(engine)
         }
     }
+
+    @Test
+    fun linearPlaybackStartsWithTargetMinusOne() {
+        requireFixtures()
+        // startSegment requires target == -1 when the runtime is linear: there is
+        // no segment to name. Play(1) is meaningless here and silently yields
+        // silence, which is exactly the trap that made an earlier test look like
+        // a decoder failure.
+        val engine = NativeAudioLibrary.createEngine()
+        try {
+            assertEquals(
+                0,
+                NativeAudioLibrary.loadLinear(
+                    engine, "native.bwav", bwavFile.readBytes(), true, 0,
+                    assetId, null, null, null,
+                ),
+            )
+            assertEquals(
+                "Play(-1) is the linear form",
+                0,
+                NativeAudioLibrary.command(engine, 0, -1, -1, 0.0, -1L),
+            )
+
+            val (peak, nonzero) = renderAndMeasure(engine, 4)
+            assertTrue(
+                "linear playback produced silence: peak=$peak nonzero=$nonzero",
+                nonzero > 0,
+            )
+        } finally {
+            NativeAudioLibrary.destroyEngine(engine)
+        }
+    }
+
+    @Test
+    fun graphPlayWithNoTargetLeavesTheTransportSilent() {
+        requireFixtures()
+        // Measured, not assumed: on the graph path Play(-1) is accepted (status
+        // Ok) but starts no segment, so rendering stays silent. The command
+        // status alone would look like success, which is why this asserts on the
+        // audio instead.
+        val engine = engineWithBoundSource()
+        try {
+            NativeAudioLibrary.command(engine, 0, -1, -1, 0.0, -1L)
+            val (peak, nonzero) = renderAndMeasure(engine, 2)
+            assertEquals("Play(-1) must not start a segment", 0f, peak, 0f)
+            assertEquals("Play(-1) must not start a segment", 0, nonzero)
+        } finally {
+            NativeAudioLibrary.destroyEngine(engine)
+        }
+    }
 }
