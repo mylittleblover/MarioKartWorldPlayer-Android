@@ -1,10 +1,11 @@
 {
   "schemaVersion": "3.0",
   "project": "MKW standalone music player",
-  "updatedAt": "2026-11-07T22:10:00+08:00",
+  "updatedAt": "2026-11-08T01:25:00+08:00",
   "worktree": {
     "repository": "mylittleblover/MarioKartWorldPlayer-Android",
     "branch": "main",
+    "lastCommit": "42f4f2b",
     "dirty": false
   },
   "applicationId": "com.mylittleblover.mkwplayer",
@@ -12,25 +13,38 @@
     "BOOT": "PARTIAL",
     "TOOLCHAIN": "READY",
     "ANDROID_BUILD_S4": "PASS",
+    "ANDROID_DEVICE_S5": "PASS",
+    "ANDROID_AUDIO_S6": "NOT_RUN",
+    "DECODER_CORRECTNESS": "PASS_BIT_EXACT",
     "PHASE_00_OST": "TOOLS_DONE_INVENTORY_INCOMPLETE",
     "PHASE_01_VERIFY": "PARTIAL",
-    "INDEX_FREEZE": "BLOCKED_NO_FULL_OST",
-    "ANDROID_DEVICE": "DEVICE_BLOCKED",
-    "UI_VISUAL_FINAL_APPROVAL": "PENDING_REVIEW"
+    "PHASE_02_INDEX": "ID_CONTRACT_DONE",
+    "INDEX_FREEZE": "BLOCKED_NO_FULL_OST"
   },
   "tasks": {
     "OST-01": {"status": "DONE"},
-    "OST-02": {"status": "PARTIAL", "note": "marker name->position UNRESOLVED"},
+    "OST-02": {"status": "PARTIAL", "note": "marker name->position UNCONFIRMED; positions verified"},
     "OST-03": {"status": "DONE_L1"},
     "OST-04": {"status": "DONE_TOOL_INVENTORY_INCOMPLETE"},
-    "VER-01": {"status": "DONE_INTEGRITY", "note": "647/647 OK; 听音 NOT_RUN"},
-    "VER-02": {"status": "DONE_COORDINATES", "note": "20991 loop 映射 0 错误; 接缝听音 NOT_RUN"},
-    "VER-03": {"status": "BLOCKED", "blocker": "marker->position UNRESOLVED"},
-    "VER-04": {"status": "BLOCKED", "blocker": "需 L3 游戏运行时证据"}
+    "VER-01": {"status": "DONE_INTEGRITY", "note": "647/647 OK"},
+    "VER-02": {"status": "DONE_COORDINATES", "note": "20991 loop mapped, 0 errors"},
+    "VER-03": {"status": "PARTIAL", "note": "marker positions verified, names UNCONFIRMED"},
+    "VER-04": {"status": "BLOCKED", "blocker": "needs L3 runtime evidence"},
+    "IDX-01": {"status": "DONE", "note": "positional ID contract, 13 JVM tests"},
+    "AND-01": {"status": "DONE_S4"},
+    "AND-02": {"status": "DONE_S4"},
+    "AND-03": {"status": "DONE_S5", "note": "emulator, library loads"},
+    "AND-04": {"status": "DONE_S5_AUDIO", "note": "real BWAV renders non-silent"},
+    "AND-05": {"status": "DONE_L2_BIT_EXACT", "note": "52000 samples maxdiff 0"},
+    "AND-06": {"status": "DONE_S5", "note": "both playback paths pinned"},
+    "AND-07": {"status": "UNRESOLVED", "note": "kind=2 BWAV codec unknown, deliberately not guessed"}
   },
-  "testTotals": {"suite": "tests", "passed": 117},
-  "lastTaskId": "VER-02",
-  "nextTaskId": "IDX-01",
+  "testTotals": {
+    "python": 143,
+    "kotlinJvm": 18,
+    "androidInstrumentation": 17,
+    "total": 178
+  },
   "evidence": [
     "evidence/bootstrap/baseline.md",
     "evidence/bootstrap/toolchain-build.md",
@@ -41,22 +55,31 @@
     "evidence/bootstrap/ost-04-audit.md",
     "evidence/bootstrap/bwav-loop.md",
     "evidence/bootstrap/ver-01-pcm.md",
-    "evidence/bootstrap/ver-02-loop-map.md"
+    "evidence/bootstrap/ver-02-loop-map.md",
+    "evidence/bootstrap/ver-03-markers.md",
+    "evidence/bootstrap/and-01-skeleton.md",
+    "evidence/bootstrap/and-02-native.md",
+    "evidence/bootstrap/and-03-emulator.md",
+    "evidence/bootstrap/and-04-real-playback.md",
+    "evidence/bootstrap/and-05-decoder-correctness.md",
+    "evidence/bootstrap/and-06-playback-paths.md",
+    "evidence/bootstrap/and-07-kind2-unresolved.md"
   ],
   "keyFindings": {
-    "bwavLoopFields": "+76 loopEnd (0xFFFFFFFF=无), +80 loopStart; 29193 项校验零违规",
-    "loopAlwaysToEnd": "2881 个 loop 全部 loopEnd == frameCount",
-    "loopNotTempoDerived": "34 个赛道主曲仅 1 个整秒 loop；BPM 反推只命中 27/174",
-    "musicAlways48k": "所有 BGM_/Dm_ wav 均 48kHz",
-    "roadConnections": "RSDB 含 137 条 InterStageEx1 道路连接，涉 37 赛道"
+    "bwavFinalBlock": "5694/20991 文件末块截断；原解析器要求完整块导致拒绝",
+    "bwavPredictorSeed": "654/20991 文件 h+68 与首字节不同；原解析器错误地要求相等",
+    "channelAlignment": "每声道起点 = 上一声道按完整块计的末尾向上对齐 64 字节（592 个双声道文件零例外）",
+    "dspDecodeCorrect": "5 首曲目 52000 采样与参考 WAV 逐样本一致，maxdiff=0",
+    "playTargetRules": "有图 Play(-1) 返回 Ok 但静音；linear 仅接受 Play(-1)",
+    "loadLinearReplacesRuntime": "loadLinear 会丢弃已加载的图，两路径需独立引擎",
+    "kind2Unknown": "253 个文件使用未知编码，明确拒绝而非猜测"
   },
   "blockers": [
-    "无 Android 真机/模拟器：S5/S6 DEVICE_BLOCKED",
-    "标记名→采样位置绑定 UNRESOLVED（阻塞 VER-03）",
-    "DSP-ADPCM 解码 UNRESOLVED（不影响 loop，但无法自证原始解码）",
-    "唯一对照源是转换工具输出，系统性错误无法自证",
-    "特别杯 BGM 身份未核实（L3）",
+    "kind=2 BWAV 编码未知（253 文件，含 227 首 JukeBox）",
+    "无人耳听音验证（无扬声器环境）",
+    "标记名→位置绑定 UNCONFIRMED（两份分析产物矛盾 127/165）",
+    "唯一参考源是转换工具输出，系统性错误无法自证",
     "剩余 495 份 .bars.zs 未逐档核查"
   ],
-  "notes": "117 tests passed。所有 NOT_RUN 项均在证据文档中显式登记。"
+  "notes": "178 测试全绿。AND-05 是本轮最强证据：解码器与独立实现逐样本一致。"
 }
