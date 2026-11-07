@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer.audio
+﻿package com.mylittleblover.mkwplayer.audio
 
 import com.mylittleblover.player2.platform.audio.NativeAudioLibrary
 
@@ -15,24 +15,24 @@ import com.mylittleblover.player2.platform.audio.NativeAudioLibrary
  * escape as a raw Long, and [close] is idempotent because a destroyed native
  * handle is a dangling pointer, not an error code.
  */
-internal class AudioEngine private constructor(private val handle: Long) {
+internal class AudioEngine private constructor(private val handle: Long) : PlaybackEngine {
 
     private var closed = false
 
     /** Exposed only for constructing the output, which must reference the engine. */
     internal fun nativeHandle(): Long = if (closed) 0 else handle
 
-    val sampleRate: Int
+    override val sampleRate: Int
         get() = if (closed) 0 else NativeAudioLibrary.engineSampleRate(handle)
 
     /** Transport rate is fixed at 48000 until a graph declares otherwise. */
     val transportRate: Int
         get() = NativeAudioLibrary.transportSampleRate()
 
-    fun loadGraph(packet: ByteArray): Int =
+    override fun loadGraph(packet: ByteArray): Int =
         if (closed) CLOSED else NativeAudioLibrary.loadCompiledGraph(handle, packet)
 
-    fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int =
+    override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int =
         if (closed) {
             CLOSED
         } else {
@@ -60,16 +60,16 @@ internal class AudioEngine private constructor(private val handle: Long) {
      * returns Ok on the graph path with no segment started, so a caller that
      * only checks the status will see success and hear silence.
      */
-    fun play(target: Int): Int =
+    override fun play(target: Int): Int =
         if (closed) CLOSED else NativeAudioLibrary.command(handle, COMMAND_PLAY, target, -1, 0.0, -1L)
 
-    fun stop(): Int =
+    override fun stop(): Int =
         if (closed) CLOSED else NativeAudioLibrary.command(handle, COMMAND_STOP, -1, -1, 0.0, -1L)
 
-    fun pause(): Int =
+    override fun pause(): Int =
         if (closed) CLOSED else NativeAudioLibrary.command(handle, COMMAND_PAUSE, -1, -1, 0.0, -1L)
 
-    fun resume(): Int =
+    override fun resume(): Int =
         if (closed) CLOSED else NativeAudioLibrary.command(handle, COMMAND_RESUME, -1, -1, 0.0, -1L)
 
     fun render(frames: Int): FloatArray? {
@@ -79,10 +79,10 @@ internal class AudioEngine private constructor(private val handle: Long) {
         return if (status == STATUS_OK) buffer else null
     }
 
-    fun snapshot(): LongArray? = if (closed) null else NativeAudioLibrary.snapshot(handle)
+    override fun snapshot(): LongArray? = if (closed) null else NativeAudioLibrary.snapshot(handle)
 
     /** Releases the engine. Safe to call repeatedly; the native delete runs once. */
-    fun close() {
+    override fun close() {
         if (closed) return
         closed = true
         NativeAudioLibrary.destroyEngine(handle)
