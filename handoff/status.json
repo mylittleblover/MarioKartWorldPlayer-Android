@@ -1,12 +1,12 @@
 {
   "schemaVersion": "3.0",
   "project": "MKW standalone music player",
-  "updatedAt": "2026-11-07T20:15:00+08:00",
+  "updatedAt": "2026-11-07T20:25:00+08:00",
   "worktree": {
     "repository": "mylittleblover/MarioKartWorldPlayer-Android",
     "branch": "main",
-    "headSha": null,
-    "dirty": null
+    "headSha": "1cadef7fd4fbffa9c5a38f80521ab826e488294e",
+    "dirty": false
   },
   "applicationId": "com.mylittleblover.mkwplayer",
   "upstreamPlayer2": {
@@ -15,26 +15,33 @@
     "observedSha20261107": "396ff6f137b00019384c46511c9136fce2c043c3",
     "runtimeVerifiedNow": false,
     "reverifiedAt": "2026-11-07T19:40:00+08:00",
-    "note": "HEAD unchanged since handoff snapshot; HEAD does not compile (see blockers)"
+    "compiles": false,
+    "compileBlocker": "MusicValidation.kt:26,28 引用 396ff6f1 重构中已删除的局部函数 quantized；331513d9 上完整",
+    "verifiedBuildCheckpoint": "331513d9f340a822285d3758308845afc9c0250d",
+    "note": "HEAD 未变；HEAD 编译失败；已验证的构建基线是 331513d9"
   },
   "gates": {
     "BOOT": "PARTIAL",
-    "INVENTORY": "BLOCKED_NO_FULL_OST",
+    "TOOLCHAIN": "READY",
+    "ANDROID_BUILD_S4": "PASS",
+    "INVENTORY": "IN_PROGRESS",
     "VERIFICATION": "NOT_RUN",
     "INDEX_FREEZE": "BLOCKED_NO_FULL_OST",
-    "ANDROID_DEVICE": "NOT_RUN",
-    "TOOLCHAIN": "READY_BUILD_BLOCKED_ON_UPSTREAM_NATIVE",
+    "ANDROID_DEVICE": "DEVICE_BLOCKED",
     "UI_VISUAL_FINAL_APPROVAL": "PENDING_REVIEW"
   },
   "lastTaskId": "OST-01",
-  "lastCommittedSha": null,
-  "lastEvidence": ["evidence/bootstrap/baseline.md"],
+  "lastCommittedSha": "1cadef7fd4fbffa9c5a38f80521ab826e488294e",
+  "lastEvidence": [
+    "evidence/bootstrap/baseline.md",
+    "evidence/bootstrap/toolchain-build.md"
+  ],
   "nextTaskId": "OST-02",
   "blockers": [
-    "上游 HEAD 396ff6f1 的 core 模块无法编译（MusicValidation.kt 引用已删除的 quantized）",
-    "上游 native gme_shared 在 Windows+NDK27 下因缺 libc++ 链接失败（正在修复验证）",
+    "无 Android 真机/模拟器：S5/S6 全部 DEVICE_BLOCKED",
     "全 OST 与特别杯 BGM 尚无完整可核验证据",
-    "尚无 Android 真机，S5/S6 无法执行"
+    "上游 HEAD 编译失败（已在 331513d9 上验证构建链路，HEAD 修复需单独任务）",
+    "v2.0 全量资源包不在本机"
   ],
-  "notes": "本文档由 DeepSeek 在 2026-11-07 会话中生成；测试数字均来自实际执行。"
+  "notes": "测试与构建数字均来自实际执行，见 evidence/bootstrap/toolchain-build.md。"
 }
