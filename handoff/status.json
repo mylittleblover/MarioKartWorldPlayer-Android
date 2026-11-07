@@ -1,11 +1,11 @@
 {
   "schemaVersion": "3.0",
   "project": "MKW standalone music player",
-  "updatedAt": "2026-11-07T20:50:00+08:00",
+  "updatedAt": "2026-11-07T21:20:00+08:00",
   "worktree": {
     "repository": "mylittleblover/MarioKartWorldPlayer-Android",
     "branch": "main",
-    "headSha": "cc3d43e",
+    "headSha": "pending-commit",
     "dirty": false
   },
   "applicationId": "com.mylittleblover.mkwplayer",
@@ -20,26 +20,35 @@
     "UI_VISUAL_FINAL_APPROVAL": "PENDING_REVIEW"
   },
   "tasks": {
-    "OST-01": {"status": "DONE", "commit": "1cadef7", "tests": "8 passed"},
-    "OST-02": {"status": "PARTIAL", "commit": "cc3d43e", "tests": "19 passed",
-               "partialReason": "容器解析完成；标记名→采样位置绑定 UNRESOLVED，位置字段留空"},
-    "OST-03": {"status": "NOT_STARTED"},
+    "OST-01": {"status": "DONE", "tests": "8 passed in its own suite"},
+    "OST-02": {
+      "status": "PARTIAL",
+      "partialReason": "容器/命名/包络全部解析（650/650）；标记名→采样位置绑定 UNRESOLVED，位置字段故意留空"
+    },
+    "OST-03": {
+      "status": "DONE_L1",
+      "note": "650/650 EXACT_VERIFIABLE；名称匹配非音频验证"
+    },
     "OST-04": {"status": "NOT_STARTED"}
   },
-  "lastTaskId": "OST-02",
-  "lastCommittedSha": "cc3d43e",
-  "lastEvidence": [
+  "testTotals": {"suite": "tests/ost_inventory", "passed": 67},
+  "lastTaskId": "OST-03",
+  "nextTaskId": "OST-04",
+  "evidence": [
     "evidence/bootstrap/baseline.md",
     "evidence/bootstrap/toolchain-build.md",
-    "evidence/bootstrap/bars-format.md"
+    "evidence/bootstrap/bars-format.md",
+    "evidence/bootstrap/name-overlap.md",
+    "evidence/bootstrap/suffix-semantics.md",
+    "evidence/bootstrap/ost-03-probe-match.md"
   ],
-  "nextTaskId": "OST-03",
   "blockers": [
     "无 Android 真机/模拟器：S5/S6 全部 DEVICE_BLOCKED",
-    "全 OST 覆盖审计未完成（650 条 BARS 已可读，但菜单/剧情/短乐分类未审计）",
+    "标记名→采样位置绑定未解（阻塞 VER-03，不阻塞 OST-04）",
     "特别杯解锁 BGM 身份未核实（L3 缺失）",
-    "标记位置绑定未解（不影响 OST-03，但阻塞 VER-03）",
+    "BWAV 格式标签 +16 与 yu/tk 语义 UNKNOWN",
+    "全 OST 分类审计未完成（OST-04 本体）",
     "v2.0 全量资源包不在本机"
   ],
-  "notes": "所有测试与构建数字均来自实际执行。"
+  "notes": "所有数字来自实际执行；名称匹配 != 音频验证 != 行为验证。"
 }
