@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
   "project": "MKW standalone music player",
-  "updatedAt": "2026-11-07T21:35:00+08:00",
+  "updatedAt": "2026-11-07T22:10:00+08:00",
   "worktree": {
     "repository": "mylittleblover/MarioKartWorldPlayer-Android",
     "branch": "main",
@@ -13,42 +13,24 @@
     "TOOLCHAIN": "READY",
     "ANDROID_BUILD_S4": "PASS",
     "PHASE_00_OST": "TOOLS_DONE_INVENTORY_INCOMPLETE",
-    "VERIFICATION": "NOT_RUN",
+    "PHASE_01_VERIFY": "PARTIAL",
     "INDEX_FREEZE": "BLOCKED_NO_FULL_OST",
     "ANDROID_DEVICE": "DEVICE_BLOCKED",
     "UI_VISUAL_FINAL_APPROVAL": "PENDING_REVIEW"
   },
-  "phase00": {
-    "archivesRead": 4,
-    "archivesTotal": 499,
-    "entries": 650,
-    "classified": 650,
-    "probedAudio": 2435,
-    "missingSources": 0,
-    "coverage": "INVENTORY_INCOMPLETE",
-    "counts": {
-      "COURSE": 338,
-      "JUKEBOX": 227,
-      "SEQUENCE": 34,
-      "CUTSCENE": 22,
-      "BATTLE": 16,
-      "MISSION": 5,
-      "DEMO": 4,
-      "SOUND_EFFECT": 3,
-      "BOOT": 1,
-      "UNCLASSIFIED": 0
-    }
-  },
   "tasks": {
     "OST-01": {"status": "DONE"},
-    "OST-02": {"status": "PARTIAL",
-               "note": "容器/命名/包络 650/650；标记名→采样位置 UNRESOLVED"},
-    "OST-03": {"status": "DONE_L1", "note": "650/650 EXACT_VERIFIABLE"},
-    "OST-04": {"status": "DONE_TOOL_INVENTORY_INCOMPLETE"}
+    "OST-02": {"status": "PARTIAL", "note": "marker name->position UNRESOLVED"},
+    "OST-03": {"status": "DONE_L1"},
+    "OST-04": {"status": "DONE_TOOL_INVENTORY_INCOMPLETE"},
+    "VER-01": {"status": "DONE_INTEGRITY", "note": "647/647 OK; 听音 NOT_RUN"},
+    "VER-02": {"status": "DONE_COORDINATES", "note": "20991 loop 映射 0 错误; 接缝听音 NOT_RUN"},
+    "VER-03": {"status": "BLOCKED", "blocker": "marker->position UNRESOLVED"},
+    "VER-04": {"status": "BLOCKED", "blocker": "需 L3 游戏运行时证据"}
   },
-  "testTotals": {"suite": "tests/ost_inventory", "passed": 84},
-  "lastTaskId": "OST-04",
-  "nextTaskId": "VER-01",
+  "testTotals": {"suite": "tests", "passed": 117},
+  "lastTaskId": "VER-02",
+  "nextTaskId": "IDX-01",
   "evidence": [
     "evidence/bootstrap/baseline.md",
     "evidence/bootstrap/toolchain-build.md",
@@ -56,19 +38,25 @@
     "evidence/bootstrap/name-overlap.md",
     "evidence/bootstrap/suffix-semantics.md",
     "evidence/bootstrap/ost-03-probe-match.md",
-    "evidence/bootstrap/ost-04-audit.md"
+    "evidence/bootstrap/ost-04-audit.md",
+    "evidence/bootstrap/bwav-loop.md",
+    "evidence/bootstrap/ver-01-pcm.md",
+    "evidence/bootstrap/ver-02-loop-map.md"
   ],
-  "findings": {
-    "roadConnections": "RSDB Course 表含 137 条 InterStageEx1_<A>To<B> 道路连接，涉 37 赛道；连接存在 != 音乐行为已验证",
-    "musicAlways48k": "所有 BGM_/Dm_ wav 均为 48kHz；非 48k 的 16 个全是音效/语音/UI"
+  "keyFindings": {
+    "bwavLoopFields": "+76 loopEnd (0xFFFFFFFF=无), +80 loopStart; 29193 项校验零违规",
+    "loopAlwaysToEnd": "2881 个 loop 全部 loopEnd == frameCount",
+    "loopNotTempoDerived": "34 个赛道主曲仅 1 个整秒 loop；BPM 反推只命中 27/174",
+    "musicAlways48k": "所有 BGM_/Dm_ wav 均 48kHz",
+    "roadConnections": "RSDB 含 137 条 InterStageEx1 道路连接，涉 37 赛道"
   },
   "blockers": [
-    "无 Android 真机/模拟器：S5/S6 全部 DEVICE_BLOCKED",
-    "剩余 495 份 .bars.zs 未逐档核查（用户判断为音效）",
-    "标记名→采样位置绑定未解（阻塞 VER-03）",
-    "特别杯解锁 BGM 身份未核实（L3 缺失）",
-    "BWAV +16 标签与 yu/tk 语义 UNKNOWN",
-    "v2.0 全量资源包不在本机"
+    "无 Android 真机/模拟器：S5/S6 DEVICE_BLOCKED",
+    "标记名→采样位置绑定 UNRESOLVED（阻塞 VER-03）",
+    "DSP-ADPCM 解码 UNRESOLVED（不影响 loop，但无法自证原始解码）",
+    "唯一对照源是转换工具输出，系统性错误无法自证",
+    "特别杯 BGM 身份未核实（L3）",
+    "剩余 495 份 .bars.zs 未逐档核查"
   ],
-  "notes": "阶段 00 工具完成但索引仍 INCOMPLETE，符合 docs/03 的 INVENTORY_INCOMPLETE 定义。"
+  "notes": "117 tests passed。所有 NOT_RUN 项均在证据文档中显式登记。"
 }
