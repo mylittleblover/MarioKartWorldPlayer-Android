@@ -4,12 +4,8 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mylittleblover.mkwplayer.audio.AudioEngine
-import com.mylittleblover.mkwplayer.audio.AudioOutput
 import com.mylittleblover.mkwplayer.audio.BwavHeader
 import com.mylittleblover.mkwplayer.audio.EngineSnapshot
-import com.mylittleblover.mkwplayer.audio.PlaybackController
-import com.mylittleblover.mkwplayer.audio.PlaybackEngine
 import com.mylittleblover.mkwplayer.audio.SeekTarget
 import com.mylittleblover.mkwplayer.audio.TimingDiagnosis
 import com.mylittleblover.mkwplayer.graph.GraphBuilder
@@ -66,6 +62,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val outputActive: Boolean = false,
         val detail: String? = null,
         val busy: Boolean = false,
+        /** True when the activity should ask for POST_NOTIFICATIONS. */
+        val needsNotificationPermission: Boolean = false,
     )
 
     private val _ui = MutableStateFlow(Ui())
@@ -80,12 +78,18 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     )
 
     private val prepared = mutableMapOf<String, Prepared>()
-    private var controller: PlaybackController? = null
-    private var engine: AudioEngine? = null
-    private var output: AudioOutput? = null
     private var pollJob: Job? = null
     private var totalFrames: Long = 0
     private var rate: Int = 0
+
+    /**
+     * The shared audio session.
+     *
+     * Not owned by this view model any more: a foreground service has to be able to keep
+     * playing after the activity is gone, so the engine lives in the process-wide holder
+     * and both the service and this class read it.
+     */
+    private val session: PlaybackSession get() = PlaybackHolder.get()
 
     private val store = LibraryStore(java.io.File(application.filesDir, "library.json"))
 
@@ -283,36 +287,20 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     }
 
     private fun start(track: Track, ready: Prepared) {
-        releaseTransport()
-
-        val created = AudioEngine.create()
-        if (created == null) {
-            _ui.value = _ui.value.copy(status = "Cannot play this file", detail = "Out of memory.")
-            return
-        }
-
-        val controller = PlaybackController(created as PlaybackEngine)
-        val state = controller.load(
+        val state = session.load(
             title = ready.name,
             packet = ready.packet,
             audio = ready.bytes,
             assetId = ready.name,
+            frames = ready.frames,
         )
-        if (state is PlaybackController.State.Failed) {
-            created.close()
-            _ui.value = _ui.value.copy(status = "Cannot play this file", detail = state.reason)
+        if (state.detail != null) {
+            _ui.value = _ui.value.copy(status = "Cannot play this file", detail = state.detail)
             return
         }
 
-        controller.setDuration(ready.frames)
-        this.controller = controller
-        this.engine = created
         totalFrames = ready.frames
         rate = ready.sampleRate
-
-        // Device output is best-effort. An emulator started with -no-audio has no
-        // stream, and that must not be reported as a playback failure.
-        output = AudioOutput.open(created.nativeHandle(), ready.sampleRate)
 
         _ui.value = _ui.value.copy(
             selectedKey = track.key,
@@ -321,100 +309,122 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             total = EngineSnapshot.formatPosition(totalFrames, rate),
             canPause = true,
             canStop = true,
-            outputActive = output != null,
-            detail = if (output == null) {
-                "No device output on this system; the engine is running without a speaker."
-            } else {
+            outputActive = session.hasOutput,
+            detail = if (session.hasOutput) {
                 null
+            } else {
+                "No device output on this system; the engine is running without a speaker."
             },
         )
+
+        // Start the foreground service so playback survives the activity, and on
+        // Android 13+ ask for the notification the service needs.
+        // Only starts when the session is actually playing; see PlaybackService.start.
+        PlaybackService.start(getApplication())
+        requestNotificationPermissionIfNeeded()
+
         startPolling()
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        // The activity asks; the view model only records that asking is needed, because
+        // a permission request needs an Activity. See MainActivity.
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
+        val context = getApplication<Application>()
+        val granted = context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            _ui.value = _ui.value.copy(needsNotificationPermission = true)
+        }
+    }
+
+    /** Called by the activity once the notification permission result is known. */
+    fun onNotificationPermissionResult(granted: Boolean) {
+        _ui.value = _ui.value.copy(
+            needsNotificationPermission = false,
+            detail = if (granted) {
+                _ui.value.detail
+            } else {
+                "Notifications are off, so the media controls will not appear."
+            },
+        )
     }
 
     private fun startPolling() {
         pollJob?.cancel()
         pollJob = viewModelScope.launch {
             while (true) {
-                val active = controller ?: break
-                publish(active.poll())
+                publish(session.poll())
                 delay(POLL_INTERVAL_MS)
             }
         }
     }
 
-    private fun publish(state: PlaybackController.State) {
-        val positionFrames = when (state) {
-            is PlaybackController.State.Playing -> state.positionFrames
-            is PlaybackController.State.Paused -> state.positionFrames
-            else -> 0L
-        }
-        val progress = if (totalFrames > 0) {
-            (positionFrames.toDouble() / totalFrames).coerceIn(0.0, 1.0).toFloat()
+    private fun publish(state: PlaybackSession.State) {
+        val progress = if (state.totalFrames > 0) {
+            (state.positionFrames.toDouble() / state.totalFrames).coerceIn(0.0, 1.0).toFloat()
         } else {
             0f
         }
 
-        val timing = TimingDiagnosis.read(output?.timingSnapshot())
+        // Timing only exists while this screen holds the output handle; the service does
+        // not expose it, so an absent packet stays NO DATA rather than being invented.
+        val timing = TimingDiagnosis.read(session.timingSnapshot())
 
         _ui.value = _ui.value.copy(
-            status = when (state) {
-                is PlaybackController.State.Idle -> "No track loaded"
-                is PlaybackController.State.Ready -> "Ready"
-                is PlaybackController.State.Playing -> "Playing"
-                is PlaybackController.State.Paused -> "Paused"
-                is PlaybackController.State.Stopped -> "Stopped"
-                is PlaybackController.State.Failed -> "Failed"
+            status = when {
+                state.detail != null -> "Failed"
+                state.playing -> "Playing"
+                state.paused -> "Paused"
+                state.title.isEmpty() -> "No track loaded"
+                else -> "Stopped"
             },
-            position = EngineSnapshot.formatPosition(positionFrames, rate),
-            total = EngineSnapshot.formatPosition(totalFrames, rate),
+            position = EngineSnapshot.formatPosition(state.positionFrames, state.sampleRate),
+            total = EngineSnapshot.formatPosition(state.totalFrames, state.sampleRate),
             progress = progress,
-            canPause = state is PlaybackController.State.Playing,
-            canResume = state is PlaybackController.State.Paused,
-            canStop = state is PlaybackController.State.Playing ||
-                state is PlaybackController.State.Paused,
+            canPause = state.playing,
+            canResume = state.paused,
+            canStop = state.active,
             timing = timing?.explanation ?: "Timing unavailable",
             timingVerdict = timing?.verdict ?: TimingDiagnosis.Verdict.NO_DATA,
-            detail = if (state is PlaybackController.State.Failed) {
-                state.reason
-            } else {
-                _ui.value.detail
-            },
+            outputActive = session.hasOutput,
+            detail = state.detail ?: _ui.value.detail,
         )
     }
 
     fun pause() {
-        controller?.pause()?.let { publish(it) }
+        publish(session.pause())
     }
 
     fun resume() {
-        controller?.resume()?.let { publish(it) }
+        publish(session.resume())
     }
 
     /** Seeks by fraction of the track. The UI only knows a 0..1 drag value. */
     fun seekTo(fraction: Float) {
-        val active = controller ?: return
         val frame = SeekTarget.fractionToFrame(fraction, totalFrames)
         if (!SeekTarget.isAddressable(frame, totalFrames)) return
-        publish(active.seek(frame))
+        publish(session.seek(frame))
     }
 
     fun stop() {
-        controller?.stop()?.let { publish(it) }
+        publish(session.stop())
         _ui.value = _ui.value.copy(progress = 0f, position = EngineSnapshot.formatPosition(0, rate))
+        PlaybackService.stop(getApplication())
     }
 
     private fun releaseTransport() {
         pollJob?.cancel()
         pollJob = null
-        output?.close()
-        output = null
-        controller?.release()
-        controller = null
-        engine = null
+        session.release()
+        PlaybackService.stop(getApplication())
     }
 
     override fun onCleared() {
-        releaseTransport()
+        // Playback deliberately continues: the foreground service keeps the session alive
+        // and the notification keeps offering controls. Only the screen stops observing.
+        pollJob?.cancel()
+        pollJob = null
         super.onCleared()
     }
 

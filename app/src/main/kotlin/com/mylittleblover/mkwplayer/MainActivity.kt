@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,19 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) model.add(uri)
+    }
+
+    // Android 13+ needs the user to allow notifications before a media notification can
+    // appear; the view model only records that asking is needed, because the request
+    // itself requires an Activity.
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> model.onNotificationPermissionResult(granted) }
+
+    LaunchedEffect(ui.needsNotificationPermission) {
+        if (ui.needsNotificationPermission) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     LazyColumn(
