@@ -1,23 +1,30 @@
 """Read BARS marker records: (index, markerId, sourceSamplePosition).
 
 Layout measured and validated on real archives (see
-evidence/bootstrap/bars-markers.md):
+evidence/bootstrap/ver-03-markers.md):
 
     +20  u32  marker section offset
     at that offset:
          u32  marker count
          then `count` records of 16 bytes:
              +0   u32  index (0..count-1, in order)
-             +4   u32  markerId   -- globally unique, NOT an Outro name code
+             +4   u32  markerId   -- per-record identity, NOT an Outro name code
              +8   u32  sourceSamplePosition (frames, at the source rate)
              +12  u32  zero in every observed record
 
-Validated across all 540 M_Bgm entries: 233 carry a table, 482 records total,
-and every record has index == k and trailing zero. No exceptions.
+Validated across all four archives: 262 entries carry a table, 531 records
+total, every record has index == k and a zero trailing field. No exceptions.
 
-markerId is NOT an Outro name. 197 distinct ids appear and only 14 repeat
-across stages, so the id space is per-record identity, not a name code.
-Binding an id to `OutroNN` requires the external game-data export.
+Two things this module deliberately does NOT claim:
+
+1. `markerId` is not an Outro name. 197 distinct ids appear and only 14 repeat
+   across stages; those repeats map to contradictory names. The id identifies
+   a record, nothing more.
+
+2. The mapping from a position to `OutroNN` is NOT confirmed. The two available
+   analyses disagree on 127 of 165 comparable cues, and both are derived from
+   the data rather than declared by the game. Positions are trustworthy;
+   names are not.
 """
 
 from __future__ import annotations
