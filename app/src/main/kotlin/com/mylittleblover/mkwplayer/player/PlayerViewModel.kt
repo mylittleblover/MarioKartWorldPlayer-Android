@@ -11,6 +11,7 @@ import com.mylittleblover.mkwplayer.audio.TimingDiagnosis
 import com.mylittleblover.mkwplayer.graph.GraphBuilder
 import com.mylittleblover.mkwplayer.graph.GraphProbe
 import com.mylittleblover.mkwplayer.library.AudioPicker
+import com.mylittleblover.mkwplayer.library.CatalogLoader
 import com.mylittleblover.mkwplayer.library.LibraryStore
 import com.mylittleblover.mkwplayer.library.Playability
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +63,10 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val outputActive: Boolean = false,
         val detail: String? = null,
         val busy: Boolean = false,
+        /** Bundled catalog, or null when the asset is missing or unreadable. */
+        val catalog: CatalogLoader.Catalog? = null,
+        /** Category currently expanded in the catalog browser. */
+        val openCategory: String? = null,
         /** True when the activity should ask for POST_NOTIFICATIONS. */
         val needsNotificationPermission: Boolean = false,
     )
@@ -94,6 +99,20 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     private val store = LibraryStore(java.io.File(application.filesDir, "library.json"))
 
     init {
+        // The catalog is bundled data, so it is read once rather than re-parsed on every
+        // recomposition. A missing or broken asset leaves it null and the UI omits the
+        // section instead of showing an empty one.
+        val catalog = try {
+            getApplication<Application>().assets.open(CATALOG_ASSET).bufferedReader().use {
+                CatalogLoader.parse(it.readText())
+            }
+        } catch (e: Exception) {
+            null
+        }
+        if (catalog != null) {
+            _ui.value = _ui.value.copy(catalog = catalog)
+        }
+
         // Restore before the first frame so the list is never briefly empty on launch.
         val loaded = store.load()
         if (loaded.rows.isNotEmpty()) {
@@ -255,6 +274,13 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         )
         AudioPicker.prune(getApplication(), _ui.value.tracks.map { it.key }.toSet())
         persist()
+    }
+
+    /** Opens or closes a catalog category in the browser. */
+    fun toggleCategory(category: String) {
+        _ui.value = _ui.value.copy(
+            openCategory = if (_ui.value.openCategory == category) null else category,
+        )
     }
 
     /** Starts the track with the given key, or reports why it cannot start. */
@@ -431,5 +457,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     companion object {
         /** 200 ms keeps the progress bar smooth without touching the audio thread. */
         const val POLL_INTERVAL_MS = 200L
+
+        /** Bundled compatibility manifest; see tools/gen_catalog.py. */
+        const val CATALOG_ASSET = "catalog.json"
     }
 }

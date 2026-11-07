@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer.player
+﻿package com.mylittleblover.mkwplayer.player
 
 import com.mylittleblover.mkwplayer.audio.AudioEngine
 import com.mylittleblover.mkwplayer.audio.AudioOutput
@@ -37,8 +37,19 @@ internal class PlaybackSession(
         val totalFrames: Long = 0,
         val sampleRate: Int = 0,
         val detail: String? = null,
+        /**
+         * True once a track is loaded and Play was accepted.
+         *
+         * Separate from [playing] on purpose. The engine processes Play through a command
+         * queue, so a snapshot taken in the same instant can still read Stopped. Gating the
+         * foreground service on [playing] therefore made it refuse to start immediately
+         * after a successful load. `loaded` says "the transport was commanded", which is
+         * what the service needs; [playing] keeps meaning "the engine says it is playing".
+         */
+        val loaded: Boolean = false,
     ) {
-        val active: Boolean get() = playing || paused
+        /** Something is loaded, so the transport is worth keeping alive and showing. */
+        val active: Boolean get() = playing || paused || loaded
     }
 
     private val _state = MutableStateFlow(State())
@@ -91,7 +102,11 @@ internal class PlaybackSession(
             output = openOutput(current.nativeHandle(), current.sampleRate)
         }
 
-        return publish(active.poll(), title, frames, current.sampleRate)
+        val published = publish(active.poll(), title, frames, current.sampleRate)
+        // Play was accepted, so the transport counts as loaded even if the queued command
+        // has not been processed by the engine yet.
+        _state.value = published.copy(loaded = true)
+        return _state.value
     }
 
     fun pause(): State {
@@ -106,7 +121,9 @@ internal class PlaybackSession(
 
     fun stop(): State {
         val active = controller ?: return _state.value
-        return publishState(active.stop())
+        val published = publishState(active.stop())
+        _state.value = published.copy(loaded = false)
+        return _state.value
     }
 
     fun seek(frame: Long): State {
@@ -192,12 +209,14 @@ internal class PlaybackSession(
             totalFrames = resolvedTotal,
             sampleRate = resolvedRate,
             detail = detail,
+            // Preserved across polls: only load, stop, release and failure change it.
+            loaded = _state.value.loaded,
         )
         return _state.value
     }
 
     private fun fail(reason: String): State {
-        _state.value = _state.value.copy(playing = false, paused = false, detail = reason)
+        _state.value = _state.value.copy(playing = false, paused = false, loaded = false, detail = reason)
         return _state.value
     }
 }

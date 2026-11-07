@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer.player
+﻿package com.mylittleblover.mkwplayer.player
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -175,7 +175,7 @@ class PlaybackService : Service() {
             .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        if (state.paused || !state.playing) {
+        if (!state.playing) {
             builder.addAction(
                 android.R.drawable.ic_media_play, "Resume",
                 command(ACTION_RESUME),

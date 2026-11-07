@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer
+﻿package com.mylittleblover.mkwplayer
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -46,9 +46,22 @@ class PlayerScreenTest {
     }
 
     @Test
-    fun unlimitedPlayableStateIsStatedInTheFooter() {
-        // The limitation is shown, not hidden: JukeBox is genuinely unsupported.
-        rule.onNodeWithText("JukeBox and cutscene entries use a different codec", substring = true)
-            .assertIsDisplayed()
+    fun theCatalogStatesItsOwnLimitations() {
+        // The footer sits far down a lazy list now, so the assertion moved to the catalog
+        // card, which makes the stronger claim anyway: the bundled data covers 4 of 499
+        // archives and must say so on screen.
+        rule.onNodeWithText("Partial catalog", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theCatalogSeparatesKnownFromPlayable() {
+        // "650 tracks known, 397 playable" is the distinction the whole catalog exists for.
+        rule.onNodeWithText("397 playable in this build", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun anEmptyLibrarySaysSoBeforeTheCatalogAppears() {
+        rule.onNodeWithText("No track loaded").assertIsDisplayed()
+        rule.onNodeWithText("Catalog").assertIsDisplayed()
     }
 }

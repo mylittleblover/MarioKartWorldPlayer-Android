@@ -114,7 +114,7 @@ class PlaybackServiceDeviceTest {
         val session = playingSession()
         assertTrue(
             "the fixture is missing so playback could not start: ${session.state.value.detail}",
-            session.state.value.playing,
+            session.state.value.loaded,
         )
 
         assertTrue("service refused to start: ${session.state.value}", PlaybackService.start(context))
@@ -128,7 +128,7 @@ class PlaybackServiceDeviceTest {
     @Test
     fun stoppingRemovesTheNotification() {
         val session = playingSession()
-        if (!session.state.value.playing) return   // no fixture: nothing to observe
+        if (!session.state.value.loaded) return   // no fixture: nothing to observe
 
         assertTrue(PlaybackService.start(context))
         assertTrue(waitForNotification(expected = true))

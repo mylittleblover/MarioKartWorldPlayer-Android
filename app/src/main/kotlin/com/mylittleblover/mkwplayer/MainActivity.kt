@@ -1,4 +1,4 @@
-﻿package com.mylittleblover.mkwplayer
+package com.mylittleblover.mkwplayer
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -226,6 +226,83 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
                                 OutlinedButton(onClick = { model.select(track.key) }) { Text("Play") }
                             }
                             OutlinedButton(onClick = { model.remove(track.key) }) { Text("Remove") }
+                        }
+                    }
+                }
+            }
+        }
+
+        ui.catalog?.let { catalog ->
+            item {
+                Text("Catalog", style = MaterialTheme.typography.titleMedium)
+            }
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "${catalog.entries.size} tracks known, " +
+                                "${catalog.playableCount} playable in this build",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (catalog.isPartial) {
+                            // Stated, not buried: the source index covers 4 of 499 archives
+                            // and its own reasons say verification was not performed.
+                            Text(
+                                "Partial catalog: ${catalog.freezeStatus.lowercase().replace('_', ' ')}, " +
+                                    "${catalog.archivesRead} of ${catalog.archivesExpected} archives read.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            catalog.coverageReasons.forEach { reason ->
+                                Text("- $reason", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        Text(
+                            "The audio files are not bundled. Pick a file to add it to your " +
+                                "library; the catalog only says what exists and what this build can decode.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+            items(catalog.categories(), key = { "cat-$it" }) { category ->
+                val total = catalog.categoryCounts[category] ?: 0
+                val playable = catalog.playableByCategory[category] ?: 0
+                val open = ui.openCategory == category
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(category, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "$playable/$total playable",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = if (playable == 0) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        }
+                        OutlinedButton(onClick = { model.toggleCategory(category) }) {
+                            Text(if (open) "Hide" else "Show")
+                        }
+                        if (open) {
+                            catalog.inCategory(category).forEach { entry ->
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        entry.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        if (entry.playable) "playable" else "codec ${entry.codecKind}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
