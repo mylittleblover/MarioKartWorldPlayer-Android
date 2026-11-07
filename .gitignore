@@ -4,17 +4,25 @@ __pycache__/
 .pytest_cache/
 .venv/
 build/
+app/build/
 *.iml
 .idea/
 local.properties
 .gradle/
 .cxx/
+.kotlin/
 
 # 证据目录只为文档保留，测试真实产物不提交
 evidence/artifacts/
 
 # 生成物含本机绝对路径，不提交
 reports/generated/
+
+# 签名：只提交专门的「测试调试」密钥库（口令公开、仅用于测试安装）
+# 任何正式发布密钥必须单独离线保管，绝不入库
+config/signing/*.jks
+config/signing/*.keystore
+config/signing/release*
 
 # 用户本地媒体绝不进入仓库
 *.bars
