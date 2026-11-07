@@ -1,6 +1,6 @@
 """Bounded reader for Nintendo BARS sound archives.
 
-Verified container layout (measured against real MKW archives; see
+Verified container layout (measured against four real MKW archives; see
 evidence/bootstrap/bars-format.md):
 
     +0   "BARS"
@@ -11,26 +11,37 @@ evidence/bootstrap/bars-format.md):
     +16+4*count  (u32 amta, u32 data)[count]   interleaved offset pairs
     ...  AMTA blocks
 
-Every AMTA block starts with "AMTA" + 0x0500FEFF, carries its declared size at
-+8 and a fixed 0x38 byte header, then:
+Every AMTA block starts with "AMTA" + 0x0500FEFF and carries:
 
-    +56  u32   leading tag (observed 0x51..0x6F, entry-dependent)
-    +60  f32   fade-in  seconds   (range 0.082..0.270 across 540 entries)
-    +64  f32   fade-out seconds   (range 0.013..0.065)
-    +68  f32   fader gain dB      (range -38.3..-20.8)
-    +72  f32   main gain dB       (range -40.4..-22.9)
+    +8   u32   declared block size
+    +16  u32   header length (56 in 635/650 entries, 64 in the other 15)
+    ...  remaining header fields (semantics partly UNKNOWN)
 
-The four-float envelope at +60..+72 is structurally stable across every entry
-sampled, so it is exposed as **L1 metadata inference**. It is NOT verified
-playback behaviour and must not be presented as one.
+The fade/gain envelope sits at `headerLength + 4`, as four float32:
+
+    +0  f32  fade-in  seconds   (0.059..0.270 across all 650 entries)
+    +4  f32  fade-out seconds   (0.013..0.072)
+    +8  f32  fader gain dB      (-38.3..-20.8)
+    +12 f32  main gain dB       (-40.4..-22.9)
+
+Using `headerLength + 4` instead of a hard-coded 60 is what makes the 24
+BgmAll entries parse: they carry headerLength=64 and previously produced
+implausible values. Both encodings are now covered by tests.
+
+IDENTITY WARNING
+----------------
+An asset name is NOT a unique key. Real archives contain distinct entries
+that share one name (e.g. `BGM_Stage_SnowMountain_Outro01` appears in 6
+separate entries with different envelopes). Entries are therefore identified
+by `ordinal` plus `amta_offset`; the name is a descriptor only.
 
 What this module deliberately does NOT do
 -----------------------------------------
-The interior record layout binding marker NAMES to sample positions is not yet
-proven. Earlier research produced per-marker numbers, but the 12-byte stride
-found in the Coaster block does not reproduce those marker IDs, so those values
-are treated as UNVERIFIED here. We expose marker NAMES with an explicit
-MarkerStatus.UNRESOLVED rather than emitting positions we cannot defend.
+The binding between marker names and sample positions is not proven. Twelve
+byte records in the Coaster block do hold the correct positions, but in an
+order that does not match the marker numbers, and the research marker IDs do
+not appear anywhere in the block. Positions are therefore left empty with
+`MarkerStatus.UNRESOLVED` rather than guessed.
 """
 
 from __future__ import annotations
@@ -55,9 +66,9 @@ __all__ = [
 BARS_MAGIC = b"BARS"
 AMTA_MAGIC = b"AMTA"
 
-AMTA_FIXED_HEADER = 0x38
-ENVELOPE_OFFSET = 56
-ENVELOPE_MIN_SIZE = 80
+AMTA_MIN_HEADER = 56
+AMTA_MAX_HEADER = 4096
+ENVELOPE_LEAD = 4
 
 # Plausibility windows derived from every entry of every real archive.
 FADE_IN_RANGE = (0.01, 5.0)
@@ -67,9 +78,16 @@ GAIN_RANGE = (-96.0, 12.0)
 MAX_ENTRIES = 1 << 20
 MAX_DECOMPRESSED = 512 * 1024 * 1024
 
-# Asset names are always BGM_-prefixed and NUL-terminated in the string table.
-_NAME_RE = re.compile(rb"(BGM_[A-Za-z0-9_.]+)\x00")
-# Marker names are NUL-terminated but not BGM_-prefixed.
+# Asset names are NUL-terminated. Three prefix families appear in real
+# archives: BGM_ (music), Dm_ (cutscene), SE_ (sound effect).
+_NAME_RE = re.compile(rb"([A-Za-z][A-Za-z0-9_.]{3,})\x00")
+_PREFIXED = re.compile(r"^(?:BGM|Dm|SE)_")
+# Transition labels that live in the same string table but are not assets.
+_TRANSITION = re.compile(
+    r"^(?:Bridge_To\w+|Outro_To\w+|Outro_ToNext\w*|Full_ToOutro\d+"
+    r"|Pre_Short.*|Pre_Normal|Fast_Pattern\d*)$"
+)
+# Marker names are NUL-terminated and never prefixed.
 _MARKER_RE = re.compile(rb"(Full_ToOutro[0-9]+)\x00")
 
 
@@ -97,9 +115,10 @@ class Marker:
 class Envelope:
     """L1 metadata inference read from the AMTA header.
 
-    These are per-entry fade and gain parameters. Their exact runtime semantics
-    (which Bus/Effect they apply to, whether fader_db is a mix-bus trim) is
-    UNVERIFIED and must be confirmed against behaviour evidence before use.
+    Four numbers per entry. Their runtime semantics -- which bus or object they
+    apply to, whether an RTPC overrides them, whether the units are really
+    seconds and dB -- is UNVERIFIED and must not be presented as original game
+    behaviour until behaviour evidence (L3) exists.
     """
 
     fade_in_seconds: float
@@ -115,6 +134,7 @@ class BarsEntry:
     amta_offset: int
     declared_size: int
     data_offset: int
+    header_length: int = AMTA_MIN_HEADER
     marker_names: tuple[str, ...] = ()
     markers: tuple[Marker, ...] = ()
     marker_status: MarkerStatus = MarkerStatus.NONE
@@ -146,22 +166,38 @@ def _decompress(raw: bytes) -> bytes:
 
 
 def _scan_names(block: bytes) -> tuple[str, ...]:
-    """Recover NUL-terminated asset names from the AMTA string table.
+    """Recover the asset name from the AMTA string table.
 
-    Only `BGM_`-prefixed, NUL-terminated strings are accepted. A blind
-    printable-run scan over-approximates badly (386/540 garbage names on real
-    archives), while this anchored form resolves 610/650 entries exactly.
+    Two-tier rule, both tiers verified against real archives:
+      1. Prefer a `BGM_` / `Dm_` / `SE_` prefixed name  (635/650 entries)
+      2. Otherwise take the first non-transition string containing `_`
+         (15/650 entries: JukeBox covers whose asset is e.g. `sIceWorld_OutroFull`)
+    Transition labels (`Bridge_ToFull`, `Outro_ToNextPre`, `Pre_Short`) and
+    bare binary noise are excluded in tier 2.
     """
-    hits = _NAME_RE.findall(block)
-    names: list[str] = []
-    for raw in hits:
+    hits: list[str] = []
+    for raw in _NAME_RE.findall(block):
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        if text not in names:
-            names.append(text)
-    return tuple(names)
+        hits.append(text)
+
+    for text in hits:
+        if _PREFIXED.match(text):
+            return (text,)
+
+    for text in hits:
+        if _TRANSITION.match(text) or "_" not in text:
+            continue
+        head = text.split("_", 1)[0]
+        # Binary noise in the same table produces stubs like `v_89`; a real
+        # asset always has a multi-letter word before its first underscore.
+        if len(head) < 2 or not head[0].isalpha():
+            continue
+        return (text,)
+
+    return ()
 
 
 def _scan_markers(block: bytes) -> tuple[str, ...]:
@@ -174,14 +210,16 @@ def _scan_markers(block: bytes) -> tuple[str, ...]:
     return tuple(names)
 
 
-def _read_envelope(block: bytes) -> Envelope | None:
-    """Read the +60..+72 float block, or return None when implausible."""
-    if len(block) < ENVELOPE_OFFSET + 20:
+def _read_envelope(block: bytes, header_length: int) -> Envelope | None:
+    """Read the four-float envelope located just past the entry header."""
+    base = header_length + ENVELOPE_LEAD
+    if base + 16 > len(block):
         return None
-    fi = _f32(block, 60)
-    fo = _f32(block, 64)
-    fader = _f32(block, 68)
-    main = _f32(block, 72)
+
+    fi = _f32(block, base)
+    fo = _f32(block, base + 4)
+    fader = _f32(block, base + 8)
+    main = _f32(block, base + 12)
 
     for v in (fi, fo, fader, main):
         if not math.isfinite(v):
@@ -242,27 +280,37 @@ def read_bars(path: str) -> list[BarsEntry]:
     for i in range(count):
         off = amta_off[i]
         declared = _u32(buf, off + 8)
-        if declared < AMTA_FIXED_HEADER or off + declared > len(buf):
+        if declared < AMTA_MIN_HEADER or off + declared > len(buf):
             raise BarsFormatError(
                 f"entry {i} declared size {declared} does not fit at offset {off}"
+            )
+
+        header_length = _u32(buf, off + 16)
+        if not (AMTA_MIN_HEADER <= header_length <= AMTA_MAX_HEADER):
+            raise BarsFormatError(
+                f"entry {i} header length {header_length} out of bounds"
+            )
+        if header_length > declared:
+            raise BarsFormatError(
+                f"entry {i} header length {header_length} exceeds block size {declared}"
             )
 
         block = buf[off:off + declared]
         names = _scan_names(block)
         marker_names = _scan_markers(block)
-        internal = names[0] if names else ""
 
         entries.append(
             BarsEntry(
                 ordinal=i,
-                internal_name=internal,
+                internal_name=names[0] if names else "",
                 amta_offset=off,
                 declared_size=declared,
                 data_offset=data_off[i],
+                header_length=header_length,
                 marker_names=marker_names,
                 markers=(),
                 marker_status=MarkerStatus.UNRESOLVED if marker_names else MarkerStatus.NONE,
-                envelope=_read_envelope(block),
+                envelope=_read_envelope(block, header_length),
                 names=names,
             )
         )

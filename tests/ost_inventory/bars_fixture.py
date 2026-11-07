@@ -36,29 +36,30 @@ def make_amta(
     marker_positions: tuple[int, ...] = (),
     pad: int = 16,
     fade: tuple[float, float, float, float] | None = None,
+    header_length: int = 56,
 ) -> bytes:
     """Build an AMTA block: header + envelope + opaque body + string table.
 
-    `fade` = (fadeInSec, fadeOutSec, faderDb, mainDb). When omitted the envelope
-    area is zeroed, which the reader must treat as "implausible / absent".
+    `fade` = (fadeInSec, fadeOutSec, faderDb, mainDb), placed at
+    `header_length + 4`. Real archives use headerLength 56 or 64.
     """
     strings = [name, *marker_names]
 
-    header_len = 56
-    fade_len = 24
+    if header_length not in (56, 64):
+        raise ValueError("fixture supports header_length 56 or 64")
+    envelope_area = 4 + 16 + 4  # lead tag + 4 floats + trailing pad
     body = b"\x00" * pad
     table = b"".join(s.encode("utf-8") + b"\x00" for s in strings)
 
-    total = header_len + fade_len + len(body) + len(table)
+    total = header_length + envelope_area + len(body) + len(table)
     real = total if size_override is None else size_override
 
-    # Magic is raw bytes; the remaining 52 bytes are thirteen little-endian u32.
-    header = AMTA_MAGIC + struct.pack(
-        "<IIIIIIIIIIIII",
+    # Magic is raw bytes; the remaining (header_length - 4) bytes are u32s.
+    fields: list[int] = [
         AMTA_VERSION_TAG,   # +4
         real,               # +8  declared block size
         0,                  # +12
-        header_len,         # +16 fixed header length (56)
+        header_length,      # +16 fixed header length
         0,                  # +20
         0,                  # +24
         0,                  # +28
@@ -68,16 +69,22 @@ def make_amta(
         7,                  # +44
         0x0201,             # +48
         0x0101,             # +52
-    )
-    assert len(header) == header_len, len(header)
+    ]
+    while len(fields) < (header_length - 4) // 4:
+        fields.append(0)
+    header = AMTA_MAGIC + struct.pack(f"<{len(fields)}I", *fields)
+    assert len(header) == header_length, (len(header), header_length)
 
     if fade is None:
-        envelope = b"\x00" * fade_len
+        envelope = b"\x00" * envelope_area
     else:
         fi, fo, fader_db, main_db = fade
-        envelope = struct.pack("<ffff", fi, fo, fader_db, main_db) + b"\x00" * (fade_len - 16)
-        # +56 is a leading tag; keep it as in real archives.
-        envelope = struct.pack("<I", 111) + struct.pack("<ffff", fi, fo, fader_db, main_db) + b"\x00" * 4
+        envelope = (
+            struct.pack("<I", 111)
+            + struct.pack("<ffff", fi, fo, fader_db, main_db)
+            + b"\x00" * 4
+        )
+        assert len(envelope) == envelope_area
 
     return header + envelope + body + table
 
@@ -127,6 +134,7 @@ def build_simple(
     *,
     markers_per_entry: int = 0,
     fade: tuple[float, float, float, float] | None = None,
+    header_length: int = 56,
 ) -> bytes:
     entries = []
     for name in names:
@@ -139,6 +147,7 @@ def build_simple(
                     marker_names=mk,
                     marker_positions=pos,
                     fade=fade,
+                    header_length=header_length,
                 )
             )
         )

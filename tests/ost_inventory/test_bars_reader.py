@@ -116,6 +116,122 @@ def test_nan_fade_envelope_is_rejected(tmp_path: Path) -> None:
     assert read_bars(str(p))[0].envelope is None
 
 
+def test_envelope_follows_header_length_64(tmp_path: Path) -> None:
+    """24 real BgmAll entries use headerLength=64; the envelope shifts with it."""
+    p = tmp_path / "hdr64.bars"
+    p.write_bytes(
+        build_simple(["BGM_Seq_Alpha"], fade=(0.15, 0.04, -23.5, -27.0), header_length=64)
+    )
+
+    entry = read_bars(str(p))[0]
+
+    assert entry.header_length == 64
+    assert entry.envelope is not None
+    assert entry.envelope.fade_in_seconds == pytest.approx(0.15, abs=1e-4)
+    assert entry.envelope.fade_out_seconds == pytest.approx(0.04, abs=1e-4)
+
+
+def test_header_length_recorded_per_entry(tmp_path: Path) -> None:
+    p = tmp_path / "hdr.bars"
+    p.write_bytes(
+        build(
+            Archive(
+                entries=[
+                    Entry(amta=make_amta(name="BGM_A_B", fade=(0.15, 0.04, -23.5, -27.0))),
+                    Entry(
+                        amta=make_amta(
+                            name="BGM_C_D",
+                            fade=(0.15, 0.04, -23.5, -27.0),
+                            header_length=64,
+                        )
+                    ),
+                ]
+            )
+        )
+    )
+
+    entries = read_bars(str(p))
+
+    assert [e.header_length for e in entries] == [56, 64]
+    assert all(e.envelope is not None for e in entries)
+
+
+def test_same_name_on_two_entries_stay_distinct(tmp_path: Path) -> None:
+    """Real archives repeat one asset name across distinct entries."""
+    p = tmp_path / "dup.bars"
+    p.write_bytes(
+        build(
+            Archive(
+                entries=[
+                    Entry(amta=make_amta(name="BGM_Stage_Same", fade=(0.15, 0.04, -20.0, -27.0))),
+                    Entry(amta=make_amta(name="BGM_Stage_Same", fade=(0.20, 0.05, -30.0, -33.0))),
+                ]
+            )
+        )
+    )
+
+    entries = read_bars(str(p))
+
+    assert len(entries) == 2
+    assert entries[0].internal_name == entries[1].internal_name
+    assert entries[0].ordinal != entries[1].ordinal
+    assert entries[0].amta_offset != entries[1].amta_offset
+    assert entries[0].envelope.fader_db != entries[1].envelope.fader_db
+
+
+def test_dm_and_se_name_families_are_recognised(tmp_path: Path) -> None:
+    """BgmAll carries Dm_ (cutscene) and SE_ (sound effect) assets, not just BGM_."""
+    p = tmp_path / "fam.bars"
+    p.write_bytes(build_simple(["Dm_SV01_OP", "SE_UI_SpecialCupOpen", "BGM_Seq_Title"]))
+
+    names = [e.internal_name for e in read_bars(str(p))]
+
+    assert names == ["Dm_SV01_OP", "SE_UI_SpecialCupOpen", "BGM_Seq_Title"]
+
+
+def test_prefixed_name_wins_over_earlier_noise(tmp_path: Path) -> None:
+    """A BGM_/Dm_/SE_ name is preferred even if binary noise precedes it."""
+    p = tmp_path / "noise.bars"
+    payload = bytearray(build_simple(["__placeholder__"]))
+    count = struct.unpack_from("<I", payload, 12)[0]
+    table = 16 + 4 * count
+    amta_off = struct.unpack_from("<I", payload, table)[0]
+    # Overwrite the fixture name with noise + a prefixed name.
+    name_start = amta_off + 80
+    noise = b"zz9_qq\x00BGM_Stage_Real\x00"
+    payload[name_start:name_start + len(noise)] = noise
+    p.write_bytes(bytes(payload))
+
+    assert read_bars(str(p))[0].internal_name == "BGM_Stage_Real"
+
+
+def test_fallback_name_used_when_no_prefix_present(tmp_path: Path) -> None:
+    """15 real JukeBox covers expose only e.g. `sIceWorld_OutroFull`."""
+    p = tmp_path / "fallback.bars"
+    p.write_bytes(build_simple(["sIceWorld_OutroFull"]))
+
+    assert read_bars(str(p))[0].internal_name == "sIceWorld_OutroFull"
+
+
+def test_transition_labels_are_not_mistaken_for_assets(tmp_path: Path) -> None:
+    """`Bridge_ToFull` / `Outro_ToNextPre` are transition labels, not assets."""
+    p = tmp_path / "trans.bars"
+    p.write_bytes(
+        build(
+            Archive(
+                entries=[
+                    Entry(amta=make_amta(
+                        name="Bridge_ToFull",
+                        fade=(0.15, 0.04, -23.5, -27.0),
+                    ))
+                ]
+            )
+        )
+    )
+
+    assert read_bars(str(p))[0].internal_name == ""
+
+
 # --------------------------------------------------------- rejection cases
 
 def test_bad_magic_rejected(tmp_path: Path) -> None:
