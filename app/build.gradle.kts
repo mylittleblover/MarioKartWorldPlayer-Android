@@ -91,6 +91,9 @@ dependencies {
 
     testImplementation(kotlin("test-junit"))
     testImplementation("junit:junit:4.13.2")
+    // org.json is part of the Android framework but absent from the JVM test
+    // classpath, so this real implementation is needed for unit tests only.
+    testImplementation("org.json:json:20250107")
 
     androidTestImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
