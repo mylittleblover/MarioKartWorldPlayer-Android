@@ -61,6 +61,17 @@ internal class AudioOutput private constructor(
     fun snapshot(): LongArray? = if (closed) null else NativeAudioLibrary.outputSnapshot(handle)
 
     /**
+     * Callback timing packet: `[wire, capacity, captured, total, missed,
+     * clockFailures, clipped, saturated, cpu p50/p95/p99/p999/max, wall p50/p95/
+     * p99/p999/max, xruns, budgetNanos]`.
+     *
+     * Returns null once closed, or when the native side has no packet. Callers pass
+     * this to [TimingDiagnosis.read], which refuses an unexpected wire version.
+     */
+    fun timingSnapshot(): LongArray? =
+        if (closed) null else NativeAudioLibrary.outputTimingSnapshot(handle)
+
+    /**
      * Rebuilds the stream after a device change. Returns false when the device
      * refused; the caller should then stop and reopen rather than render into a
      * dead stream.
