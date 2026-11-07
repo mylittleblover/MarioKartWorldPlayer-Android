@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer.audio
+﻿package com.mylittleblover.mkwplayer.audio
 
 /**
  * The engine operations a playback session needs, as an interface.
@@ -21,6 +21,9 @@ internal interface PlaybackEngine {
     fun pause(): Int
     fun resume(): Int
 
+    /** Seeks the transport to [frame] within the current source. */
+    fun seek(frame: Long): Int
+
     /** Engine snapshot; null once closed. */
     fun snapshot(): LongArray?
 
@@ -37,6 +40,7 @@ internal class NativePlaybackEngine(private val engine: AudioEngine) : PlaybackE
     override fun stop(): Int = engine.stop()
     override fun pause(): Int = engine.pause()
     override fun resume(): Int = engine.resume()
+    override fun seek(frame: Long): Int = engine.seek(frame)
     override fun snapshot(): LongArray? = engine.snapshot()
     override fun close() = engine.close()
 }

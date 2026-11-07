@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer.player
+﻿package com.mylittleblover.mkwplayer.player
 
 import android.app.Application
 import android.net.Uri
@@ -10,6 +10,7 @@ import com.mylittleblover.mkwplayer.audio.BwavHeader
 import com.mylittleblover.mkwplayer.audio.EngineSnapshot
 import com.mylittleblover.mkwplayer.audio.PlaybackController
 import com.mylittleblover.mkwplayer.audio.PlaybackEngine
+import com.mylittleblover.mkwplayer.audio.SeekTarget
 import com.mylittleblover.mkwplayer.audio.TimingDiagnosis
 import com.mylittleblover.mkwplayer.graph.GraphBuilder
 import com.mylittleblover.mkwplayer.graph.GraphProbe
@@ -320,6 +321,14 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
     fun resume() {
         controller?.resume()?.let { publish(it) }
+    }
+
+    /** Seeks by fraction of the track. The UI only knows a 0..1 drag value. */
+    fun seekTo(fraction: Float) {
+        val active = controller ?: return
+        val frame = SeekTarget.fractionToFrame(fraction, totalFrames)
+        if (!SeekTarget.isAddressable(frame, totalFrames)) return
+        publish(active.seek(frame))
     }
 
     fun stop() {

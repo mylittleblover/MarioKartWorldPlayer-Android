@@ -72,6 +72,10 @@ internal class AudioEngine private constructor(private val handle: Long) : Playb
     override fun resume(): Int =
         if (closed) CLOSED else NativeAudioLibrary.command(handle, COMMAND_RESUME, -1, -1, 0.0, -1L)
 
+    /** Transport seek in source frames. Only valid while a source is bound. */
+    override fun seek(frame: Long): Int =
+        if (closed) CLOSED else NativeAudioLibrary.seek(handle, frame)
+
     fun render(frames: Int): FloatArray? {
         if (closed) return null
         val buffer = FloatArray(frames * 2)

@@ -135,6 +135,24 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         return state
     }
 
+    /**
+     * Seeks to [frame].
+     *
+     * Refuses a target outside the track rather than clamping silently: the UI already
+     * clamps through [SeekTarget], so a frame still out of range here means something
+     * upstream is wrong and should be reported, not quietly corrected.
+     */
+    fun seek(frame: Long): State {
+        if (!SeekTarget.isAddressable(frame, totalFrames)) {
+            return fail("Cannot seek to frame $frame of $totalFrames.")
+        }
+        val result = engine.seek(frame)
+        if (result != AudioEngine.STATUS_OK) {
+            return fail("Could not seek: ${describe(result)}")
+        }
+        return poll()
+    }
+
     /** Closes the engine and returns to Idle. Safe after any state, including Failed. */
     fun release(): State {
         engine.close()

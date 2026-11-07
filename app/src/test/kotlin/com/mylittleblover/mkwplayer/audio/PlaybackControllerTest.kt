@@ -40,6 +40,10 @@ class PlaybackControllerTest {
             if (pauseStatus == 0 && transport == 1L) transport = 2
             return pauseStatus
         }
+        override fun seek(frame: Long): Int {
+            this.frame = frame
+            return 0
+        }
         override fun resume(): Int {
             if (resumeStatus == 0 && transport == 2L) transport = 1
             return resumeStatus

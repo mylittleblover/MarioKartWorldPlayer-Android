@@ -1,4 +1,4 @@
-package com.mylittleblover.mkwplayer
+﻿package com.mylittleblover.mkwplayer
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,10 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -87,8 +87,12 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
                         Text(ui.title, style = MaterialTheme.typography.bodyMedium)
                     }
 
-                    LinearProgressIndicator(
-                        progress = { ui.progress },
+                    // Draggable: the bar is the seek control, so tapping or dragging
+                    // it must move the playhead rather than only reporting it.
+                    Slider(
+                        value = ui.progress,
+                        onValueChange = { model.seekTo(it) },
+                        enabled = ui.canStop,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(
