@@ -157,6 +157,16 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
             }
         }
 
+        item {
+            // Reads filesDir/stages. Kept separate from the picker because it is the one path an
+            // automated test can drive, and because some file managers return names the app
+            // cannot resolve.
+            OutlinedButton(
+                onClick = { model.openFlowFromFolder() },
+                enabled = !ui.busy,
+            ) { Text("Scan the stages folder") }
+        }
+
         ui.flow?.let { flow ->
             item {
                 Card(Modifier.fillMaxWidth()) {
