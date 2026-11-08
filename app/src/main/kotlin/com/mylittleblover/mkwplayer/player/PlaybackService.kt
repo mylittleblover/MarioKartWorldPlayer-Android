@@ -1,4 +1,4 @@
-﻿package com.mylittleblover.mkwplayer.player
+package com.mylittleblover.mkwplayer.player
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -36,26 +36,99 @@ class PlaybackService : Service() {
     private lateinit var session: PlaybackSession
     private var mediaSession: MediaSessionCompat? = null
     private lateinit var manager: NotificationManager
+    private lateinit var focus: AudioFocusManager
+
+    /** True when focus itself paused the transport, so a gain may resume it. */
+    private var pausedByFocus = false
+
+    /**
+     * Keeps the session state fresh while the screen is away.
+     *
+     * The view model polls only while the activity is alive. Without this, the session's
+     * state stops updating the moment the user leaves the app: the notification shows a
+     * stale position, and flags read later (for example `playing` during a focus decision)
+     * describe a transport that has moved on. The engine is the authority; the service has
+     * to ask it.
+     *
+     * Runs on the main looper because every session method expects the control thread.
+     */
+    private val pollTicker = object : Runnable {
+        override fun run() {
+            if (!session.state.value.active) {
+                polling = false
+                return
+            }
+            session.poll()
+            refresh()
+            handler.postDelayed(this, POLL_INTERVAL_MS)
+        }
+    }
+    private var polling = false
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun startPolling() {
+        if (polling) return
+        polling = true
+        handler.postDelayed(pollTicker, POLL_INTERVAL_MS)
+    }
+
+    private fun stopPolling() {
+        polling = false
+        handler.removeCallbacks(pollTicker)
+    }
+
+    /**
+     * Receives the route-change broadcast.
+     *
+     * Unplugging headphones must stop audible output; without this the music keeps playing
+     * through the loudspeaker. Registered while the service exists and unregistered in
+     * `onDestroy`, so it never outlives the playback it protects.
+     */
+    private val noisyReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != AudioFocusManager.ACTION_AUDIO_BECOMING_NOISY) return
+            focus.notifyRouteLost()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         session = PlaybackHolder.get()
         manager = getSystemService(NotificationManager::class.java)
         createChannel()
+
+        focus = AudioFocusManager(this) { event -> handleFocusEvent(event) }
+
+        registerReceiver(
+            noisyReceiver,
+            android.content.IntentFilter(AudioFocusManager.ACTION_AUDIO_BECOMING_NOISY),
+            // EXPORTED, deliberately. A route change is a system broadcast, so it comes from
+            // outside this process: registering NOT_EXPORTED makes the receiver unreachable
+            // for the very sender it exists for, and unplugging headphones would keep
+            // playing through the loudspeaker. It is safe here because the action is a
+            // protected broadcast -- only the system can send it, other apps cannot.
+            Context.RECEIVER_EXPORTED,
+        )
+
         mediaSession = MediaSessionCompat(this, MEDIA_SESSION_TAG).apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
+                    if (!requestFocusForPlayback()) return
                     session.resume()
                     refresh()
                 }
 
                 override fun onPause() {
                     session.pause()
+                    // A user pause is not a focus pause: focus must not resume it later.
+                    pausedByFocus = false
                     refresh()
                 }
 
                 override fun onStop() {
                     session.stop()
+                    pausedByFocus = false
+                    focus.abandon()
                     refresh()
                     stopSelf()
                 }
@@ -69,18 +142,78 @@ class PlaybackService : Service() {
         }
     }
 
+    /**
+     * Applies a focus action.
+     *
+     * The policy lives in [FocusPolicy]; this only performs the result.
+     */
+    private fun handleFocusEvent(event: FocusPolicy.Event) {
+        val action = FocusPolicy.decide(
+            event = event,
+            playing = session.state.value.playing,
+            pausedByFocus = pausedByFocus,
+        )
+        when (action) {
+            FocusPolicy.Action.NONE -> Unit
+
+            FocusPolicy.Action.PAUSE_RESUMABLE -> {
+                session.pause()
+                pausedByFocus = true
+                refresh()
+            }
+
+            FocusPolicy.Action.PAUSE_FINAL -> {
+                session.pause()
+                pausedByFocus = false
+                refresh()
+            }
+
+            FocusPolicy.Action.RESUME -> {
+                pausedByFocus = false
+                if (focus.hasFocus) session.resume()
+                refresh()
+            }
+        }
+    }
+
+    /**
+     * Requests focus before starting playback.
+     *
+     * Returns false when the system refuses. Callers must treat that as "do not start":
+     * starting anyway is exactly how two apps end up playing at once.
+     */
+    private fun requestFocusForPlayback(): Boolean {
+        if (focus.hasFocus) return true
+        pausedByFocus = false
+        return focus.request()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Start foreground before anything else: the platform requires the notification
         // to exist promptly once a media service is started.
         startForeground(NOTIFICATION_ID, buildNotification())
 
         when (intent?.action) {
-            ACTION_PAUSE -> session.pause()
-            ACTION_RESUME -> session.resume()
+            ACTION_PAUSE -> {
+                session.pause()
+                pausedByFocus = false
+            }
+            ACTION_RESUME -> {
+                if (requestFocusForPlayback()) session.resume()
+            }
             ACTION_STOP -> {
                 session.stop()
+                pausedByFocus = false
+                focus.abandon()
                 stopSelf()
                 return START_NOT_STICKY
+            }
+            else -> {
+                // Started because a track began. If focus is refused the transport must not
+                // keep playing into another app's audio.
+                if (session.state.value.playing && !requestFocusForPlayback()) {
+                    session.pause()
+                }
             }
         }
 
@@ -91,6 +224,14 @@ class PlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(noisyReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Not registered, or already gone. Nothing to undo.
+        }
+        focus.abandon()
+        pausedByFocus = false
+        stopPolling()
         mediaSession?.isActive = false
         mediaSession?.release()
         mediaSession = null
@@ -104,6 +245,8 @@ class PlaybackService : Service() {
         val state = session.state.value
         updatePlaybackState(state)
         manager.notify(NOTIFICATION_ID, buildNotification())
+
+        if (state.active) startPolling() else stopPolling()
 
         if (!state.active) {
             // REMOVE, not DETACH: detaching leaves the notification behind after the
@@ -218,6 +361,9 @@ class PlaybackService : Service() {
         const val NOTIFICATION_ID = 1
         const val MEDIA_SESSION_TAG = "mkwplayer"
 
+        /** 500 ms: smooth enough for a progress bar, cheap enough to run indefinitely. */
+        const val POLL_INTERVAL_MS = 500L
+
         const val ACTION_PAUSE = "com.mylittleblover.mkwplayer.PAUSE"
         const val ACTION_RESUME = "com.mylittleblover.mkwplayer.RESUME"
         const val ACTION_STOP = "com.mylittleblover.mkwplayer.STOP"
@@ -235,6 +381,10 @@ class PlaybackService : Service() {
          */
         fun start(context: Context): Boolean {
             if (!PlaybackHolder.get().state.value.active) return false
+            // A start cancels a stop that has not fired yet: the user resumed.
+            pendingStop?.let { stopHandler.removeCallbacks(it) }
+            pendingStop = null
+
             val intent = Intent(context, PlaybackService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -244,8 +394,30 @@ class PlaybackService : Service() {
             return true
         }
 
+        /**
+         * Stops the service after the foreground handshake has had time to finish.
+         *
+         * Calling `stopService` while `startForegroundService`'s handshake is still pending
+         * brings the service down before `startForeground` runs, and the platform then kills
+         * the process with `ForegroundServiceDidNotStartInTimeException`. That is reachable
+         * from the UI -- start a track, press Stop immediately -- and it is what made the
+         * device suite crash rather than fail.
+         */
         fun stop(context: Context) {
-            context.stopService(Intent(context, PlaybackService::class.java))
+            val app = context.applicationContext
+            pendingStop?.let { stopHandler.removeCallbacks(it) }
+            val runnable = Runnable {
+                pendingStop = null
+                app.stopService(Intent(app, PlaybackService::class.java))
+            }
+            pendingStop = runnable
+            stopHandler.postDelayed(runnable, STOP_GRACE_MS)
         }
+
+        /** Delay long enough for one foreground handshake, short enough to feel immediate. */
+        private const val STOP_GRACE_MS = 400L
+
+        private val stopHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        private var pendingStop: Runnable? = null
     }
 }
