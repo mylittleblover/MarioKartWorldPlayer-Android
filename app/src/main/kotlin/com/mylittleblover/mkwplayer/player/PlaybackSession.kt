@@ -1,7 +1,8 @@
-﻿package com.mylittleblover.mkwplayer.player
+package com.mylittleblover.mkwplayer.player
 
 import com.mylittleblover.mkwplayer.audio.AudioEngine
 import com.mylittleblover.mkwplayer.audio.AudioOutput
+import com.mylittleblover.mkwplayer.audio.AudioStatusText
 import com.mylittleblover.mkwplayer.audio.PlaybackController
 import com.mylittleblover.mkwplayer.audio.PlaybackEngine
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +71,66 @@ internal class PlaybackSession(
      * with no audio device never opens one at all.
      */
     fun timingSnapshot(): LongArray? = output?.timingSnapshot()
+
+    /**
+     * Loads a multi-segment flow and starts its first section.
+     *
+     * The packet already describes every section, so this differs from [load] mainly in
+     * binding: a flow has one asset per part and each must reach its own slot. Binding by the
+     * compiler's own asset order means the position cannot silently disagree with the graph.
+     *
+     * @param startSegment segment to play first; the flow's entry point, chosen by the caller
+     */
+    fun loadFlow(
+        title: String,
+        packet: ByteArray,
+        assets: List<Pair<String, ByteArray>>,
+        frames: Long,
+        startSegment: Int,
+    ): State {
+        var current = engine
+        if (current == null) {
+            current = createEngine() ?: return fail("Out of memory creating the audio engine.")
+            engine = current
+            controller = PlaybackController(current as PlaybackEngine)
+        }
+        val active = controller ?: return fail("The audio engine is not initialised.")
+
+        val loaded = active.loadGraphOnly(packet)
+        if (loaded is PlaybackController.State.Failed) return fail(loaded.reason)
+
+        // One bind per part. A flow that bound only its first asset would play the prelude and
+        // then fail silently at the first transition.
+        assets.forEachIndexed { index, (name, bytes) ->
+            val status = current.bindBwav(index, bytes, name)
+            if (status != AudioEngine.STATUS_OK) {
+                return fail("Could not bind '$name': ${AudioStatusText.engineHint(status) ?: AudioStatusText.engine(status)}")
+            }
+        }
+
+        val started = active.playSegment(startSegment)
+        if (started is PlaybackController.State.Failed) return fail(started.reason)
+
+        active.setDuration(frames)
+        if (output == null) {
+            output = openOutput(current.nativeHandle(), current.sampleRate)
+        }
+
+        val published = publish(started, title, frames, current.sampleRate)
+        _state.value = published.copy(loaded = true)
+        return _state.value
+    }
+
+    /**
+     * Plays a different section of the currently loaded flow.
+     *
+     * Goes through the engine's own request path, so a segment that has a transition rule is
+     * reached by that transition rather than by a cut. That is the whole point of a flow.
+     */
+    fun playSegment(segment: Int): State {
+        val active = controller ?: return _state.value
+        return publishState(active.playSegment(segment))
+    }
 
     /**
      * Prepares and starts one track.

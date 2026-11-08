@@ -97,6 +97,38 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
     }
 
     /**
+     * Loads a graph without starting anything.
+     *
+     * A multi-segment flow binds several assets before playing, and binding is refused while the
+     * transport is running. So the flow path loads the packet, binds, then plays: separate steps
+     * rather than the single bundled sequence [load] performs.
+     */
+    fun loadGraphOnly(packet: ByteArray): State {
+        val status = engine.loadGraph(packet)
+        if (status != AudioEngine.STATUS_OK) {
+            return fail("Could not load the flow: ${describe(status)}")
+        }
+        state = State.Ready(title, totalFrames = 0, sampleRate = engine.sampleRate)
+        sampleRate = engine.sampleRate
+        return state
+    }
+
+    /**
+     * Requests a segment by index.
+     *
+     * The index is a graph node, not a position in a list: for a flow it names one section, and
+     * the engine decides whether the move is a cut or a transition based on the rules in the
+     * graph.
+     */
+    fun playSegment(segment: Int): State {
+        val status = engine.play(segment)
+        if (status != AudioEngine.STATUS_OK) {
+            return fail("Could not play section $segment: ${describe(status)}")
+        }
+        return poll()
+    }
+
+    /**
      * Polls the engine and advances the visible state.
      *
      * Returns the current state. Call on the control thread while audio runs; the
