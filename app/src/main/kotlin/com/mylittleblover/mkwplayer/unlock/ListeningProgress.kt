@@ -40,6 +40,9 @@ internal class ListeningProgress(
     /** Latest state, for display. */
     val snapshot: SpecialCupUnlock.UnlockState get() = current
 
+    /** How many stages the cup requires, so callers do not have to re-derive it. */
+    val eligibleCount: Int get() = unlock.eligibleCount
+
     /**
      * Starts crediting [stage].
      *
@@ -94,6 +97,17 @@ internal class ListeningProgress(
             before.ceremony != SpecialCupUnlock.CeremonyPhase.PENDING
         current = progress.state
         return Outcome(current, progress.newlyEntitled, offeredNow)
+    }
+
+    /**
+     * Adopts a restored state.
+     *
+     * Used when progress comes back from disk and there is no transport yet. Kept separate from
+     * [begin] because a restored state has no cursor, and inventing one would let the first sample
+     * measure a gap the user never heard.
+     */
+    fun seed(state: SpecialCupUnlock.UnlockState) {
+        current = state.copy(lastReportedFrames = -1)
     }
 
     /** Note that the transport stopped. Any later resume is a new run, not a continuation. */

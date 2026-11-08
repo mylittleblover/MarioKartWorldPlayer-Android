@@ -124,6 +124,9 @@ internal class SpecialCupUnlock(
     /** True when every eligible stage is complete but the ceremony has not been entered. */
     val isPending: Boolean get() = state.ceremony == CeremonyPhase.PENDING
 
+    /** How many stages the cup requires. Exposed so the screen can count without guessing. */
+    val eligibleCount: Int get() = eligibleStages.size
+
     /** Stage prefixes that are still outstanding. */
     fun remainingStages(): Set<String> = eligibleStages - state.completedStages
 
