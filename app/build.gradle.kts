@@ -12,10 +12,10 @@ android {
         applicationId = "com.mylittleblover.mkwplayer"
         minSdk = 26
         targetSdk = 35
-        // Bumped for the alpha02 build: the Special Cup, saved versions, routes, cue data and the
-        // design tokens all landed since alpha01, and a listener needs to tell the two apart.
-        versionCode = 2
-        versionName = "0.1.0-alpha02"
+        // Bumped for the alpha03 build: a stage can now be performed end to end with one button, the
+        // measured bridge handovers reach the engine, and every stage has its own map icon.
+        versionCode = 3
+        versionName = "0.1.0-alpha03"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
