@@ -321,6 +321,16 @@ def build(
         print(f"no readable .bwav files under {romfs}", file=sys.stderr)
         return 1
 
+    # Duplicates are collapsed by digest, because the format identifies an asset by its bytes and a ZIP cannot
+    # hold two members with one name. Eight files in the catalogue are byte-identical to another file under a
+    # different name -- `BGM_Mission_BooLake.bwav` and `BGM_Stage_Cinema_SFC.bwav` are the same audio -- and
+    # writing both produced a ZIP with duplicate entries, which every strict reader rejects.
+    unique: dict[str, Bwav] = {}
+    for asset in files:
+        unique.setdefault(asset.digest, asset)
+    duplicates = len(files) - len(unique)
+    files = list(unique.values())
+
     tracks = build_tracks(files)
     by_digest = {asset.digest: asset for asset in files}
 
@@ -456,6 +466,8 @@ def build(
     scope_size = len(manifest["unlock"]["stages"])
     frozen = "frozen" if manifest["unlock"]["frozen"] else "NOT frozen"
     print(f"unlock    : {scope_size} stage(s), {frozen}")
+    if duplicates:
+        print(f"duplicates: {duplicates} file(s) were byte-identical to another and were stored once")
     if skipped:
         print(f"skipped   : {len(skipped)} unreadable file(s), first: {skipped[0]}")
     return 0
