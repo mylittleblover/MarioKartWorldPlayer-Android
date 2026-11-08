@@ -19,6 +19,10 @@ import com.mylittleblover.mkwplayer.library.StageFlow
 import com.mylittleblover.mkwplayer.library.StageFlowDiscovery
 import com.mylittleblover.mkwplayer.library.FolderAudioSource
 import com.mylittleblover.mkwplayer.library.StageFlowReader
+import com.mylittleblover.mkwplayer.unlock.ListeningProgress
+import com.mylittleblover.mkwplayer.unlock.SpecialCupUnlock
+import com.mylittleblover.mkwplayer.unlock.SpecialCupRules
+import com.mylittleblover.mkwplayer.unlock.UnlockStore
 import com.mylittleblover.mkwplayer.library.Playability
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -77,6 +81,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val needsNotificationPermission: Boolean = false,
         /** The loaded multi-part flow, if one is open. Null in single-track mode. */
         val flow: FlowUi? = null,
+        /** Special Cup progress and the offer, or null before a library exists. */
+        val unlock: UnlockUi? = null,
     )
 
     /**
@@ -145,6 +151,41 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
     private val store = LibraryStore(java.io.File(application.filesDir, "library.json"))
 
+    /** Special Cup progress, persisted separately from the library so a corrupt one cannot lose both. */
+    private val unlockStore = UnlockStore(java.io.File(application.filesDir, SPECIAL_CUP_FILE))
+
+    /** The cup's rules and progress, or null until there is a library to derive eligibility from. */
+    private var cup: SpecialCupUnlock? = null
+
+    /** Bridges the transport to the rules; null in the same condition as [cup]. */
+    private var listening: ListeningProgress? = null
+
+    /**
+     * Feeds a transport sample to the cup.
+     *
+     * Only playing samples count, and only for the stage the sample belongs to. The result is
+     * persisted immediately: losing thirty seconds of listening to a crash would be indistinguishable
+     * from the rule not working.
+     */
+    private fun creditListening(state: PlaybackSession.State) {
+        val bridge = listening ?: return
+        val stage = state.title.takeIf { it.isNotEmpty() } ?: return
+        val prefix = StageFlowDiscovery.prefixOf(stage)
+
+        if (bridge.snapshot.currentStage != prefix) {
+            bridge.begin(prefix, state.totalFrames, state.sampleRate.coerceAtLeast(48_000))
+        }
+        if (!state.playing && !state.paused) bridge.stopped()
+
+        val outcome = bridge.sample(state.positionFrames, state.playing)
+        val offered = outcome.offeredNow || _ui.value.unlock?.offered == true
+
+        if (outcome.ignoredReason == null) {
+            _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered))
+            unlockStore.save(outcome.state)?.let { _ui.value = _ui.value.copy(detail = it) }
+        }
+    }
+
     init {
         // The catalog is bundled data, so it is read once rather than re-parsed on every
         // recomposition. A missing or broken asset leaves it null and the UI omits the
@@ -179,6 +220,95 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             )
         }
         loaded.problem?.let { _ui.value = _ui.value.copy(detail = it) }
+
+        // The cup's eligibility depends on what the user actually has, so it is derived after the
+        // library is restored. Reading the stored progress first means the offer survives a restart.
+        establishCup(loaded.tracks)
+    }
+
+    /**
+     * Builds the cup from the library and restores its progress.
+     *
+     * Eligibility is derived from file names rather than stored, because the rule is "every stage you
+     * have" -- a stored list would go stale the moment a stage was added, and the cup would then be
+     * earnable without hearing it.
+     */
+    private fun establishCup(tracks: List<LibraryStore.TrackRow> = emptyList()) {
+        val names = _ui.value.tracks.map { it.name }.ifEmpty { tracks.map { it.title } }
+        val eligible = SpecialCupRules.eligibleStages(names)
+        if (eligible.isEmpty()) {
+            cup = null
+            listening = null
+            _ui.value = _ui.value.copy(unlock = null)
+            return
+        }
+
+        val restored = unlockStore.load()
+        restored.problem?.let { _ui.value = _ui.value.copy(detail = it) }
+
+        val rules = SpecialCupUnlock(eligible).let { fresh ->
+            restored.state?.let { fresh.withState(it) } ?: fresh
+        }
+        cup = rules
+
+        val bridge = ListeningProgress(rules)
+        listening = bridge
+        // The offer is only claimed if the stored phase says the user was already offered it, so a
+        // restart does not re-notify.
+        val offered = restored.state?.ceremony == SpecialCupUnlock.CeremonyPhase.PENDING ||
+            restored.state?.ceremony == SpecialCupUnlock.CeremonyPhase.PLAYING ||
+            restored.state?.ceremony == SpecialCupUnlock.CeremonyPhase.COMPLETED
+        _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered))
+    }
+
+    /** Enters the ceremony. Fails loudly rather than pretending when the cup is not open. */
+    fun enterCeremony(): Boolean {
+        val rules = cup ?: return false
+        val bridge = listening ?: return false
+        if (bridge.snapshot.ceremony == SpecialCupUnlock.CeremonyPhase.PLAYING) return false
+        val next = rules.withState(bridge.snapshot).beginCeremony()
+        bridge.seed(next)
+        unlockStore.save(next)?.let { _ui.value = _ui.value.copy(detail = it) }
+        _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered = true))
+        return true
+    }
+
+    /** Leaves the ceremony early. The entitlement is preserved by the rules. */
+    fun leaveCeremony() {
+        val rules = cup ?: return
+        val bridge = listening ?: return
+        if (bridge.snapshot.ceremony != SpecialCupUnlock.CeremonyPhase.PLAYING) return
+        val next = rules.withState(bridge.snapshot).leaveCeremonyEarly()
+        bridge.seed(next)
+        unlockStore.save(next)?.let { _ui.value = _ui.value.copy(detail = it) }
+        _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered = true))
+    }
+
+    /**
+     * Reports that the ceremony audio reached its natural end.
+     *
+     * Called by whoever owns the ceremony track's completion, not by a timer: a UI countdown would be
+     * the fake-completion the specification forbids.
+     */
+    fun ceremonyReachedEnd() {
+        val rules = cup ?: return
+        val bridge = listening ?: return
+        if (bridge.snapshot.ceremony != SpecialCupUnlock.CeremonyPhase.PLAYING) return
+        val next = rules.withState(bridge.snapshot).finishCeremony(reachedEnd = true)
+        bridge.seed(next)
+        unlockStore.save(next)?.let { _ui.value = _ui.value.copy(detail = it) }
+        _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered = true))
+    }
+
+    /** Consumes the first-time congratulations, if it is owed. */
+    fun dismissCongratulations() {
+        val rules = cup ?: return
+        val bridge = listening ?: return
+        if (!rules.withState(bridge.snapshot).owesCongratulations) return
+        val next = rules.withState(bridge.snapshot).markCongratulated()
+        bridge.seed(next)
+        unlockStore.save(next)?.let { _ui.value = _ui.value.copy(detail = it) }
+        _ui.value = _ui.value.copy(unlock = UnlockUi.from(bridge, offered = true))
     }
 
     /**
@@ -647,6 +777,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     }
 
     private fun publish(state: PlaybackSession.State) {
+        creditListening(state)
         val progress = if (state.totalFrames > 0) {
             (state.positionFrames.toDouble() / state.totalFrames).coerceIn(0.0, 1.0).toFloat()
         } else {
@@ -727,5 +858,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
         /** Folder inside app storage that [openFlowFromFolder] reads. */
         const val FLOW_FOLDER = "stages"
+
+        /** Where Special Cup progress lives, beside the library rather than inside it. */
+        const val SPECIAL_CUP_FILE = "special-cup.json"
     }
 }
