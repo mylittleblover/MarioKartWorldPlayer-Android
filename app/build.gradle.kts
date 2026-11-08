@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     id("com.android.application")
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -12,8 +12,10 @@ android {
         applicationId = "com.mylittleblover.mkwplayer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-alpha01"
+        // Bumped for the alpha02 build: the Special Cup, saved versions, routes, cue data and the
+        // design tokens all landed since alpha01, and a listener needs to tell the two apart.
+        versionCode = 2
+        versionName = "0.1.0-alpha02"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
