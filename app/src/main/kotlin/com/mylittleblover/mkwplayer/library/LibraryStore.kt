@@ -31,14 +31,44 @@ internal class LibraryStore(private val file: File) {
         val reason: String? = null,
     )
 
-    data class Loaded(val rows: List<Row>, val problem: String? = null)
+    /**
+     * One persisted logical track.
+     *
+     * References assets by digest, so a renamed or moved file still resolves. A flow's parts are
+     * listed so a missing part can be reported rather than silently skipped.
+     */
+    data class TrackRow(
+        val id: String,
+        val title: String,
+        val kind: String,
+        val primary: String,
+        val assets: List<String>,
+        val frames: Long,
+        val sampleRate: Int,
+        val isFlow: Boolean,
+    )
+
+    data class Loaded(
+        val rows: List<Row>,
+        val tracks: List<TrackRow> = emptyList(),
+        val problem: String? = null,
+    )
 
     companion object {
-        /** Bumped only when a field's meaning changes, not when one is added. */
-        const val SCHEMA_VERSION = 1
+        /**
+         * Bumped only when a field's meaning changes, not when one is added.
+         *
+         * v2 added the `tracks` array. A v1 file has no tracks and still loads: its rows become
+         * single-file tracks on read, so an upgrade does not lose the user's list.
+         */
+        const val SCHEMA_VERSION = 2
 
         private const val ROOT_VERSION = "schemaVersion"
         private const val ROWS = "rows"
+        private const val TRACKS = "tracks"
+
+        /** Version this reader still accepts, upgraded in memory. */
+        const val LEGACY_SCHEMA_VERSION = 1
     }
 
     /**
@@ -52,7 +82,7 @@ internal class LibraryStore(private val file: File) {
         val text = try {
             file.readText()
         } catch (e: Exception) {
-            return Loaded(emptyList(), "The library file could not be read: ${e.message}")
+            return Loaded(emptyList(), problem = "The library file could not be read: ${e.message}")
         }
         if (text.isBlank()) return Loaded(emptyList())
 
@@ -60,15 +90,15 @@ internal class LibraryStore(private val file: File) {
             JSONObject(text)
         } catch (e: Exception) {
             quarantine()
-            return Loaded(emptyList(), "The library file was unreadable and has been set aside.")
+            return Loaded(emptyList(), problem = "The library file was unreadable and has been set aside.")
         }
 
         val version = root.optInt(ROOT_VERSION, 0)
-        if (version != SCHEMA_VERSION) {
+        if (version != SCHEMA_VERSION && version != LEGACY_SCHEMA_VERSION) {
             quarantine()
             return Loaded(
                 emptyList(),
-                "The library was written by a different version ($version) and has been set aside.",
+                problem = "The library was written by a different version ($version) and has been set aside.",
             )
         }
 
@@ -92,10 +122,61 @@ internal class LibraryStore(private val file: File) {
             )
         }
 
+        // v1 files carry no tracks. Rather than dropping their rows or refusing the file, each row
+        // becomes a single-file track: the user's list survives an upgrade, and the first save
+        // writes the new shape.
+        val tracks = if (version >= SCHEMA_VERSION) {
+            readTracks(root)
+        } else {
+            rows.map { row ->
+                TrackRow(
+                    id = "single:${row.key.take(32)}",
+                    title = row.name,
+                    kind = "UNCLASSIFIED",
+                    primary = row.key,
+                    assets = listOf(row.key),
+                    frames = row.frames,
+                    sampleRate = row.sampleRate,
+                    isFlow = false,
+                )
+            }
+        }
+
         return Loaded(
             rows = rows,
+            tracks = tracks,
             problem = if (skipped > 0) "$skipped library entries were unreadable." else null,
         )
+    }
+
+    /** Reads the v2 track array, skipping entries that cannot be used. */
+    private fun readTracks(root: JSONObject): List<TrackRow> {
+        val array = root.optJSONArray(TRACKS) ?: return emptyList()
+        val tracks = ArrayList<TrackRow>(array.length())
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val assets = item.optJSONArray("assets") ?: continue
+            val assetList = ArrayList<String>(assets.length())
+            for (position in 0 until assets.length()) {
+                assets.optString(position).takeIf { it.isNotEmpty() }?.let { assetList += it }
+            }
+            val primary = item.optString("primary")
+            if (primary.isEmpty() || assetList.isEmpty() || primary !in assetList) continue
+            val id = item.optString("id")
+            if (id.isEmpty()) continue
+
+            tracks += TrackRow(
+                id = id,
+                title = item.optString("title").ifEmpty { id },
+                kind = item.optString("kind").ifEmpty { "UNCLASSIFIED" },
+                primary = primary,
+                assets = assetList,
+                frames = item.optLong("frames", 0),
+                sampleRate = item.optInt("sampleRate", 0),
+                isFlow = item.optBoolean("isFlow", assetList.size > 1),
+            )
+        }
+        return tracks
     }
 
     /**
@@ -104,7 +185,7 @@ internal class LibraryStore(private val file: File) {
      * Returns null on success or a displayable problem. Storage failing must not crash
      * playback, so the caller keeps working with the in-memory list either way.
      */
-    fun save(rows: List<Row>): String? {
+    fun save(rows: List<Row>, tracks: List<TrackRow> = emptyList()): String? {
         val root = JSONObject()
         try {
             root.put(ROOT_VERSION, SCHEMA_VERSION)
@@ -120,6 +201,21 @@ internal class LibraryStore(private val file: File) {
                 array.put(item)
             }
             root.put(ROWS, array)
+
+            val trackArray = org.json.JSONArray()
+            tracks.forEach { track ->
+                val item = JSONObject()
+                item.put("id", track.id)
+                item.put("title", track.title)
+                item.put("kind", track.kind)
+                item.put("primary", track.primary)
+                item.put("assets", org.json.JSONArray(track.assets))
+                item.put("frames", track.frames)
+                item.put("sampleRate", track.sampleRate)
+                item.put("isFlow", track.isFlow)
+                trackArray.put(item)
+            }
+            root.put(TRACKS, trackArray)
         } catch (e: Exception) {
             return "The library could not be serialised: ${e.message}"
         }
