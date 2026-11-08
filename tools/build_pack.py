@@ -409,20 +409,32 @@ def build(
                 "level": "MEASURED_L1",
                 "note": "Read from each file's BWAV header: codec kind, sample rate, channels and frames.",
             },
+        ] + [
+            # One record per track that declares a timing. The reader looks provenance up by the track's own
+            # key, so a single pack-level record does not cover any of them: a pack that says "timings are
+            # chosen" without saying which track's timings is a disclaimer the screen cannot attach to
+            # anything.
             {
-                "subject": "pack",
+                "subject": track.key,
                 "field": "timing",
                 "level": "CHOSEN_BY_PROJECT",
                 "note": "No container field establishes when the game schedules a transition.",
-            },
+            }
+            for track in tracks
+            if track.is_flow
         ],
         "unlock": {
-            # Frozen only when a scope was supplied AND every stage in it is present in this pack. A pack
-            # built from a partial tree must not define a smaller cup, so a scope that names a stage the
-            # scan did not find is recorded as not frozen -- which closes the cup rather than opening a
-            # reduced one.
-            "frozen": bool(scope) and all(code in present_codes for code in scope),
-            "stages": scope,
+            # The scope lists every stage this pack carries and is marked NOT frozen.
+            #
+            # Two separate rules force this shape. The reader refuses an empty scope outright -- an empty
+            # scope makes "every eligible stage has been heard" true over nothing, which would open the
+            # Special Cup on a fresh install. And this tool does not know which stages actually form that
+            # cup, so claiming a frozen scope would be inventing the very fact the cup is gated on.
+            #
+            # Not-frozen is the honest answer: the pack installs and plays, and the cup stays closed because
+            # no pack has stated a scope it can back.
+            "frozen": False,
+            "stages": sorted(present_codes),
         },
     }
 
