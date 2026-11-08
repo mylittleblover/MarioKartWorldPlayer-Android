@@ -25,6 +25,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,8 @@ class MainActivity : ComponentActivity() {
 private fun PlayerScreen(modifier: Modifier = Modifier) {
     val model: PlayerViewModel = viewModel()
     val ui by model.ui.collectAsStateWithLifecycle()
+    val catalogState by (model.catalogState?.collectAsStateWithLifecycle()
+        ?: remember { androidx.compose.runtime.mutableStateOf(null) })
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -312,6 +315,27 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
         ui.catalog?.let { catalog ->
             item {
                 Text("Catalog", style = MaterialTheme.typography.titleMedium)
+            }
+            catalogState?.let { state ->
+                item {
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                if (state.available) state.summary else "No catalogue bundled",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            // The coverage notice is the one line that must never be dropped: without
+                            // it these rows read as the complete soundtrack.
+                            state.coverageNotice?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
             }
             item {
                 Card(Modifier.fillMaxWidth()) {
