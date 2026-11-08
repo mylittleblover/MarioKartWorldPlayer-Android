@@ -48,7 +48,7 @@ import com.mylittleblover.mkwplayer.ui.Tokens
 private val PIN_DOT = 28.dp
 
 /** The map frame's proportions. The world map has no established aspect ratio; this is layout only. */
-private const val MAP_ASPECT = 1.6f
+private const val MAP_FRAME_ASPECT = 1.6f
 
 /**
  * The world map.
@@ -118,7 +118,7 @@ internal fun MapScreen(
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(MAP_ASPECT)
+                    .aspectRatio(MAP_FRAME_ASPECT)
                     .clip(RoundedCornerShape(Tokens.Radius.md))
                     .background(Tokens.Palette.navy700)
                     .border(

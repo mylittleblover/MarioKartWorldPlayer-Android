@@ -12,10 +12,10 @@ android {
         applicationId = "com.mylittleblover.mkwplayer"
         minSdk = 26
         targetSdk = 35
-        // Bumped for alpha04: the app is navigable, the console drives a whole stage with real events, and
-        // codec 2 (chunked Opus) decodes through the libopus that was already linked.
-        versionCode = 4
-        versionName = "0.1.0-alpha04"
+        // Bumped for alpha05: pack import is reachable from the library and the console, and the world map is
+        // full screen, draggable and zoomable.
+        versionCode = 5
+        versionName = "0.1.0-alpha05"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -24,6 +24,12 @@ import com.mylittleblover.mkwplayer.unlock.SpecialCupUnlock
 import com.mylittleblover.mkwplayer.unlock.SpecialCupRules
 import com.mylittleblover.mkwplayer.unlock.UnlockStore
 import com.mylittleblover.mkwplayer.library.Playability
+import com.mylittleblover.mkwplayer.library.PackPicker
+import com.mylittleblover.mkwplayer.pack.PackCoverage
+import com.mylittleblover.mkwplayer.pack.PackInstaller
+import com.mylittleblover.mkwplayer.pack.PackManifest
+import com.mylittleblover.mkwplayer.pack.PackPlayback
+import com.mylittleblover.mkwplayer.pack.PackRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -222,6 +228,12 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     private var flow: StageFlow? = null
     private var flowCompiled: StageFlowCompiler.Compiled? = null
     private var flowBytes: Map<String, ByteArray> = emptyMap()
+
+    /** The installed pack, or null when the listener is using loose files. */
+    private var pack: InstalledPack? = null
+
+    /** A pack that has been installed and verified, kept together so a track can be prepared on demand. */
+    private data class InstalledPack(val manifest: PackManifest, val directory: java.io.File)
 
     /**
      * The running stage performance, or null when the listener is driving sections by hand.
@@ -748,6 +760,140 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+    /**
+     * Imports a soundtrack pack.
+     *
+     * This is the only import path a normal listener needs: one file carries the audio, the stage
+     * structures, the timings and the cue data, so there is nothing to pick one at a time.
+     *
+     * The import runs off the main thread because it hashes every asset, and the screen is told what it is
+     * doing rather than appearing frozen. A refusal is shown verbatim: the importer names the member or rule
+     * that failed, and "could not import" tells a user nothing they can act on.
+     */
+    fun importPack(uri: Uri) {
+        _ui.value = _ui.value.copy(
+            busy = true,
+            status = "Copying the pack...",
+            detail = null,
+            pack = _ui.value.pack?.copy(importing = true, progress = "copying"),
+        )
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val copied = withContext(Dispatchers.IO) { PackPicker.copy(context, uri) }
+            val picked = when (copied) {
+                is PackPicker.Result.Rejected -> {
+                    _ui.value = _ui.value.copy(
+                        busy = false,
+                        status = "Could not read the pack",
+                        detail = copied.reason,
+                        pack = _ui.value.pack?.copy(importing = false, progress = ""),
+                    )
+                    return@launch
+                }
+                is PackPicker.Result.Ok -> copied
+            }
+
+            _ui.value = _ui.value.copy(status = "Installing ${picked.displayName}...")
+
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    PackInstaller.install(
+                        archive = picked.file,
+                        libraryRoot = java.io.File(context.filesDir, PACK_ROOT),
+                        progress = object : PackInstaller.Progress {
+                            override fun onMember(index: Int, total: Int, name: String) = Unit
+                        },
+                    )
+                } finally {
+                    picked.file.delete()
+                }
+            }
+
+            when (result) {
+                is PackInstaller.Result.Refused -> {
+                    _ui.value = _ui.value.copy(
+                        busy = false,
+                        status = "This pack was not installed",
+                        detail = result.reason,
+                        pack = _ui.value.pack?.copy(importing = false, progress = ""),
+                    )
+                }
+                is PackInstaller.Result.Installed -> {
+                    onPackInstalled(result.manifest, result.directory, result.coverage, picked.displayName)
+                }
+            }
+        }
+    }
+
+    /** Records an installed pack and opens the first stage it can play. */
+    private fun onPackInstalled(
+        manifest: PackManifest,
+        directory: java.io.File,
+        coverage: PackCoverage.Coverage,
+        displayName: String,
+    ) {
+        this.pack = InstalledPack(manifest, directory)
+
+        val playable = PackPlayback.playableTracks(manifest)
+        val notes = buildList {
+            if (coverage.unsupportedCodecs.isNotEmpty()) {
+                add(
+                    "${coverage.unsupportedCodecs.sumOf { it.affectedTracks }} track(s) use a codec this " +
+                        "build cannot decode.",
+                )
+            }
+        }
+
+        _ui.value = _ui.value.copy(
+            busy = false,
+            status = if (playable.isEmpty()) "Pack installed, but nothing in it is playable" else "Pack installed",
+            detail = notes.firstOrNull(),
+            pack = PackUi(
+                name = manifest.name.ifBlank { displayName },
+                trackCount = manifest.tracks.size,
+                playableCount = playable.size,
+                notes = notes,
+                importing = false,
+                progress = "",
+            ),
+        )
+
+        // Open the first stage, so importing is immediately audible rather than leaving the listener to
+        // find their way back to a list.
+        val firstStage = manifest.stages.firstNotNullOfOrNull { stage ->
+            manifest.tracksOf(stage).firstOrNull { track -> playable.any { it.key == track.key } }
+        } ?: playable.firstOrNull()
+        if (firstStage != null) openPackTrack(firstStage)
+    }
+
+    /** Opens one track from the installed pack. */
+    fun openPackTrack(track: PackManifest.Track) {
+        val installed = pack ?: return
+        when (val prepared = PackPlayback.prepare(installed.manifest, track, installed.directory)) {
+            is PackPlayback.Result.Refused -> {
+                _ui.value = _ui.value.copy(status = "Cannot open this track", detail = prepared.reason)
+            }
+            is PackPlayback.Result.Ok -> {
+                val playable = prepared.playable
+                startFlow(playable.flow, playable.bytes, playable.notes)
+            }
+        }
+    }
+
+    /** Opens the first track of the imported pack. */
+    fun openFirstPackStage() {
+        val installed = pack ?: return
+        val track = PackPlayback.playableTracks(installed.manifest).firstOrNull()
+        if (track == null) {
+            _ui.value = _ui.value.copy(
+                status = "Nothing to play",
+                detail = "This pack carries no track this build can decode.",
+            )
+            return
+        }
+        openPackTrack(track)
+    }
+
     /** Requests a section of the open flow. */
     fun playSection(segment: Int) {
         val compiled = flowCompiled ?: return
@@ -1097,6 +1243,9 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
         /** Bundled map anchors. Named here so the missing case can be stated once. */
         const val MAP_ANCHORS_ASSET = "map_anchors.json"
+
+        /** Where installed packs live, under app storage. */
+        const val PACK_ROOT = "packs"
 
         /** Where Special Cup progress lives, beside the library rather than inside it. */
         const val SPECIAL_CUP_FILE = "special-cup.json"
