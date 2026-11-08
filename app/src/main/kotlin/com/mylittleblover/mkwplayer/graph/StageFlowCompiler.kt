@@ -146,65 +146,21 @@ internal object StageFlowCompiler {
             )
         }
 
-        val bridgeSegment = segmentByRole[StageFlow.Role.Bridge]
-        val mainSegment = segmentByRole[StageFlow.Role.Main]!!
-
-        val transitions = mutableListOf<MusicGraphBuilder.Transition>()
-        var nextTransition = TRANSITION_BASE
-
-        // Preludes hand over to the main section, declaring the bridge on that transition.
-        for (role in listOf(StageFlow.Role.PreShort, StageFlow.Role.Pre)) {
-            val from = segmentByRole[role] ?: continue
-            transitions += MusicGraphBuilder.Transition(
-                index = nextTransition++,
-                sources = listOf(from),
-                destinations = listOf(mainSegment),
-                sync = flow.timing.preludeExit,
-                entry = MusicGraphBuilder.EntryMode.EntryCue,
-                bridge = bridgeSegment ?: -1,
-                fadeOut = MusicGraphBuilder.Fade(flow.timing.bridgeFadeOutBeats),
-                fadeIn = MusicGraphBuilder.Fade(flow.timing.bridgeFadeInBeats),
-            )
-        }
-
-        // The bridge needs its own way out, or a flow that enters it never reaches main.
-        if (bridgeSegment != null) {
-            transitions += MusicGraphBuilder.Transition(
-                index = nextTransition++,
-                sources = listOf(bridgeSegment),
-                destinations = listOf(mainSegment),
-                sync = flow.timing.bridgeEntry,
-                entry = MusicGraphBuilder.EntryMode.EntryCue,
-            )
-        }
-
-        // One transition per outro. Listing them all as destinations on one rule would leave the
-        // engine to choose; a caller asking for outro 2 must get outro 2.
-        for (number in segmentByOutro.keys.sorted()) {
-            transitions += MusicGraphBuilder.Transition(
-                index = nextTransition++,
-                sources = listOf(mainSegment),
-                destinations = listOf(segmentByOutro.getValue(number)),
-                sync = flow.timing.outroEntry,
-                entry = MusicGraphBuilder.EntryMode.EntryCue,
-            )
-        }
-
-        // Switching from one outro to another, for a request that has not been executed yet.
-        // Each ordered pair gets its own rule so a replacement is addressable directly.
-        val outrosSorted = segmentByOutro.keys.sorted()
-        for (from in outrosSorted) {
-            for (to in outrosSorted) {
-                if (from == to) continue
-                transitions += MusicGraphBuilder.Transition(
-                    index = nextTransition++,
-                    sources = listOf(segmentByOutro.getValue(from)),
-                    destinations = listOf(segmentByOutro.getValue(to)),
-                    sync = flow.timing.outroSwitch,
-                    entry = MusicGraphBuilder.EntryMode.EntryCue,
-                )
-            }
-        }
+        // The whole transition set comes from the planner, so the measured bridge numbers reach the
+        // engine through one tested path rather than being rebuilt here. What this compiler still owns
+        // is the numbering: the planner takes the first index and the caller keeps the table.
+        val plan = StageTransitionPlanner.plan(
+            flow = flow,
+            segments = StageTransitionPlanner.Segments(
+                main = segmentByRole[StageFlow.Role.Main]!!,
+                bridge = segmentByRole[StageFlow.Role.Bridge],
+                prelude = segmentByRole[StageFlow.Role.Pre],
+                preludeShort = segmentByRole[StageFlow.Role.PreShort],
+                outros = segmentByOutro,
+            ),
+            firstIndex = TRANSITION_BASE,
+        )
+        val transitions = plan.transitions
 
         return Compiled(
             packet = MusicGraphBuilder.build(
