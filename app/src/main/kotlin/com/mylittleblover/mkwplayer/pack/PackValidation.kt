@@ -91,6 +91,9 @@ internal object PackValidation {
         /** A track declares timings with no provenance record covering them. */
         TIMING_WITHOUT_PROVENANCE,
 
+        /** A timing claims to have been measured, which no container field can establish. */
+        TIMING_PROVENANCE_OVERCLAIMS,
+
         /** The unlock scope lists no stages. */
         UNLOCK_SCOPE_EMPTY,
 
@@ -164,8 +167,9 @@ internal object PackValidation {
      * Validates [manifest].
      *
      * Never throws and never short-circuits: a manifest with eleven broken rules produces eleven
-     * failures. The order of the checks is the order the failures are reported in, which groups the
-     * asset rules, then the track rules, then the pack-kind rules, then the unlock contract.
+     * failures. The order of the checks is the order the failures are reported in: the pack kind and
+     * its base first, then assets, then the track rules, the stage rules, provenance, and the unlock
+     * contract last, because the unlock rules read from everything above them.
      *
      * @param manifest a value produced by [PackManifest.parse]. Rules the parser already enforces
      *   (digest shape, known vocabulary, playable count above total) are not repeated here.
@@ -378,16 +382,16 @@ internal object PackValidation {
         val outros = track.parts.filter { it.role == PackManifest.Role.OUTRO }
         outros.forEach { part ->
             val number = part.outro
-            when {
-                number == null -> into += Failure(
+            if (number == null) {
+                into += Failure(
                     code = Code.OUTRO_NUMBER_INVALID,
                     subject = track.key,
                     message = "$where has an outro part (${part.asset.short()}) with no outro " +
                         "number. Unnumbered endings compare equal, so one of them would disappear " +
                         "from every listen.",
                 )
-
-                number < 0 -> into += Failure(
+            } else if (number < 0) {
+                into += Failure(
                     code = Code.OUTRO_NUMBER_INVALID,
                     subject = track.key,
                     message = "$where has an outro numbered $number; ending numbers start at 0.",
@@ -470,6 +474,22 @@ internal object PackValidation {
                 message = "$where declares section timings but no provenance record covers them. " +
                     "These timings are this project's or the pack author's choice, not the game's " +
                     "behaviour, and the app must be able to say so wherever it shows them.",
+            )
+        }
+
+        // A timing may never be labelled as measured. A marker offset is a measured position in a
+        // file; it does not establish that the game schedules a transition there, which is what a
+        // measured timing would be claiming. Allowing the label would let a pack buy authority it
+        // cannot have, and the UI would then show the choice as a fact about the game.
+        val declared = manifest.provenanceFor(track.key, TIMING_FIELD)
+        if (track.timing != null && declared != null && declared.level.isMeasured()) {
+            into += Failure(
+                code = Code.TIMING_PROVENANCE_OVERCLAIMS,
+                subject = track.key,
+                message = "$where labels its section timings as ${declared.level.name}. A section " +
+                    "timing is a scheduling decision; no resource field or audio measurement " +
+                    "establishes when the game makes it. Record the timing as " +
+                    "CHOSEN_BY_PROJECT or UNVERIFIED instead.",
             )
         }
     }

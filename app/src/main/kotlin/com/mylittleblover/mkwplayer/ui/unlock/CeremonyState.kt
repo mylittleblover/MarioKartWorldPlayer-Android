@@ -144,14 +144,23 @@ internal fun progressFor(
 ): CeremonyProgress {
     val lengthKnown = totalFrames > 0 && sampleRate > 0
     return CeremonyProgress(
-        elapsed = if (lengthKnown) EngineSnapshot.formatPosition(positionFrames, sampleRate) else UNKNOWN_TIME,
-        total = if (lengthKnown) EngineSnapshot.formatPosition(totalFrames, sampleRate) else UNKNOWN_TIME,
+        elapsed = timeLabel(positionFrames, sampleRate, lengthKnown),
+        total = timeLabel(totalFrames, sampleRate, lengthKnown),
         fraction = if (lengthKnown) SeekTarget.frameToFraction(positionFrames, totalFrames) else 0f,
         // Not negotiable. The screen has no seek callback and this flag is what makes a future caller
         // notice that adding one means changing this function first.
         isReadOnly = true,
     )
 }
+
+/**
+ * One time label, for either end of the bar.
+ *
+ * [lengthKnown] is passed in rather than re-derived here, so the elapsed and total labels cannot
+ * disagree about whether the ceremony has a measurable length.
+ */
+private fun timeLabel(frames: Long, sampleRate: Int, lengthKnown: Boolean): String =
+    if (lengthKnown) EngineSnapshot.formatPosition(frames, sampleRate) else UNKNOWN_TIME
 
 /**
  * One ceremony panel, as the screen draws it.
@@ -191,13 +200,16 @@ internal fun viewFor(
     cupName: String,
 ): CeremonyView {
     val parsed = ceremonyPhaseOf(phase)
+    // Inverted once, here, because the persisted flag says "already congratulated" and this argument
+    // says "still owed". Two negations spread across a call site is how the two flags drift.
+    val alreadyCongratulated = !congratulationOwed
     return CeremonyView(
         title = cupName.trim().ifEmpty { CupArt.special.label },
         subtitle = subtitleFor(parsed),
         emblem = CupArt.special.drawable,
         controls = controlsFor(phase),
         progress = progressFor(positionFrames, totalFrames, sampleRate),
-        showCongratulation = shouldShowCongratulation(phase, congratulated = !congratulationOwed),
+        showCongratulation = shouldShowCongratulation(phase, alreadyCongratulated),
         exitHint = exitHintFor(parsed),
     )
 }
@@ -251,22 +263,27 @@ private const val NOTICE_ACTION_LABEL = "Open the hidden cup"
 /**
  * The top notification for the Special Cup offer, or null when there is nothing to announce.
  *
- * Null unless the cup is offered. `offered` is the caller's record of having told the user at all; it
- * is passed in rather than derived from the phase precisely because announcing and earning are
- * separate decisions. Merging them would make the notification fire again after a restart, and a
- * notification that comes back every launch is one the user learns to ignore.
+ * Null unless the cup is offered, and null unless the cup also passes [CupVisibility.mayReveal].
+ *
+ * The two conditions answer different questions. `offered` is the caller's record of having told the
+ * user at all; it is passed in rather than derived from the phase precisely because announcing and
+ * earning are separate decisions, and merging them would make the notification fire again after a
+ * restart. `mayReveal` is the app's one visibility gate: a notification saying a hidden cup has
+ * appeared is itself a representation of that cup, and `CupVisibility` is explicit that hiding one
+ * card on one page is not enough. In the normal path the second is redundant -- `UnlockUi.from` only
+ * sets `offered` for an entitled cup, and entitlement is what makes it visible -- but a restored or
+ * hand-built state can set the two out of step, and a notice on that path would leak the cup with no
+ * way for the user to tell that it had.
  *
  * The wording is [UnlockPresentation.offerLabel] rather than a string here, so the notice cannot drift
  * from the app's one statement of what has happened. The action label is deliberately in the same
- * register: no "unlock", and no "Special Cup", because the notification is not the place to reveal a
- * cup the user has not opened yet.
- *
- * Where the notice may be drawn is the caller's decision, and callers should render it only on a page
- * where it is not already stale -- not over the ceremony itself, where "open" would be a control that
- * does nothing.
+ * register: no "unlock", and no "Special Cup", because a cup the user has not opened yet must not be
+ * named by the notification that announces it.
  */
 internal fun noticeFor(unlock: UnlockUi?): NoticeView? {
-    if (unlock?.offered != true) return null
+    if (unlock == null) return null
+    if (!unlock.offered) return null
+    if (!CupVisibility.mayReveal(unlock)) return null
 
     return NoticeView(
         message = UnlockPresentation.offerLabel(),

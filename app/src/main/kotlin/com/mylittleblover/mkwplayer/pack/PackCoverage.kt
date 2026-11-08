@@ -47,7 +47,9 @@ internal object PackCoverage {
      * things and make the limitation look five times worse than it is.
      */
     data class UnsupportedCodec(
+        /** The BWAV codec kind this build does not decode. */
         val codecKind: Int,
+        /** How many logical tracks cannot be fully played because of it. */
         val affectedTracks: Int,
         /** One-line reason, shared with the existing per-entry playability verdict. */
         val reason: String,
@@ -254,7 +256,7 @@ internal object PackCoverage {
     /**
      * Whether the manifest's declared numbers describe the content it carries.
      *
-     * Two comparisons, both necessary:
+     * Three comparisons, all necessary:
      *
      * - `totalLogicalTracks` must equal the number of tracks actually listed. A total larger than
      *   the list means tracks were lost in packing; a total smaller means the list carries rows the
@@ -262,10 +264,14 @@ internal object PackCoverage {
      * - `playableLogicalTracks` must equal the number of tracks whose assets the pack really holds.
      *   This is the claim that would otherwise let a pack advertise 650 playable tracks while
      *   holding 412.
+     * - `codecKinds` must equal the kinds actually used. A declared list that omits a kind is how an
+     *   undecodable asset gets hidden behind an "all playable" claim: the reader would report only
+     *   the codecs the pack admitted to.
      */
     private fun declaredCoverageMatches(manifest: PackManifest): Boolean =
         manifest.coverage.totalLogicalTracks == manifest.tracks.size &&
-            manifest.coverage.playableLogicalTracks == tracksWithCompleteAssets(manifest).size
+            manifest.coverage.playableLogicalTracks == tracksWithCompleteAssets(manifest).size &&
+            manifest.coverage.codecKinds.toSet() == manifest.codecKindsInUse()
 
     /**
      * Structural defects this object can establish without the full validation report.

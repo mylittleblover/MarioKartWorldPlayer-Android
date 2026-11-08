@@ -210,6 +210,9 @@ hand-picked files usable. **It must not run against pack content.** A name-deriv
 is a guess, and a guess inside a pack is indistinguishable from a stated fact once the
 manifest has been accepted.
 
+The reader in this repository therefore has no `roleOf`-style helper at all: every fact
+below is read from a field, and a missing field is a failure, never a fallback.
+
 | Fact | Where the pack states it | What guessing it looks like |
 |---|---|---|
 | section roles (Pre_Short, Pre, Bridge, Main, Outro) | `tracks[].parts[].role` | treating `_Fast` as Main, or `_Pre_Short` as Pre because the substring matches |
@@ -233,7 +236,8 @@ Every declared timing carries a provenance record. A pack that declares a timing
 one is invalid (`TIMING_WITHOUT_PROVENANCE`), and a pack whose provenance list is empty
 is invalid (`PROVENANCE_MISSING`).
 
-Levels, at least these four:
+Levels. These four are the complete vocabulary of v1; a fifth is a format change, not an
+extension.
 
 | Level | Means | Example |
 |---|---|---|
@@ -253,7 +257,15 @@ Rules:
 3. A `MEASURED_L1` marker position says nothing about when the game *uses* a transition.
    A pack must not label a cue list as a schedule. The marker file's own `provenance`
    field is `L1_MARKER_ONLY` in v1, for exactly that reason.
-4. Provenance travels with the data. The UI must show it wherever the value is shown; the
+4. **A section timing may never be labelled measured.** `preludeExit`, `bridgeEntry`,
+   `outroEntry`, `outroSwitch`, `mainRepeats` and the bridge fades are scheduling
+   decisions. No container field and no audio measurement establishes when the game makes
+   a transition, so a timing record whose level is `MEASURED_L1` or `MEASURED_L2` is
+   invalid (`TIMING_PROVENANCE_OVERCLAIMS`). This is the one place the format refuses a
+   claim rather than merely disclaiming it: a marker offset is a real L1 fact about a
+   file, and reusing its authority for a timing is the exact substitution this project
+   has already had to undo once.
+5. Provenance travels with the data. The UI must show it wherever the value is shown; the
    runtime must never drop it, because a timing shown without its level is read as a fact.
 
 ---
@@ -267,11 +279,12 @@ The manifest states, in `coverage`:
 - `codecKinds`: every codec kind used by any asset in the pack.
 
 `playableLogicalTracks` is a statement about the pack, not about the reader: it means
-"tracks whose every asset this pack lists, with a codec from `codecKinds`, and a
-non-zero size". A reader recomputes that from the asset list and refuses a pack whose
-declared number cannot be supported by its own contents
-(`declaredPlayableMismatch` in `PackCoverage`). A pack cannot declare 650 playable
-tracks while listing 412.
+"tracks whose every asset this pack lists, with a non-zero size". A reader recomputes that
+from the asset list and refuses a pack whose declared number cannot be supported by its
+own contents (`PackCoverage.Coverage.declaredCoverageMatches`). A pack cannot declare 650
+playable tracks while listing 412. The declared `codecKinds` list is checked the same
+way: it must equal the kinds its assets actually use, because an omitted kind would
+otherwise hide an undecodable asset behind an honest-looking count.
 
 What this build can *actually* play is a separate computation, done against the
 reader's decoder capability:
@@ -444,9 +457,9 @@ are refused (section 12).
 | Key | Type | Required | Rule |
 |---|---|---|---|
 | `formatVersion` | integer | yes | must be `1`; anything else is refused without reading further |
-| `packId` | string | yes | stable identity, non-blank, no surrounding whitespace, no `/` or `\` |
+| `packId` | string | yes | `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`; it becomes a directory name, so it may not contain a separator or `..` |
 | `packVersion` | integer | yes | >= 1, increases per `packId` |
-| `name` | string | yes | human name; blank falls back to `packId` |
+| `name` | string or absent | no | human name; absent or blank falls back to `packId` |
 | `kind` | `"FULL"` or `"DELTA"` | yes | anything else is refused |
 | `basePackId` | string or null | for `DELTA` | required for `DELTA`, forbidden for `FULL` |
 | `basePackVersion` | integer or null | for `DELTA` | required for `DELTA`, forbidden for `FULL`, >= 0 |
@@ -488,7 +501,7 @@ be a claim that the asset loops over nothing.
 |---|---|---|---|
 | `key` | string | yes | must equal section 3.2's derivation, else `TRACK_KEY_INCONSISTENT` |
 | `kind` | string | yes | one of the catalogue kinds, enum name as written (e.g. `COURSE`, `SOUND_EFFECT`) |
-| `title` | string | yes | display only; blank falls back to `key`; never used for matching |
+| `title` | string or absent | no | display only; absent or blank falls back to `key`; never used for matching |
 | `primary` | string | yes | asset digest; must appear in this track's own `parts` |
 | `isFlow` | boolean | yes | `true` when the track's parts are switched at sync points |
 | `parts` | array | yes | at least the primary; one entry per asset, ordered |
@@ -528,7 +541,7 @@ silence the very distinction the field exists to record.
 | Key | Type | Rule |
 |---|---|---|
 | `code` | string | non-blank, `[A-Za-z0-9_-]{1,64}`, unique |
-| `name` | string | display only; blank falls back to `code` |
+| `name` | string or absent | display only; absent or blank falls back to `code` |
 | `tracks` | array of strings | logical track keys; every one must exist in `tracks` |
 
 A stage naming more than one track is legal on purpose: a stage can carry its course
@@ -723,7 +736,11 @@ A reader is conformant only if it does all of the following:
 - [ ] refuse an unknown `kind`, an unknown provenance level, an unknown role, an unknown
       sync point, and an unknown track kind;
 - [ ] refuse a malformed asset digest anywhere, including in `parts` and `primary`;
-- [ ] refuse `playableLogicalTracks > totalLogicalTracks`;
+- [ ] refuse `playableLogicalTracks > totalLogicalTracks` (at parse time, before any
+      other row is trusted);
+- [ ] check the declared `totalLogicalTracks`, `playableLogicalTracks` and `codecKinds`
+      against the content, and report a mismatch instead of showing the declared number;
+- [ ] refuse a timing whose provenance level is `MEASURED_L1` or `MEASURED_L2`;
 - [ ] reject member names that escape the archive (absolute, `..`, backslash, unknown
       directory, more than one separator);
 - [ ] verify every audio member's name, declared size, and SHA-256 while streaming;
@@ -763,6 +780,7 @@ messages are for people.
 | `DELTA_NOT_FORWARD` | a delta's `packVersion` is not greater than its base version |
 | `PROVENANCE_MISSING` | the pack declares no provenance records at all |
 | `TIMING_WITHOUT_PROVENANCE` | a track declares timings with no record for them |
+| `TIMING_PROVENANCE_OVERCLAIMS` | a timing is labelled `MEASURED_L1` or `MEASURED_L2`; a timing is a scheduling decision, so it must be `CHOSEN_BY_PROJECT` or `UNVERIFIED` |
 | `UNLOCK_SCOPE_EMPTY` | the unlock scope lists no stages |
 | `UNLOCK_STAGE_UNKNOWN` | the unlock scope names a stage the pack does not describe |
 | `UNLOCK_STAGE_INCOMPLETE` | an unlock stage has no track, or its tracks reference assets the pack does not carry |

@@ -107,8 +107,10 @@ class PackManifestTest {
         assertEquals(3, manifest.assets.size, "asset count")
         assertEquals(2, manifest.tracks.size, "track count")
 
-        val main = manifest.asset(AudioAssetId(MAIN))
-        assertNotNull(main, "the main asset must be addressable by digest")
+        val main = assertNotNull(
+            manifest.asset(AudioAssetId(MAIN)),
+            "the main asset must be addressable by digest",
+        )
         assertEquals(1024L, main.byteSize, "byte size")
         assertEquals(1, main.codecKind, "codec kind")
         assertEquals(48_000, main.sampleRate, "sample rate")
@@ -118,22 +120,21 @@ class PackManifestTest {
         assertEquals(48_000L, main.loopEnd, "loop end")
         assertTrue(main.hasLoop, "the loop window is complete")
 
-        val coaster = manifest.track(MAIN_KEY)
-        assertNotNull(coaster, "the documented track key must resolve")
+        val coaster = assertNotNull(manifest.track(MAIN_KEY), "the documented track key must resolve")
         assertEquals(ResourceKind.COURSE, coaster.kind, "track kind")
         assertEquals("Coaster", coaster.title, "track title")
         assertTrue(coaster.isFlow, "the coaster track is a flow")
         assertEquals(2, coaster.parts.size, "part count")
         assertEquals(PackManifest.Role.OUTRO, coaster.parts[1].role, "second part is an outro")
         assertEquals(0, coaster.parts[1].outro, "outro number")
-        assertNotNull(coaster.timing, "a flow states its timings")
-        assertEquals(PackManifest.SyncPoint.EXIT_CUE, coaster.timing.preludeExit, "prelude exit")
-        assertEquals(2, coaster.timing.mainRepeats, "main repeats")
+        val timing = assertNotNull(coaster.timing, "a flow states its timings")
+        assertEquals(PackManifest.SyncPoint.EXIT_CUE, timing.preludeExit, "prelude exit")
+        assertEquals(2, timing.mainRepeats, "main repeats")
+        assertEquals(0.0, timing.bridgeFadeOutBeats, "an omitted fade is zero, not absent")
 
-        val stage = manifest.stage("Coaster")
-        assertNotNull(stage, "the stage must resolve by code")
+        val stage = assertNotNull(manifest.stage("Coaster"), "the stage must resolve by code")
         assertEquals(listOf(MAIN_KEY), stage.tracks, "stage tracks")
-        assertEquals(1, manifest.tracksOf(stage).size, "both stage tracks resolve")
+        assertEquals(1, manifest.tracksOf(stage).size, "the stage's track key resolves")
 
         assertEquals(2, manifest.coverage.totalLogicalTracks, "declared total")
         assertEquals(2, manifest.coverage.playableLogicalTracks, "declared playable")
@@ -142,8 +143,10 @@ class PackManifestTest {
         assertTrue(manifest.unlock.frozen, "the scope is frozen")
         assertEquals(listOf("Coaster"), manifest.unlock.stages, "scope")
 
-        val provenance = manifest.provenanceFor(MAIN_KEY, "timing")
-        assertNotNull(provenance, "the timing must have a provenance record")
+        val provenance = assertNotNull(
+            manifest.provenanceFor(MAIN_KEY, "timing"),
+            "the timing must have a provenance record",
+        )
         assertEquals(PackManifest.Level.CHOSEN_BY_PROJECT, provenance.level, "provenance level")
     }
 
@@ -157,7 +160,10 @@ class PackManifestTest {
     @Test
     fun anAbsentLoopStaysNull() {
         val manifest = parseOk()
-        val battle = assertNotNull(manifest.asset(AudioAssetId(BATTLE)))
+        val battle = assertNotNull(
+            manifest.asset(AudioAssetId(BATTLE)),
+            "the battle asset must be addressable by digest",
+        )
         assertNull(battle.loopStart, "an asset with no loop has no start")
         assertNull(battle.loopEnd, "an absent loop has no end")
         assertFalse(battle.hasLoop, "no loop was measured")
@@ -186,34 +192,28 @@ class PackManifestTest {
     }
 
     /**
-     * A missing manifest is refused by name, not reported as an empty pack.
+     * A document that cannot be read is refused by name, never treated as an empty pack.
      *
-     * "No manifest" and "a manifest that lists nothing" are different facts, and the import screen
-     * has to be able to tell the user which one happened.
+     * Two shapes, both refused, and both distinct from "a manifest that lists nothing": an absent
+     * member, and text that is not JSON. A parser that returned an empty manifest for either would
+     * install an empty library and report success -- the failure this whole layer exists to prevent.
      */
     @Test
-    fun aMissingManifestIsRefusedByItsName() {
-        val result = PackManifest.read(null)
-        val reason = assertNotNull(result.reasonOrNull(), "a null manifest must be refused")
-        assertEquals(PackManifest.MISSING_REASON, reason, "the fixed wording is used")
-        assertTrue(reason.contains("manifest.json"), "the reason names the member")
-    }
+    fun aMissingOrUnreadableManifestIsRefused() {
+        val missing = assertNotNull(
+            PackManifest.read(null).reasonOrNull(),
+            "a null manifest must be refused",
+        )
+        assertEquals(PackManifest.MISSING_REASON, missing, "the fixed wording is used")
+        assertTrue(missing.contains("manifest.json"), "the reason names the member")
 
-    /**
-     * Text that is not JSON is refused with a reason that names the member.
-     *
-     * A parser that returned an empty manifest here would install an empty library and report
-     * success, which is the failure this whole layer exists to prevent.
-     */
-    @Test
-    fun aDocumentThatIsNotJsonIsRefused() {
-        val reason = assertNotNull(
+        val unreadable = assertNotNull(
             PackManifest.parse("not a manifest").reasonOrNull(),
             "invalid JSON must be refused",
         )
         assertTrue(
-            reason.contains("manifest.json") && reason.contains("JSON"),
-            "the reason must say the manifest is not JSON, got: $reason",
+            unreadable.contains("manifest.json") && unreadable.contains("JSON"),
+            "the reason must say the manifest is not JSON, got: $unreadable",
         )
     }
 

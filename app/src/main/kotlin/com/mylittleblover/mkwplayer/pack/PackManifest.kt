@@ -49,6 +49,7 @@ internal data class PackManifest(
     val packVersion: Int,
     /** Human name. Falls back to [packId] when the document leaves it blank. */
     val name: String,
+    /** Whether this file is a whole pack or an overlay on one. */
     val kind: Kind,
     /** Base product a [Kind.DELTA] applies to. Must be null for [Kind.FULL]. */
     val basePackId: String?,
@@ -56,11 +57,15 @@ internal data class PackManifest(
     val basePackVersion: Int?,
     /** What the pack claims about itself. [PackCoverage] checks those claims against the content. */
     val coverage: DeclaredCoverage,
+    /** Every audio file the pack carries, addressed by digest. */
     val assets: List<Asset>,
+    /** Every logical track, i.e. every thing a user can play. */
     val tracks: List<Track>,
+    /** Stage rows. May be empty; the unlock scope is what decides the cup. */
     val stages: List<Stage>,
     /** Provenance record per declared timing. Empty is invalid; see [PackValidation]. */
     val provenance: List<Provenance>,
+    /** The Special Cup's eligible stage list, as the pack fixed it. */
     val unlock: Unlock,
 ) {
 
@@ -196,18 +201,33 @@ internal data class PackManifest(
 
         /** Recorded but nothing establishes it. Shown as unverified rather than hidden. */
         UNVERIFIED,
+        ;
+
+        /**
+         * True when a value at this level claims to rest on a measurement.
+         *
+         * Exposed as a function rather than left to a `when` at each call site: the distinction
+         * decides whether a value may be displayed as established, and two copies of it would
+         * eventually disagree. It also gives [PackValidation] one definition to test against.
+         */
+        fun isMeasured(): Boolean = this == MEASURED_L1 || this == MEASURED_L2
     }
 
     /** One audio file in the pack, described by its bytes rather than by a name. */
     data class Asset(
+        /** The bytes' SHA-256. The only way this asset is ever referenced. */
         val digest: AudioAssetId,
+        /** Exact stored size. Checked against the archive before a byte is read. */
         val byteSize: Long,
         /** Declared media type. There is no file extension to infer it from. */
         val mediaType: String,
         /** Container codec kind; `1` is DSP-ADPCM, the only kind this build decodes. */
         val codecKind: Int,
+        /** Frames per second the asset was measured at. Never 0. */
         val sampleRate: Int,
+        /** Channel count as measured. Never 0. */
         val channels: Int,
+        /** Measured length. Never 0: a zero-frame asset is an absent one. */
         val frames: Long,
         /**
          * Measured loop window, or null when the asset does not loop.
@@ -216,6 +236,7 @@ internal data class PackManifest(
          * claim that the asset loops over nothing rather than a statement that it does not loop.
          */
         val loopStart: Long? = null,
+        /** Loop end, in frames. Present exactly when [loopStart] is. */
         val loopEnd: Long? = null,
     ) {
         /** True only when both ends of the loop were measured. */
@@ -233,7 +254,9 @@ internal data class PackManifest(
      * already documents for [StageFlow.Part].
      */
     data class Part(
+        /** The file this section plays. Must be one of the track's assets. */
         val asset: AudioAssetId,
+        /** Which structural section this is. Stated, never inferred from a file name. */
         val role: Role,
         /** Which ending this is, for [Role.OUTRO] only. Null for every other role. */
         val outro: Int? = null,
@@ -257,13 +280,19 @@ internal data class PackManifest(
      * would hear two different arrangements of the same declared content.
      */
     data class Timing(
+        /** Allowed position for leaving a prelude. */
         val preludeExit: SyncPoint,
+        /** Allowed position for entering the bridge, or handing straight to Main. */
         val bridgeEntry: SyncPoint,
+        /** Allowed position for requesting an ending. */
         val outroEntry: SyncPoint,
+        /** Allowed position for replacing an ending that was requested but not yet started. */
         val outroSwitch: SyncPoint,
         /** How many main-loop passes before an ending is offered. At least 1. */
         val mainRepeats: Int,
+        /** Fade applied when a bridge transition starts, in beats. */
         val bridgeFadeOutBeats: Double = 0.0,
+        /** Fade applied when the bridge hands over to Main, in beats. */
         val bridgeFadeInBeats: Double = 0.0,
     ) {
         /** The runtime timing, assembled from stated values only. */
@@ -288,7 +317,9 @@ internal data class PackManifest(
      * pointed at it.
      */
     data class Track(
+        /** The derived key. Checked against its own derivation, never trusted as given. */
         val key: String,
+        /** Catalogue kind, part of the key derivation. */
         val kind: ResourceKind,
         /** Display only. Never used to match anything, because a translated title is not an id. */
         val title: String,
@@ -296,6 +327,7 @@ internal data class PackManifest(
         val primary: AudioAssetId,
         /** True when [parts] are switched at sync points rather than being separate tracks. */
         val isFlow: Boolean,
+        /** Every asset the track needs, primary included. */
         val parts: List<Part>,
         /** Required for a flow, absent for a single-file track. */
         val timing: Timing? = null,
@@ -317,7 +349,9 @@ internal data class PackManifest(
      * the key the unlock scope uses. A display name would be translated and would stop matching.
      */
     data class Stage(
+        /** Identifier, used as a member name and as the unlock scope's key. Never translated. */
         val code: String,
+        /** Display name. Falls back to [code] when the document leaves it blank. */
         val name: String,
         /** Logical track keys. More than one is legal: a stage can carry variants as tracks. */
         val tracks: List<String>,
@@ -336,6 +370,7 @@ internal data class PackManifest(
         val subject: String,
         /** The field this covers, e.g. `timing`. */
         val field: String,
+        /** How well established the value is. Shown wherever the value is shown. */
         val level: Level,
         /** Optional human explanation of where the value came from. */
         val note: String? = null,
@@ -365,6 +400,7 @@ internal data class PackManifest(
      * a number the file cannot support.
      */
     data class DeclaredCoverage(
+        /** How many logical tracks the pack says it carries. */
         val totalLogicalTracks: Int,
         /** How many of those the pack claims are playable, by its own definition. */
         val playableLogicalTracks: Int,
@@ -395,8 +431,13 @@ internal data class PackManifest(
         /** Fixed member name of the manifest. Named in the format so a reader can seek to it. */
         const val MEMBER_NAME = "manifest.json"
 
-        /** Shown when the archive has no manifest at all. */
-        const val MISSING_REASON =
+        /**
+         * Shown when the archive has no manifest at all.
+         *
+         * Written out rather than assembled from [MEMBER_NAME]: a user reads this sentence, and
+         * keeping it a literal means what they read is exactly what the source says.
+         */
+        const val MISSING_REASON: String =
             "This file has no manifest.json, so it is not an MKW Soundtrack Pack. " +
                 "A pack is identified by its manifest, never by its file extension."
 
@@ -808,7 +849,7 @@ internal data class PackManifest(
         private fun readProvenance(source: JSONObject, index: Int): Provenance {
             val where = "manifest.provenance[$index]"
             val subject = source.requiredString("subject", where)
-            val field = source.requiredString("field", where)
+            val fieldName = source.requiredString("field", where)
             val levelText = source.requiredString("level", where)
             val level = Level.entries.firstOrNull { it.name.equals(levelText, ignoreCase = true) }
                 ?: fail(
@@ -819,7 +860,7 @@ internal data class PackManifest(
                 )
             return Provenance(
                 subject = subject,
-                field = field,
+                field = fieldName,
                 level = level,
                 note = source.optionalString("note", where),
             )
@@ -949,22 +990,40 @@ private fun JSONArray.requiredIntAt(index: Int, where: String): Int {
  *
  * A fractional number is refused rather than truncated: a `byteSize` of `1.5` is a broken document,
  * and reading it as 1 would hide the defect behind a size that nearly matches.
+ *
+ * Integral values are read through their own type rather than through `Double`, because a frame
+ * count or byte size near `2^53` would otherwise lose its last digits and a size check would then
+ * compare against a number the manifest never wrote.
  */
-private fun wholeNumber(raw: Any?, where: String): Long {
-    val number = raw as? Number ?: fail("$where must be a whole number, got ${describe(raw)}.")
-    val asDouble = number.toDouble()
-    if (!asDouble.isFinite() || asDouble % 1.0 != 0.0) {
-        fail("$where must be a whole number, got $number.")
+private fun wholeNumber(raw: Any?, where: String): Long = when (raw) {
+    is Byte -> raw.toLong()
+    is Short -> raw.toLong()
+    is Int -> raw.toLong()
+    is Long -> raw
+    is Number -> {
+        val asDouble = raw.toDouble()
+        if (!asDouble.isFinite() || asDouble % 1.0 != 0.0) {
+            fail("$where must be a whole number, got $raw.")
+        }
+        // A value this large cannot describe a size or a frame count, and `toLong()` would silently
+        // clamp it to Long.MAX_VALUE -- a number the manifest never wrote, which would then be
+        // compared against a real file.
+        if (asDouble < Long.MIN_VALUE.toDouble() || asDouble > Long.MAX_VALUE.toDouble()) {
+            fail("$where is out of range for a 64-bit integer: $raw.")
+        }
+        raw.toLong()
     }
-    return number.toLong()
+
+    else -> fail("$where must be a whole number, got ${describe(raw)}.")
 }
 
-private fun describe(value: Any?): String = when (value) {
-    null, JSONObject.NULL -> "null"
-    is String -> "text"
-    is Boolean -> "a boolean"
-    is Number -> "a number"
-    is JSONObject -> "an object"
-    is JSONArray -> "an array"
+private fun describe(value: Any?): String = when {
+    value == null -> "null"
+    value == JSONObject.NULL -> "null"
+    value is String -> "text"
+    value is Boolean -> "a boolean"
+    value is Number -> "a number"
+    value is JSONObject -> "an object"
+    value is JSONArray -> "an array"
     else -> "an unsupported value"
 }

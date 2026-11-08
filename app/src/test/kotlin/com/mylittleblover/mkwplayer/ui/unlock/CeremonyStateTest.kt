@@ -2,6 +2,7 @@ package com.mylittleblover.mkwplayer.ui.unlock
 
 import com.mylittleblover.mkwplayer.player.UnlockUi
 import com.mylittleblover.mkwplayer.ui.art.CupArt
+import com.mylittleblover.mkwplayer.unlock.UnlockPresentation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -21,16 +22,15 @@ class CeremonyStateTest {
     private fun ui(
         offered: Boolean = true,
         visible: Boolean = true,
-        ceremonyPlaying: Boolean = false,
     ): UnlockUi = UnlockUi(
         progress = "1 of 1 stage heard",
         remaining = null,
         ruleNotice = "Provisional rule (every stage you have): 1 stage(s) to listen to.",
         offered = offered,
-        ceremonyPlaying = ceremonyPlaying,
+        ceremonyPlaying = false,
         ceremonyCompleted = false,
         congratulationOwed = false,
-        canEnter = visible && !ceremonyPlaying,
+        canEnter = visible,
         visible = visible,
         hiddenReason = if (visible) null else "No stages to hear yet. Add some music first.",
     )
@@ -176,11 +176,16 @@ class CeremonyStateTest {
 
     @Test
     fun aReplayDoesNotResendTheFirstTimeDialog() {
-        // A replay reaches COMPLETED again. Showing the dialog there would claim the cup is newly
-        // unlocked, which is false the second time.
+        // The same user, in order: the ceremony finishes the first time and the dialog is owed; the
+        // dialog is consumed; the ceremony is replayed and finishes again. The last step reaches
+        // COMPLETED exactly like the first, so only the persisted flag can tell them apart.
+        assertTrue(
+            shouldShowCongratulation("COMPLETED", congratulated = false),
+            "the first natural end owes the dialog",
+        )
         assertFalse(
             shouldShowCongratulation("COMPLETED", congratulated = true),
-            "a replay must not re-show the first-time dialog",
+            "the replay reaches COMPLETED again but must not re-show it",
         )
     }
 
@@ -241,8 +246,7 @@ class CeremonyStateTest {
 
     @Test
     fun theNoticeActionLabelDoesNotRevealTheCup() {
-        val notice = noticeFor(ui())
-        assertNotNull(notice, "an offered, visible cup is announced")
+        val notice = assertNotNull(noticeFor(ui()), "an offered, visible cup is announced")
         assertFalse(
             notice.actionLabel.contains("unlock", ignoreCase = true),
             "the button must not promise an unlock the user has not entered: ${notice.actionLabel}",
@@ -259,18 +263,31 @@ class CeremonyStateTest {
 
     @Test
     fun theNoticeIsDismissibleAndCarriesAnAction() {
-        val notice = noticeFor(ui())
-        assertNotNull(notice)
+        val notice = assertNotNull(noticeFor(ui()), "an offered, visible cup is announced")
         assertTrue(notice.dismissible, "closing only hides the notification; the cup stays earned")
         assertTrue(notice.actionLabel.isNotBlank(), "the notification needs an action")
     }
 
     @Test
-    fun theNoticeIsNotShownWhileTheCeremonyPlays() {
-        // The user is already there; an "open" action would be a control that does nothing.
+    fun theNoticeUsesTheSameWordingAsTheOffer() {
+        // One statement of what has happened, so the notification cannot say something the rest of
+        // the app would not.
+        val notice = assertNotNull(noticeFor(ui()), "an offered cup is announced")
+        assertEquals(
+            UnlockPresentation.offerLabel(),
+            notice.message,
+            "the notice must not reword the offer",
+        )
+    }
+
+    @Test
+    fun theNoticeStaysBehindTheCupsVisibilityGate() {
+        // The notification is itself a representation of the cup. A state whose two flags disagree --
+        // offered but not entitled, which a restored or hand-built snapshot can produce -- must not be
+        // the path that leaks it.
         assertNull(
-            noticeFor(ui(ceremonyPlaying = true)),
-            "the notification would be a no-op during the ceremony",
+            noticeFor(ui(offered = true, visible = false)),
+            "an offered but still-hidden cup must not be announced",
         )
     }
 

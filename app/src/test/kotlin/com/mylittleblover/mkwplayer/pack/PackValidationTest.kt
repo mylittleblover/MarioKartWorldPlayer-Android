@@ -6,6 +6,7 @@ import com.mylittleblover.mkwplayer.registry.ResourceKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -163,9 +164,11 @@ class PackValidationTest {
         val report = validate(manifest(tracks = listOf(broken, single())))
 
         assertFalse(report.isInstallable, "a primary outside the parts must not install")
-        val failure = report.forCode(PackValidation.Code.PRIMARY_NOT_IN_PARTS).singleOrNull()
-        assertTrue(failure != null, "PRIMARY_NOT_IN_PARTS must be reported: ${report.messages()}")
-        assertEquals(FLOW_KEY, failure!!.subject, "the failure names the track")
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.PRIMARY_NOT_IN_PARTS).singleOrNull(),
+            "PRIMARY_NOT_IN_PARTS must be reported: ${report.messages()}",
+        )
+        assertEquals(FLOW_KEY, failure.subject, "the failure names the track")
         assertTrue(
             failure.message.contains(PRE.short()),
             "the message names the offending digest, got: ${failure.message}",
@@ -190,10 +193,12 @@ class PackValidationTest {
         val report = validate(manifest(assets = listOf(asset(MAIN), asset(OTHER)), tracks = listOf(broken, single())))
 
         assertFalse(report.isInstallable, "a missing asset must not install")
-        val failure = report.forCode(PackValidation.Code.TRACK_ASSET_MISSING).singleOrNull()
-        assertTrue(failure != null, "TRACK_ASSET_MISSING must be reported: ${report.messages()}")
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.TRACK_ASSET_MISSING).singleOrNull(),
+            "TRACK_ASSET_MISSING must be reported: ${report.messages()}",
+        )
         assertTrue(
-            failure!!.message.contains(PRE.short()),
+            failure.message.contains(PRE.short()),
             "the message names the absent digest, got: ${failure.message}",
         )
     }
@@ -267,10 +272,12 @@ class PackValidationTest {
         )
 
         assertFalse(report.isInstallable, "a base-less delta must not install")
-        val failure = report.forCode(PackValidation.Code.DELTA_WITHOUT_BASE).singleOrNull()
-        assertTrue(failure != null, "DELTA_WITHOUT_BASE must be reported: ${report.messages()}")
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.DELTA_WITHOUT_BASE).singleOrNull(),
+            "DELTA_WITHOUT_BASE must be reported: ${report.messages()}",
+        )
         assertTrue(
-            failure!!.message.contains("basePackId"),
+            failure.message.contains("basePackId"),
             "the message names the missing field, got: ${failure.message}",
         )
     }
@@ -333,9 +340,11 @@ class PackValidationTest {
         )
 
         assertFalse(report.isInstallable, "an unknown scope stage must not install")
-        val failure = report.forCode(PackValidation.Code.UNLOCK_STAGE_UNKNOWN).singleOrNull()
-        assertTrue(failure != null, "UNLOCK_STAGE_UNKNOWN must be reported: ${report.messages()}")
-        assertEquals("PeachBeach", failure!!.subject, "the failure names the stage")
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.UNLOCK_STAGE_UNKNOWN).singleOrNull(),
+            "UNLOCK_STAGE_UNKNOWN must be reported: ${report.messages()}",
+        )
+        assertEquals("PeachBeach", failure.subject, "the failure names the stage")
     }
 
     // ------------------------------------------------------------------------------ provenance
@@ -358,12 +367,46 @@ class PackValidationTest {
         )
 
         assertFalse(report.isInstallable, "uncovered timings must not install")
-        val failure = report.forCode(PackValidation.Code.TIMING_WITHOUT_PROVENANCE).singleOrNull()
-        assertTrue(
-            failure != null,
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.TIMING_WITHOUT_PROVENANCE).singleOrNull(),
             "TIMING_WITHOUT_PROVENANCE must be reported: ${report.messages()}",
         )
-        assertEquals(FLOW_KEY, failure!!.subject, "the failure names the track whose timing is bare")
+        assertEquals(FLOW_KEY, failure.subject, "the failure names the track whose timing is bare")
+    }
+
+    /**
+     * A timing labelled as measured is refused.
+     *
+     * This is the one claim the format refuses outright instead of qualifying. The project has L1
+     * marker positions and L2 audio measurements; neither establishes *when the game* makes a
+     * transition. A pack that labelled its timings `MEASURED_L1` would borrow the authority of a
+     * marker record for a scheduling decision, and the UI, which is required to show the level,
+     * would then present the choice as a fact about the game.
+     */
+    @Test
+    fun aTimingLabelledAsMeasuredIsRefused() {
+        val report = validate(
+            manifest(
+                provenance = listOf(
+                    PackManifest.Provenance(FLOW_KEY, "timing", PackManifest.Level.MEASURED_L1),
+                ),
+            ),
+        )
+
+        assertFalse(report.isInstallable, "an overclaiming timing must not install")
+        val failure = assertNotNull(
+            report.forCode(PackValidation.Code.TIMING_PROVENANCE_OVERCLAIMS).singleOrNull(),
+            "TIMING_PROVENANCE_OVERCLAIMS must be reported: ${report.messages()}",
+        )
+        assertEquals(FLOW_KEY, failure.subject, "the failure names the track")
+        assertTrue(
+            failure.message.contains(PackManifest.Level.MEASURED_L1.name),
+            "the message names the level that cannot apply, got: ${failure.message}",
+        )
+        assertFalse(
+            report.has(PackValidation.Code.TIMING_WITHOUT_PROVENANCE),
+            "a record that exists but overclaims is a different failure from a missing record",
+        )
     }
 
     // ------------------------------------------------------------------------------ reporting

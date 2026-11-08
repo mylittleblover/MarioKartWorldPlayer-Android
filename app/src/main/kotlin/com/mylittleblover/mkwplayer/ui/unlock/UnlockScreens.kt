@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.mylittleblover.mkwplayer.ui.Tokens
 import com.mylittleblover.mkwplayer.ui.art.CupArt
 import com.mylittleblover.mkwplayer.unlock.UnlockPresentation
@@ -55,14 +54,30 @@ import com.mylittleblover.mkwplayer.unlock.UnlockPresentation
  *   would present borrowed art as the app's own.
  */
 
-/** The notification's badge mark. A gold disc, not the cup's emblem: the cup must not be revealed. */
-private val NOTICE_BADGE = 32.dp
+/**
+ * The notification's badge mark. A gold disc, not the cup's emblem: the cup must not be revealed.
+ *
+ * Taken from the pack's one small-artwork measurement rather than invented, because the badge is an
+ * artwork slot and not a spacing decision of this screen.
+ */
+private val NOTICE_BADGE = Tokens.Component.miniPlayerArtwork
 
-/** The ceremony's emblem. Large, because it is the panel's main visual. */
-private val CEREMONY_EMBLEM = 96.dp
+/**
+ * The ceremony's emblem.
+ *
+ * The pack measures no emblem, so this borrows the pack's largest control measurement rather than
+ * introducing a number: a size that is not in the token set should still come from a size that is.
+ * It is the panel's only artwork, so it takes the largest one the pack names.
+ */
+private val CEREMONY_EMBLEM = Tokens.Component.mainPlaybackButton
 
-/** The dialog's emblem. Smaller than the ceremony's, because the dialog also carries two actions. */
-private val DIALOG_EMBLEM = 64.dp
+/**
+ * The dialog's emblem.
+ *
+ * Same reasoning, one step down: the dialog already carries a title, an explanation, a provenance
+ * line and two actions, so its artwork is the pack's small artwork slot rather than its largest.
+ */
+private val DIALOG_EMBLEM = Tokens.Component.miniPlayerArtwork
 
 /**
  * UI-11, the top notification announcing that the hidden cup has appeared.
@@ -330,8 +345,8 @@ internal fun CongratulationDialog(
     onEnterCup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // Composed nothing at all when hidden, so the dialog cannot appear in the semantics tree before
-    // the ceremony has actually finished.
+    // Nothing is composed at all when hidden, so the dialog cannot appear in the semantics tree
+    // before the ceremony has actually finished.
     if (!visible) return
 
     val name = cupName.trim().ifEmpty { CupArt.special.label }

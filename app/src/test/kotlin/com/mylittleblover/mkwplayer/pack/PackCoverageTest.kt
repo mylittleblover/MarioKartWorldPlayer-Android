@@ -94,6 +94,7 @@ class PackCoverageTest {
         kind: PackManifest.Kind = PackManifest.Kind.FULL,
     ): PackManifest {
         val tracks = listOf(flow(), single())
+        val assets = listOf(asset(MAIN), asset(PRE, preCodec), asset(OTHER))
         return PackManifest(
             formatVersion = PackManifest.FORMAT_VERSION,
             packId = "org.example.mkw.base",
@@ -105,9 +106,11 @@ class PackCoverageTest {
             coverage = PackManifest.DeclaredCoverage(
                 totalLogicalTracks = tracks.size,
                 playableLogicalTracks = declaredPlayable,
-                codecKinds = listOf(DECODABLE, UNDECODABLE).distinct(),
+                // Derived from the assets, as a correct pack must: the declared codec list is one of
+                // the claims coverage checks, so a fixture that guessed it would test the wrong rule.
+                codecKinds = assets.map { it.codecKind }.distinct(),
             ),
-            assets = listOf(asset(MAIN), asset(PRE, preCodec), asset(OTHER)),
+            assets = assets,
             tracks = tracks,
             stages = listOf(PackManifest.Stage("Coaster", "Coaster", stageTracks)),
             provenance = listOf(
