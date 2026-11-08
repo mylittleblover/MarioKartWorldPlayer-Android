@@ -1,85 +1,257 @@
 {
-  "schemaVersion": "3.0",
-  "project": "MKW standalone music player",
-  "updatedAt": "2026-11-08T01:25:00+08:00",
-  "worktree": {
-    "repository": "mylittleblover/MarioKartWorldPlayer-Android",
-    "branch": "main",
-    "lastCommit": "42f4f2b",
-    "dirty": false
-  },
-  "applicationId": "com.mylittleblover.mkwplayer",
-  "gates": {
-    "BOOT": "PARTIAL",
-    "TOOLCHAIN": "READY",
-    "ANDROID_BUILD_S4": "PASS",
-    "ANDROID_DEVICE_S5": "PASS",
-    "ANDROID_AUDIO_S6": "NOT_RUN",
-    "DECODER_CORRECTNESS": "PASS_BIT_EXACT",
-    "PHASE_00_OST": "TOOLS_DONE_INVENTORY_INCOMPLETE",
-    "PHASE_01_VERIFY": "PARTIAL",
-    "PHASE_02_INDEX": "ID_CONTRACT_DONE",
-    "INDEX_FREEZE": "BLOCKED_NO_FULL_OST"
-  },
-  "tasks": {
-    "OST-01": {"status": "DONE"},
-    "OST-02": {"status": "PARTIAL", "note": "marker name->position UNCONFIRMED; positions verified"},
-    "OST-03": {"status": "DONE_L1"},
-    "OST-04": {"status": "DONE_TOOL_INVENTORY_INCOMPLETE"},
-    "VER-01": {"status": "DONE_INTEGRITY", "note": "647/647 OK"},
-    "VER-02": {"status": "DONE_COORDINATES", "note": "20991 loop mapped, 0 errors"},
-    "VER-03": {"status": "PARTIAL", "note": "marker positions verified, names UNCONFIRMED"},
-    "VER-04": {"status": "BLOCKED", "blocker": "needs L3 runtime evidence"},
-    "IDX-01": {"status": "DONE", "note": "positional ID contract, 13 JVM tests"},
-    "AND-01": {"status": "DONE_S4"},
-    "AND-02": {"status": "DONE_S4"},
-    "AND-03": {"status": "DONE_S5", "note": "emulator, library loads"},
-    "AND-04": {"status": "DONE_S5_AUDIO", "note": "real BWAV renders non-silent"},
-    "AND-05": {"status": "DONE_L2_BIT_EXACT", "note": "52000 samples maxdiff 0"},
-    "AND-06": {"status": "DONE_S5", "note": "both playback paths pinned"},
-    "AND-07": {"status": "UNRESOLVED", "note": "kind=2 BWAV codec unknown, deliberately not guessed"}
-  },
-  "testTotals": {
-    "python": 143,
-    "kotlinJvm": 18,
-    "androidInstrumentation": 17,
-    "total": 178
-  },
-  "evidence": [
-    "evidence/bootstrap/baseline.md",
-    "evidence/bootstrap/toolchain-build.md",
-    "evidence/bootstrap/bars-format.md",
-    "evidence/bootstrap/name-overlap.md",
-    "evidence/bootstrap/suffix-semantics.md",
-    "evidence/bootstrap/ost-03-probe-match.md",
-    "evidence/bootstrap/ost-04-audit.md",
-    "evidence/bootstrap/bwav-loop.md",
-    "evidence/bootstrap/ver-01-pcm.md",
-    "evidence/bootstrap/ver-02-loop-map.md",
-    "evidence/bootstrap/ver-03-markers.md",
-    "evidence/bootstrap/and-01-skeleton.md",
-    "evidence/bootstrap/and-02-native.md",
-    "evidence/bootstrap/and-03-emulator.md",
-    "evidence/bootstrap/and-04-real-playback.md",
-    "evidence/bootstrap/and-05-decoder-correctness.md",
-    "evidence/bootstrap/and-06-playback-paths.md",
-    "evidence/bootstrap/and-07-kind2-unresolved.md"
-  ],
-  "keyFindings": {
-    "bwavFinalBlock": "5694/20991 文件末块截断；原解析器要求完整块导致拒绝",
-    "bwavPredictorSeed": "654/20991 文件 h+68 与首字节不同；原解析器错误地要求相等",
-    "channelAlignment": "每声道起点 = 上一声道按完整块计的末尾向上对齐 64 字节（592 个双声道文件零例外）",
-    "dspDecodeCorrect": "5 首曲目 52000 采样与参考 WAV 逐样本一致，maxdiff=0",
-    "playTargetRules": "有图 Play(-1) 返回 Ok 但静音；linear 仅接受 Play(-1)",
-    "loadLinearReplacesRuntime": "loadLinear 会丢弃已加载的图，两路径需独立引擎",
-    "kind2Unknown": "253 个文件使用未知编码，明确拒绝而非猜测"
-  },
-  "blockers": [
-    "kind=2 BWAV 编码未知（253 文件，含 227 首 JukeBox）",
-    "无人耳听音验证（无扬声器环境）",
-    "标记名→位置绑定 UNCONFIRMED（两份分析产物矛盾 127/165）",
-    "唯一参考源是转换工具输出，系统性错误无法自证",
-    "剩余 495 份 .bars.zs 未逐档核查"
-  ],
-  "notes": "178 测试全绿。AND-05 是本轮最强证据：解码器与独立实现逐样本一致。"
+    "schemaVersion":  "3.0",
+    "project":  "MKW standalone music player",
+    "updatedAt":  "2026-11-08T16:15:00+08:00",
+    "worktree":  {
+                     "repository":  "mylittleblover/MarioKartWorldPlayer-Android",
+                     "branch":  "main",
+                     "lastCommit":  "095ba7f",
+                     "dirty":  false
+                 },
+    "applicationId":  "com.mylittleblover.mkwplayer",
+    "artifact":  {
+                     "path":  "MKW-Player-dist/MKW-Player-0.1.0-alpha01.apk",
+                     "sizeMB":  39.04,
+                     "sha256":  "C8113ADAD76B9A279B5CB025C39A202004B5FD188BDEAF399ABB2942C26B6E6A",
+                     "versionName":  "0.1.0-alpha01",
+                     "versionCode":  1,
+                     "minSdk":  26,
+                     "targetSdk":  35,
+                     "abis":  [
+                                  "arm64-v8a",
+                                  "armeabi-v7a",
+                                  "x86",
+                                  "x86_64"
+                              ],
+                     "signing":  {
+                                     "type":  "TEST ONLY - never use for release",
+                                     "dn":  "CN=MKW Player Debug, O=Shenggui Development, C=CN",
+                                     "certSha256":  "DB:E9:4B:6E:38:A6:BC:D7:6F:C3:99:DE:E5:5B:B2:86:55:44:F1:29:81:F0:0B:7A:A5:1C:38:95:80:5E:CC:88"
+                                 }
+                 },
+    "gates":  {
+                  "BOOT":  "PARTIAL",
+                  "TOOLCHAIN":  "READY",
+                  "ANDROID_BUILD_S4":  "PASS",
+                  "ANDROID_DEVICE_S5":  "PASS",
+                  "ANDROID_AUDIO_S6":  "PASS",
+                  "ANDROID_REAL_DEVICE_ARM64":  "PASS",
+                  "ANDROID_BACKGROUND_PLAYBACK":  "PASS",
+                  "DECODER_CORRECTNESS":  "PASS_BIT_EXACT",
+                  "PHASE_00_OST":  "TOOLS_DONE_INVENTORY_INCOMPLETE",
+                  "PHASE_01_VERIFY":  "PARTIAL",
+                  "PHASE_02_INDEX":  "ID_CONTRACT_DONE",
+                  "INDEX_FREEZE":  "BLOCKED_NO_FULL_OST"
+              },
+    "listeningEvidence":  {
+                              "verdict":  "PASS",
+                              "source":  "user report",
+                              "replayable":  false,
+                              "device":  "iQOO Z9 Turbo (V2352A), arm64-v8a, Android 16 (API 36)",
+                              "track":  "BGM_Stage_Coaster.bwav",
+                              "confirmed":  {
+                                                "pitchCorrect":  true,
+                                                "noClipping":  true,
+                                                "loopNatural":  true,
+                                                "backgroundPlaybackPersists":  true
+                                            },
+                              "notCovered":  [
+                                                 "any other track",
+                                                 "COURSE categories other than stage themes",
+                                                 "headphone and bluetooth routing",
+                                                 "long-run stability"
+                                             ],
+                              "document":  "evidence/bootstrap/and-23-real-device-listening.md"
+                          },
+    "tasks":  {
+                  "OST-01":  {
+                                 "status":  "DONE"
+                             },
+                  "OST-02":  {
+                                 "status":  "PARTIAL",
+                                 "note":  "marker name-\u003eposition UNCONFIRMED; positions verified"
+                             },
+                  "OST-03":  {
+                                 "status":  "DONE_L1"
+                             },
+                  "OST-04":  {
+                                 "status":  "DONE_TOOL_INVENTORY_INCOMPLETE"
+                             },
+                  "VER-01":  {
+                                 "status":  "DONE_INTEGRITY",
+                                 "note":  "647/647 OK"
+                             },
+                  "VER-02":  {
+                                 "status":  "DONE_COORDINATES",
+                                 "note":  "20991 loop mapped, 0 errors"
+                             },
+                  "VER-03":  {
+                                 "status":  "PARTIAL",
+                                 "note":  "marker positions verified, names UNCONFIRMED"
+                             },
+                  "VER-04":  {
+                                 "status":  "BLOCKED",
+                                 "blocker":  "needs L3 runtime evidence"
+                             },
+                  "IDX-01":  {
+                                 "status":  "DONE",
+                                 "note":  "positional ID contract"
+                             },
+                  "IDX-02":  {
+                                 "status":  "PARTIAL",
+                                 "note":  "catalog asset generated, 4/499 archives"
+                             },
+                  "AND-01":  {
+                                 "status":  "DONE_S4"
+                             },
+                  "AND-02":  {
+                                 "status":  "DONE_S4"
+                             },
+                  "AND-03":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "emulator, library loads"
+                             },
+                  "AND-04":  {
+                                 "status":  "DONE_S5_AUDIO",
+                                 "note":  "real BWAV renders non-silent"
+                             },
+                  "AND-05":  {
+                                 "status":  "DONE_L2_BIT_EXACT",
+                                 "note":  "52000 samples maxdiff 0"
+                             },
+                  "AND-06":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "both playback paths pinned"
+                             },
+                  "AND-07":  {
+                                 "status":  "UNRESOLVED",
+                                 "note":  "kind=2 BWAV codec unknown, deliberately not guessed"
+                             },
+                  "AND-08":  {
+                                 "status":  "DONE",
+                                 "note":  "native shell and self-test screen"
+                             },
+                  "AND-09":  {
+                                 "status":  "DONE",
+                                 "note":  "status text by name, never coerced to Ok"
+                             },
+                  "AND-10":  {
+                                 "status":  "DONE",
+                                 "note":  "graph envelope check before any native call"
+                             },
+                  "AND-11":  {
+                                 "status":  "DONE",
+                                 "note":  "track library model and centralised playability"
+                             },
+                  "AND-12":  {
+                                 "status":  "DONE",
+                                 "note":  "ost index loader does not pretend completeness"
+                             },
+                  "AND-13":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "Kotlin graph builder byte-identical to reference"
+                             },
+                  "AND-14":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "BwavHeader reads rate/channels/frames/loop/kind"
+                             },
+                  "AND-15":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "TrackOpener joins header/builder/engine"
+                             },
+                  "AND-16":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "player UI: picker, library, transport, timing"
+                             },
+                  "AND-17":  {
+                                 "status":  "DONE",
+                                 "note":  "JukeBox chunk container parsed, decode unresolved"
+                             },
+                  "AND-18":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "seek: clamped at UI, refused above"
+                             },
+                  "AND-19":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "real Oboe stream, 54 callbacks/500ms at 48 kHz"
+                             },
+                  "AND-20":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "library persists; corrupt file quarantined"
+                             },
+                  "AND-21":  {
+                                 "status":  "DONE",
+                                 "note":  "foreground service + MediaSession"
+                             },
+                  "AND-22":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "650-entry catalog asset, coverage disclaimer kept"
+                             },
+                  "AND-23":  {
+                                 "status":  "DONE_S6",
+                                 "note":  "user listening confirmation on real arm64 device"
+                             }
+              },
+    "testTotals":  {
+                       "python":  143,
+                       "kotlinJvm":  242,
+                       "androidInstrumentation":  69,
+                       "total":  454,
+                       "manualVerifications":  1
+                   },
+    "keyFindings":  {
+                        "bwavFinalBlock":  "5694/20991 files truncate the final DSP block; the original parser rejected them",
+                        "bwavPredictorSeed":  "654/20991 files disagree at h+68; the original parser wrongly required equality",
+                        "channelAlignment":  "channel start = align64(padded previous end); 592/592 stereo files, no exceptions",
+                        "dspDecodeCorrect":  "5 tracks, 52000 samples, maxdiff 0 against reference WAV",
+                        "playTargetRules":  "graph + Play(-1) returns Ok and stays silent; linear accepts only Play(-1)",
+                        "loadLinearReplacesRuntime":  "loadLinear discards the loaded graph, so the two paths need separate engines",
+                        "kind2Container":  "u32 tag 0x80000001 (24-byte config) + u32 tag 0x80000004 (audio); 253/253 files, 594 channels, no exceptions",
+                        "kind2Unknown":  "average 0.2177 bytes/sample, 83.6 kbps constant; no packet framing found in 48 combinations x every offset",
+                        "catalogLoopOffsets":  "offsets 60 (loopLast) and 64 (loopFirst); 48/8 silently produced null loops"
+                    },
+    "blockers":  [
+                     "kind=2 BWAV codec unknown: 253 files including 227 JukeBox",
+                     "catalog covers 4 of 499 archives; INDEX_FREEZE still blocked",
+                     "marker name-\u003eposition binding UNCONFIRMED (two analysis artifacts disagree 127/165)",
+                     "only one track has listening evidence",
+                     "remaining 495 .bars.zs not individually audited"
+                 ],
+    "notes":  "454 automated tests green plus one S6 listening confirmation. The listening evidence is a user report, not a replayable assertion, and is accounted separately so machine evidence and human evidence stay distinguishable.",
+    "evidence":  [
+                     "evidence/bootstrap/and-01-skeleton.md",
+                     "evidence/bootstrap/and-02-native.md",
+                     "evidence/bootstrap/and-03-emulator.md",
+                     "evidence/bootstrap/and-04-real-playback.md",
+                     "evidence/bootstrap/and-05-decoder-correctness.md",
+                     "evidence/bootstrap/and-06-playback-paths.md",
+                     "evidence/bootstrap/and-07-kind2-unresolved.md",
+                     "evidence/bootstrap/and-08-shell.md",
+                     "evidence/bootstrap/and-09-ui.md",
+                     "evidence/bootstrap/and-10-graph-probe.md",
+                     "evidence/bootstrap/and-11-library-model.md",
+                     "evidence/bootstrap/and-12-index-loader.md",
+                     "evidence/bootstrap/and-13-graph-builder.md",
+                     "evidence/bootstrap/and-14-bwav-header.md",
+                     "evidence/bootstrap/and-15-track-opener.md",
+                     "evidence/bootstrap/and-16-player-ui.md",
+                     "evidence/bootstrap/and-17-jukebox-container.md",
+                     "evidence/bootstrap/and-18-seek.md",
+                     "evidence/bootstrap/and-19-audio-output-real.md",
+                     "evidence/bootstrap/and-20-library-persistence.md",
+                     "evidence/bootstrap/and-21-background-playback.md",
+                     "evidence/bootstrap/and-22-catalog.md",
+                     "evidence/bootstrap/and-23-real-device-listening.md",
+                     "evidence/bootstrap/bars-format.md",
+                     "evidence/bootstrap/baseline.md",
+                     "evidence/bootstrap/bwav-loop.md",
+                     "evidence/bootstrap/name-overlap.md",
+                     "evidence/bootstrap/ost-03-probe-match.md",
+                     "evidence/bootstrap/ost-04-audit.md",
+                     "evidence/bootstrap/suffix-semantics.md",
+                     "evidence/bootstrap/toolchain-build.md",
+                     "evidence/bootstrap/ver-01-pcm.md",
+                     "evidence/bootstrap/ver-02-loop-map.md",
+                     "evidence/bootstrap/ver-03-markers.md"
+                 ]
 }
