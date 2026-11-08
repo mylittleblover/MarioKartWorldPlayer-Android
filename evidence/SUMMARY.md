@@ -79,7 +79,7 @@
 
 ## 6. 证据文档
 
-33 份，全部在 `evidence/bootstrap/`：
+34 份，全部在 `evidence/bootstrap/`：
 
 | 前缀 | 内容 |
 |---|---|
