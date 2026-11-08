@@ -12,6 +12,7 @@ import com.mylittleblover.mkwplayer.graph.GraphBuilder
 import com.mylittleblover.mkwplayer.graph.GraphProbe
 import com.mylittleblover.mkwplayer.library.AudioPicker
 import com.mylittleblover.mkwplayer.library.CatalogLoader
+import com.mylittleblover.mkwplayer.library.CatalogMatcher
 import com.mylittleblover.mkwplayer.graph.StageFlowCompiler
 import com.mylittleblover.mkwplayer.library.LibraryStore
 import com.mylittleblover.mkwplayer.library.StageFlow
@@ -94,6 +95,24 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val isProvisional: Boolean,
     )
 
+    /**
+     * Catalogue rows with ownership, rebuilt whenever the library changes.
+     *
+     * Separate from [catalog] because ownership changes as files are added or removed, while the
+     * catalogue itself is bundled and static.
+     */
+    /**
+     * Catalogue rows with ownership, rebuilt whenever the library changes.
+     *
+     * Owns no Android state, so it is constructed once the bundled catalogue has been parsed in
+     * [init]; ownership changes as files are added or removed while the catalogue stays static.
+     */
+    private var browser: CatalogBrowser? = null
+
+    /** Catalogue browser state, or null before the bundled catalogue is available. */
+    val catalogState: StateFlow<CatalogBrowser.State>?
+        get() = browser?.state
+
     private val _ui = MutableStateFlow(Ui())
     val ui: StateFlow<Ui> = _ui.asStateFlow()
 
@@ -139,6 +158,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }
         if (catalog != null) {
             _ui.value = _ui.value.copy(catalog = catalog)
+            browser = CatalogBrowser(catalog)
+            refreshCatalog()
         }
 
         // Restore before the first frame so the list is never briefly empty on launch.
@@ -158,6 +179,25 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             )
         }
         loaded.problem?.let { _ui.value = _ui.value.copy(detail = it) }
+    }
+
+    /**
+     * Rebuilds the catalogue rows from the library.
+     *
+     * Only measured values are offered to the matcher: a track row that has never been opened has
+     * no frames yet, and passing zeros would make it look like a mismatch rather than unknown.
+     */
+    private fun refreshCatalog() {
+        val active = browser ?: return
+        val files = _ui.value.tracks.map {
+            CatalogMatcher.PresentFile(
+                fileName = it.name,
+                frames = it.frames,
+                sampleRate = it.sampleRate,
+                channels = 2,
+            )
+        }
+        active.refresh(files)
     }
 
     /** Writes the current list. Storage failing is reported, never fatal. */
