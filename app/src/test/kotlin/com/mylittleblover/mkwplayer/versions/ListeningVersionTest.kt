@@ -92,7 +92,7 @@ class ListeningVersionTest {
 
     @Test
     fun duplicateGetsANewIdentity() {
-        val original = structured(name = "Original")
+        val original = structured(name = "Original").withRepeatCount(main, 4)
         val copy = original.duplicated("Copy")
 
         assertNotEquals(original.id, copy.id, "a duplicate must not share the original's identity")
@@ -102,6 +102,11 @@ class ListeningVersionTest {
         assertEquals(original.timing, copy.timing, "a duplicate copies the timing choices")
         assertEquals(original.assets, copy.assets, "a duplicate must bind the same assets")
         assertEquals(original.provenance, copy.provenance, "a duplicate must keep the provenance")
+        assertEquals(
+            4,
+            copy.repeats[main],
+            "a duplicate must keep the main repeat count the original had been edited to",
+        )
     }
 
     @Test
@@ -113,19 +118,6 @@ class ListeningVersionTest {
         assertTrue(
             error.message!!.contains("new identity"),
             "reusing an id leaves two saved versions find-by-id cannot tell apart",
-        )
-    }
-
-    @Test
-    fun aDuplicateKeepsTheRepeatCountsItCopied() {
-        val original = structured(name = "Original").withRepeatCount(main, 4)
-        val copy = original.duplicated("Original again")
-
-        assertEquals(4, copy.repeats[main], "a duplicate must keep the main repeat count")
-        assertEquals(
-            original.timing.mainRepeats,
-            copy.timing.mainRepeats,
-            "a duplicate must keep the timing's repeat count in step",
         )
     }
 
