@@ -16,6 +16,7 @@ import com.mylittleblover.mkwplayer.graph.StageFlowCompiler
 import com.mylittleblover.mkwplayer.library.LibraryStore
 import com.mylittleblover.mkwplayer.library.StageFlow
 import com.mylittleblover.mkwplayer.library.StageFlowDiscovery
+import com.mylittleblover.mkwplayer.library.FolderAudioSource
 import com.mylittleblover.mkwplayer.library.StageFlowReader
 import com.mylittleblover.mkwplayer.library.Playability
 import kotlinx.coroutines.Dispatchers
@@ -434,6 +435,53 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         startPolling()
     }
 
+    /**
+     * Opens the stage files found in a folder inside app storage.
+     *
+     * Same path as [openFlow], minus the picker: this is what makes the flow reachable from an
+     * automated test, and it is a working fallback for a user whose file manager returns names the
+     * app cannot read.
+     */
+    fun openFlowFromFolder() {
+        val folder = java.io.File(getApplication<Application>().filesDir, FLOW_FOLDER)
+        _ui.value = _ui.value.copy(busy = true, status = "Scanning folder...", detail = null)
+        viewModelScope.launch {
+            val scan = withContext(Dispatchers.IO) { FolderAudioSource.scan(folder) }
+            _ui.value = _ui.value.copy(busy = false)
+
+            if (scan.missingFolder) {
+                _ui.value = _ui.value.copy(
+                    status = "No folder",
+                    detail = "Put the stage files in ${folder.path} and try again.",
+                )
+                return@launch
+            }
+            if (scan.found.isEmpty()) {
+                _ui.value = _ui.value.copy(
+                    status = "No usable files",
+                    detail = scan.rejected.firstOrNull() ?: "The folder holds no readable stage parts.",
+                )
+                return@launch
+            }
+
+            val group = StageFlowDiscovery.dominant(scan.groups())
+            if (group == null) {
+                _ui.value = _ui.value.copy(status = "No usable files", detail = scan.rejected.firstOrNull())
+                return@launch
+            }
+
+            val assembled = StageFlowDiscovery.flowFor(group)
+            if (assembled.isFailure) {
+                _ui.value = _ui.value.copy(
+                    status = "Cannot open this flow",
+                    detail = assembled.exceptionOrNull()?.message,
+                )
+                return@launch
+            }
+            startFlow(assembled.getOrThrow(), scan.bytesByName(), scan.rejected)
+        }
+    }
+
     /** Requests a section of the open flow. */
     fun playSection(segment: Int) {
         val compiled = flowCompiled ?: return
@@ -636,5 +684,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
         /** Bundled compatibility manifest; see tools/gen_catalog.py. */
         const val CATALOG_ASSET = "catalog.json"
+
+        /** Folder inside app storage that [openFlowFromFolder] reads. */
+        const val FLOW_FOLDER = "stages"
     }
 }
