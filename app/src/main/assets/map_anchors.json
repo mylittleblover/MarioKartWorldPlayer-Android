@@ -1,0 +1,265 @@
+{
+ "schemaVersion": 1,
+ "provenance": "EXTRACTED_ANCHORS",
+ "provenanceNote": "Normalised positions of the map icon anchors, measured on the WorldMap_full_2500 canvas. u/v are resolution independent; the app multiplies them by the drawn size.",
+ "canvas": [
+  2500,
+  2400
+ ],
+ "stages": [
+  {
+   "code": "AirshipFortress_00",
+   "u": 0.216,
+   "v": 0.364
+  },
+  {
+   "code": "BigTree_00",
+   "u": 0.514,
+   "v": 0.21
+  },
+  {
+   "code": "Cave_00",
+   "u": 0.618,
+   "v": 0.402
+  },
+  {
+   "code": "Central_00",
+   "u": 0.514,
+   "v": 0.548
+  },
+  {
+   "code": "ChocoMountain_00",
+   "u": 0.41,
+   "v": 0.512
+  },
+  {
+   "code": "Cinema_00",
+   "u": 0.628,
+   "v": 0.258
+  },
+  {
+   "code": "Coaster",
+   "u": 0.292,
+   "v": 0.72
+  },
+  {
+   "code": "DKJungleParkway_00",
+   "u": 0.618,
+   "v": 0.638
+  },
+  {
+   "code": "DKPass_00",
+   "u": 0.71,
+   "v": 0.45
+  },
+  {
+   "code": "DesertHills_00",
+   "u": 0.194,
+   "v": 0.644
+  },
+  {
+   "code": "DinoBones_00",
+   "u": 0.412,
+   "v": 0.262
+  },
+  {
+   "code": "DinoDinoJungle_00",
+   "u": 0.638,
+   "v": 0.77
+  },
+  {
+   "code": "DonkeyKong",
+   "u": 0.424,
+   "v": 0.752
+  },
+  {
+   "code": "FirstCircuit",
+   "u": 0.284,
+   "v": 0.572
+  },
+  {
+   "code": "IceBuildings_00",
+   "u": 0.81,
+   "v": 0.382
+  },
+  {
+   "code": "KoopaTroopaBeach_00",
+   "u": 0.512,
+   "v": 0.726
+  },
+  {
+   "code": "LagoonCity_00",
+   "u": 0.718,
+   "v": 0.578
+  },
+  {
+   "code": "Lava_00",
+   "u": 0.316,
+   "v": 0.262
+  },
+  {
+   "code": "MooMooFarm_00",
+   "u": 0.514,
+   "v": 0.442
+  },
+  {
+   "code": "PeachBeach_00",
+   "u": 0.814,
+   "v": 0.644
+  },
+  {
+   "code": "RaftingRiver_00",
+   "u": 0.624,
+   "v": 0.512
+  },
+  {
+   "code": "Rainbow_00",
+   "u": 0.516,
+   "v": 0.65
+  },
+  {
+   "code": "SFCMarioCircuit_00",
+   "u": 0.52,
+   "v": 0.33
+  },
+  {
+   "code": "ShyGuyBazaar_00",
+   "u": 0.198,
+   "v": 0.502
+  },
+  {
+   "code": "SnowMountain_00",
+   "u": 0.718,
+   "v": 0.308
+  },
+  {
+   "code": "StormClouds_00",
+   "u": 0.748,
+   "v": 0.724
+  },
+  {
+   "code": "ToadFactory_00",
+   "u": 0.422,
+   "v": 0.384
+  },
+  {
+   "code": "WarioShipyard_00",
+   "u": 0.816,
+   "v": 0.53
+  },
+  {
+   "code": "WarioStadium",
+   "u": 0.308,
+   "v": 0.446
+  },
+  {
+   "code": "WestCity",
+   "u": 0.414,
+   "v": 0.656
+  }
+ ],
+ "cups": [
+  {
+   "code": "GP00",
+   "u": 0.347,
+   "v": 0.6671
+  },
+  {
+   "code": "GP01",
+   "u": 0.2289,
+   "v": 0.4872
+  },
+  {
+   "code": "GP02",
+   "u": 0.7664,
+   "v": 0.4126
+  },
+  {
+   "code": "GP03",
+   "u": 0.5113,
+   "v": 0.6408
+  },
+  {
+   "code": "GP04",
+   "u": 0.7182,
+   "v": 0.6746
+  },
+  {
+   "code": "GP05",
+   "u": 0.5687,
+   "v": 0.3294
+  },
+  {
+   "code": "GP06",
+   "u": 0.4097,
+   "v": 0.3922
+  },
+  {
+   "code": "GP07",
+   "u": 0.5169,
+   "v": 0.4802
+  }
+ ],
+ "survival": [
+  {
+   "code": "SV00",
+   "u": 0.4083,
+   "v": 0.4509
+  },
+  {
+   "code": "SV01",
+   "u": 0.6118,
+   "v": 0.4694
+  },
+  {
+   "code": "SV02",
+   "u": 0.5095,
+   "v": 0.4332
+  },
+  {
+   "code": "SV03",
+   "u": 0.7353,
+   "v": 0.4569
+  },
+  {
+   "code": "SV04",
+   "u": 0.5052,
+   "v": 0.7076
+  },
+  {
+   "code": "SV05",
+   "u": 0.4959,
+   "v": 0.477
+  },
+  {
+   "code": "SV06",
+   "u": 0.4237,
+   "v": 0.5863
+  },
+  {
+   "code": "SV07",
+   "u": 0.382,
+   "v": 0.3904
+  },
+  {
+   "code": "SV08",
+   "u": 0.5752,
+   "v": 0.3744
+  },
+  {
+   "code": "SV09",
+   "u": 0.462,
+   "v": 0.5539
+  },
+  {
+   "code": "SV10",
+   "u": 0.4777,
+   "v": 0.3393
+  },
+  {
+   "code": "SV11",
+   "u": 0.4537,
+   "v": 0.4935
+  }
+ ]
+}
