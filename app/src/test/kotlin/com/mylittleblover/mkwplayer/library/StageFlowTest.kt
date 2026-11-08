@@ -31,6 +31,8 @@ class StageFlowTest {
         channels = 2,
         loopStart = loop?.first,
         loopEnd = loop?.second,
+        // Outros carry their number, as the reader derives it from the file name.
+        outroNumber = if (role == StageFlow.Role.Outro) 0 else null,
     )
 
     private fun suffix(role: StageFlow.Role): String = when (role) {

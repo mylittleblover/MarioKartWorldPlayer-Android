@@ -38,6 +38,7 @@ class StageFlowCompilerTest {
             channels = 2,
             loopStart = loop?.first,
             loopEnd = loop?.second,
+            outroNumber = if (role == StageFlow.Role.Outro) 0 else null,
         )
     }
 
@@ -68,12 +69,12 @@ class StageFlowCompilerTest {
     fun everyRoleGetsItsOwnSegment() {
         val flow = fullFlow()
         val compiled = StageFlowCompiler.compile(flow, digests(flow))
-        assertEquals(5, compiled.segmentByRole.size)
-        assertEquals(
-            compiled.segmentByRole.size,
-            compiled.segmentByRole.values.toSet().size,
-            "segment indices must be distinct",
-        )
+        // Outros live in their own map, indexed by number rather than by role, because a flow
+        // may carry several of them.
+        assertEquals(4, compiled.segmentByRole.size)
+        assertEquals(1, compiled.segmentByOutro.size)
+        val all = compiled.segmentByRole.values + compiled.segmentByOutro.values
+        assertEquals(all.size, all.toSet().size, "segment indices must be distinct")
     }
 
     @Test
@@ -163,7 +164,7 @@ class StageFlowCompilerTest {
     fun theOutroIsItsOwnSegmentWithNoLoop() {
         val flow = fullFlow()
         val compiled = StageFlowCompiler.compile(flow, digests(flow))
-        assertNotNull(compiled.segmentByRole[StageFlow.Role.Outro])
+        assertNotNull(compiled.segmentForOutro(0))
         // An outro that looped would never end; the graph must not put a loop on it.
         val outro = flow.part(StageFlow.Role.Outro)!!
         assertTrue(!outro.hasLoop)

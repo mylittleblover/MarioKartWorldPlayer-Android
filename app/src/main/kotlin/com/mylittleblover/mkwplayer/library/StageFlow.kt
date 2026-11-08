@@ -58,9 +58,20 @@ internal data class StageFlow(
         /** Measured loop window, or null when the part does not loop. */
         val loopStart: Long?,
         val loopEnd: Long?,
+        /**
+         * Which outro this is, for [Role.Outro] parts.
+         *
+         * A stage has several endings and the game picks one; keeping the number lets a flow
+         * offer them as choices instead of silently keeping whichever file was read first.
+         * `null` for every non-outro role.
+         */
+        val outroNumber: Int? = null,
     ) {
         val hasLoop: Boolean get() = loopStart != null && loopEnd != null
         val seconds: Double get() = if (sampleRate <= 0) 0.0 else frames.toDouble() / sampleRate
+
+        /** Stable label, so two outros never look like the same part in a list. */
+        val label: String get() = outroNumber?.let { "Outro%02d".format(it) } ?: role.name
     }
 
     /**
@@ -77,6 +88,13 @@ internal data class StageFlow(
         val bridgeEntry: MusicGraphBuilder.SyncPoint,
         /** Sync point for requesting the outro. */
         val outroEntry: MusicGraphBuilder.SyncPoint,
+        /**
+         * Sync point for switching from one outro to another.
+         *
+         * A request that has not been executed yet can be replaced; once the source has left,
+         * it cannot. Using `Immediate` here makes a replacement land on the next buffer.
+         */
+        val outroSwitch: MusicGraphBuilder.SyncPoint = MusicGraphBuilder.SyncPoint.Immediate,
         /** How many main-loop passes the storefront plays before offering the outro. */
         val mainRepeats: Int,
         /** Fade applied when a bridge transition starts. */
@@ -101,6 +119,12 @@ internal data class StageFlow(
 
     fun part(role: Role): Part? = parts.firstOrNull { it.role == role }
 
+    /** Every outro this flow offers, in file order. Empty when the flow has none. */
+    fun outros(): List<Part> = parts.filter { it.role == Role.Outro }
+
+    /** A specific outro by number, or null when the flow does not carry it. */
+    fun outro(number: Int): Part? = parts.firstOrNull { it.role == Role.Outro && it.outroNumber == number }
+
     /** True when every part the flow needs is present. */
     fun isComplete(): Boolean =
         part(Role.Pre) != null && part(Role.Main) != null &&
@@ -118,6 +142,7 @@ internal data class StageFlow(
             preludeExit = MusicGraphBuilder.SyncPoint.ExitCue,
             bridgeEntry = MusicGraphBuilder.SyncPoint.NextBar,
             outroEntry = MusicGraphBuilder.SyncPoint.NextBar,
+            outroSwitch = MusicGraphBuilder.SyncPoint.Immediate,
             mainRepeats = 2,
             bridgeFadeOutBeats = 0.0,
             bridgeFadeInBeats = 0.0,
@@ -164,6 +189,15 @@ internal object StageFlowReader {
             is BwavHeader.Result.Ok -> read.info
         }
 
+        // An outro's number comes from its file name, so a flow can offer several without
+        // the caller having to track which file was which.
+        val outroNumber = if (role == StageFlow.Role.Outro) {
+            Regex("_outro(\\d+)", RegexOption.IGNORE_CASE)
+                .find(fileName)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        } else {
+            null
+        }
+
         if (header.codecKind != 1) {
             return Result.failure(
                 IllegalArgumentException(
@@ -181,6 +215,7 @@ internal object StageFlowReader {
                 channels = header.channels,
                 loopStart = header.loopStart?.toLong(),
                 loopEnd = header.loopEnd?.toLong(),
+                outroNumber = outroNumber,
             ),
         )
     }
@@ -193,10 +228,28 @@ internal object StageFlowReader {
     ): Result<StageFlow> {
         if (parts.isEmpty()) return Result.failure(IllegalArgumentException("no parts supplied"))
 
-        val duplicated = parts.groupBy { it.role }.filterValues { it.size > 1 }.keys
+        // Outros are the one role a flow may carry several of, so the duplicate check counts
+        // distinct outro numbers rather than assuming at most one.
+        val duplicated = parts
+            .filter { it.role != StageFlow.Role.Outro }
+            .groupBy { it.role }
+            .filterValues { it.size > 1 }
+            .keys
         if (duplicated.isNotEmpty()) {
             return Result.failure(
                 IllegalArgumentException("more than one part for role(s) $duplicated"),
+            )
+        }
+
+        val outroNumbers = parts.filter { it.role == StageFlow.Role.Outro }.map { it.outroNumber }
+        if (outroNumbers.any { it == null }) {
+            return Result.failure(
+                IllegalArgumentException("every outro needs a number in its file name"),
+            )
+        }
+        if (outroNumbers.toSet().size != outroNumbers.size) {
+            return Result.failure(
+                IllegalArgumentException("the same outro number appears twice: $outroNumbers"),
             )
         }
 

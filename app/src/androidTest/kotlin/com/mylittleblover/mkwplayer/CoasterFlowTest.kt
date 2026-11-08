@@ -127,9 +127,14 @@ class CoasterFlowTest {
         try {
             assertEquals(48000, audio.sampleRate)
             assertEquals(
-                "the five-part flow should get one segment per part",
-                5,
+                "the four structural parts each get a segment",
+                4,
                 compiled.segmentByRole.size,
+            )
+            assertEquals(
+                "Outro00 gets a segment of its own, indexed by its number",
+                1,
+                compiled.segmentByOutro.size,
             )
         } finally {
             audio.close()
@@ -144,7 +149,9 @@ class CoasterFlowTest {
         val flow = flowOf(data)
         val compiled = StageFlowCompiler.compileFromBytes(flow, data.byName)
 
-        for ((role, segment) in compiled.segmentByRole) {
+        val parts = compiled.segmentByRole.map { (role, segment) -> role.name to segment } +
+            compiled.segmentByOutro.map { (number, segment) -> "Outro%02d".format(number) to segment }
+        for ((role, segment) in parts) {
             val audio = engineFor(data, flow).first
             try {
                 assertEquals("Play($segment) for $role", 0, audio.play(segment))
@@ -265,13 +272,16 @@ class CoasterFlowTest {
     }
 
     @Test
-    fun mainToOutroRunsAsATransitionAndEndsSilently() {
+    fun mainToOutroRunsAsATransitionWithoutCrashing() {
+        // Renamed: the previous name claimed it checked silence, and it only checked that
+        // rendering past the outro did not crash. Silence is asserted separately in
+        // MultiOutroTest.anOutroRunsOutInsteadOfLoopingForever, which measures it.
         val data = files() ?: return
         val flow = flowOf(data)
         val (audio, compiled) = engineFor(data, flow)
         try {
             val main = compiled.segmentByRole[StageFlow.Role.Main]!!
-            val outro = compiled.segmentByRole[StageFlow.Role.Outro]!!
+            val outro = compiled.segmentForOutro(0)!!
 
             assertEquals(0, audio.play(main))
             render(audio, blocks = 8)
@@ -283,9 +293,9 @@ class CoasterFlowTest {
             assertEquals("the source should be the main segment", main.toLong(), transition.source)
             assertEquals("the destination should be the outro", outro.toLong(), transition.destination)
 
-            // The outro is short (226,286 frames, ~4.7 s); rendering well past it must not
-            // resurrect audio, and must not crash.
-            val (_, _) = render(audio, blocks = 600)
+            // The outro is short (226,286 frames, ~4.7 s). Rendering well past it must not
+            // crash. Whether it ends silently is measured in MultiOutroTest, not here.
+            render(audio, blocks = 600)
         } finally {
             audio.close()
         }
@@ -309,7 +319,7 @@ class CoasterFlowTest {
             render(audio, blocks = 8)
             frames += EngineSnapshot.read(audio.snapshot())!!.transportFrame
 
-            assertEquals(0, audio.play(compiled.segmentByRole[StageFlow.Role.Outro]!!))
+            assertEquals(0, audio.play(compiled.segmentForOutro(0)!!))
             render(audio, blocks = 8)
             frames += EngineSnapshot.read(audio.snapshot())!!.transportFrame
 
