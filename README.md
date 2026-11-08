@@ -17,6 +17,13 @@
 
 完整的门禁与任务状态见 `handoff/status.json`，一页总结见 `evidence/SUMMARY.md`。
 
+| 文档 | 内容 |
+|---|---|
+| `docs/USAGE.md` | 怎么装、怎么加曲目、界面各项什么意思 |
+| `docs/ARCHITECTURE.md` | 分层理由，以及每一层拒绝了什么 |
+| `CHANGELOG.md` | 版本变更 |
+| `evidence/SUMMARY.md` | 能力、限制、缺陷、测试数一页汇总 |
+
 ## 明确不支持
 
 | 项 | 影响 |
