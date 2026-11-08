@@ -45,6 +45,20 @@ internal class PerformanceDriver(
 
     private var armed = false
 
+    /**
+     * The transport reading that prompted the last request, so a repeat of it is not mistaken for new news.
+     *
+     * Without this the driver advances twice: the state it reads immediately after a request is still the
+     * one from before it, showing the previous segment at its end, and the next tick would move again --
+     * skipping a section, between two similar musical sections, where it is hardest to hear.
+     *
+     * The guard clears when the reading *changes*, not when a fixed time passes. A timer here would be the
+     * same clock the driver exists to avoid: it would expire while the engine is still loading the next
+     * segment and advance on audio nobody has heard.
+     */
+    private var stalePosition: Long? = null
+    private var staleTotal: Long = -1
+
     /** True once [start] has run and the driver is following the transport. */
     val isRunning: Boolean get() = armed
 
@@ -78,9 +92,27 @@ internal class PerformanceDriver(
             return Event.Waiting("the transport is idle")
         }
 
+        // The same reading that prompted the last request. The transport has not moved yet, so this says
+        // nothing about the segment that was just started.
+        val stale = stalePosition != null &&
+            state.positionFrames == stalePosition &&
+            state.totalFrames == staleTotal
+
+        stalePosition = null
+        if (stale) return Event.Waiting("waiting for the new segment to start")
+
         if (!reachedEnd(state)) return Event.Waiting("the current segment is still playing")
 
-        return act(performance.segmentEnded())
+        // Record the reading *before* the request is issued. Reading it afterwards would capture the new
+        // segment's own state, which is the opposite of stale, and the guard would silence a real end.
+        val previousPosition = state.positionFrames
+        val previousTotal = state.totalFrames
+        val event = act(performance.segmentEnded())
+        if (event is Event.Advanced) {
+            stalePosition = previousPosition
+            staleTotal = previousTotal
+        }
+        return event
     }
 
     /** Asks for an outro. Returns the event so the caller can report a refusal. */
@@ -114,6 +146,8 @@ internal class PerformanceDriver(
                 armed = false
                 Event.Blocked("the transport refused segment ${step.segment}")
             } else {
+                // The reading that produced this request is recorded by the caller, which has it; act() has
+                // only the decision.
                 Event.Advanced(step.segment, step.reason)
             }
         }
