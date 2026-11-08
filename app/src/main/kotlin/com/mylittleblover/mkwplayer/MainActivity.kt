@@ -70,6 +70,12 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
     // Android 13+ needs the user to allow notifications before a media notification can
     // appear; the view model only records that asking is needed, because the request
     // itself requires an Activity.
+    val multiPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        if (uris.isNotEmpty()) model.openFlow(uris)
+    }
+
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> model.onNotificationPermissionResult(granted) }
@@ -136,10 +142,71 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
         }
 
         item {
-            Button(
-                onClick = { picker.launch(arrayOf("audio/*", "*/*")) },
-                enabled = !ui.busy,
-            ) { Text(if (ui.busy) "Reading..." else "Add a .bwav file") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { picker.launch(arrayOf("audio/*", "*/*")) },
+                    enabled = !ui.busy,
+                ) { Text(if (ui.busy) "Reading..." else "Add a .bwav file") }
+
+                // Multi-select: a stage is five sibling files, and picking them one at a time is
+                // how the bridge or an outro gets left out.
+                OutlinedButton(
+                    onClick = { multiPicker.launch(arrayOf("audio/*", "*/*")) },
+                    enabled = !ui.busy,
+                ) { Text("Open a stage") }
+            }
+        }
+
+        ui.flow?.let { flow ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(flow.title, style = MaterialTheme.typography.titleSmall)
+                        Text(flow.summary, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            flow.provenance,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = if (flow.isProvisional) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
+            items(flow.sections, key = { "sec-${it.segment}" }) { section ->
+                val active = section.segment == flow.activeSegment
+                Card(
+                    Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (active) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                    ),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text(
+                                section.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                            )
+                            Text(
+                                "${section.seconds}s",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { model.playSection(section.segment) },
+                            enabled = !active,
+                        ) { Text(if (active) "Playing" else "Play") }
+                    }
+                }
+            }
         }
 
         ui.detail?.let { detail ->

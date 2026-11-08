@@ -1,4 +1,4 @@
-﻿package com.mylittleblover.mkwplayer.player
+package com.mylittleblover.mkwplayer.player
 
 import android.app.Application
 import android.net.Uri
@@ -12,7 +12,11 @@ import com.mylittleblover.mkwplayer.graph.GraphBuilder
 import com.mylittleblover.mkwplayer.graph.GraphProbe
 import com.mylittleblover.mkwplayer.library.AudioPicker
 import com.mylittleblover.mkwplayer.library.CatalogLoader
+import com.mylittleblover.mkwplayer.graph.StageFlowCompiler
 import com.mylittleblover.mkwplayer.library.LibraryStore
+import com.mylittleblover.mkwplayer.library.StageFlow
+import com.mylittleblover.mkwplayer.library.StageFlowDiscovery
+import com.mylittleblover.mkwplayer.library.StageFlowReader
 import com.mylittleblover.mkwplayer.library.Playability
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -69,6 +73,24 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val openCategory: String? = null,
         /** True when the activity should ask for POST_NOTIFICATIONS. */
         val needsNotificationPermission: Boolean = false,
+        /** The loaded multi-part flow, if one is open. Null in single-track mode. */
+        val flow: FlowUi? = null,
+    )
+
+    /**
+     * A multi-part flow, as the screen sees it.
+     *
+     * `sections` are the requestable parts and `activeSegment` marks the one playing. The
+     * `provenance` string is not decoration: it is the difference between showing a testing
+     * configuration and presenting it as the game's behaviour.
+     */
+    data class FlowUi(
+        val title: String,
+        val sections: List<FlowPresentation.Section>,
+        val activeSegment: Int?,
+        val summary: String,
+        val provenance: String,
+        val isProvisional: Boolean,
     )
 
     private val _ui = MutableStateFlow(Ui())
@@ -83,6 +105,11 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     )
 
     private val prepared = mutableMapOf<String, Prepared>()
+
+    /** The open flow, if any: its compiled graph and the parts it will bind. */
+    private var flow: StageFlow? = null
+    private var flowCompiled: StageFlowCompiler.Compiled? = null
+    private var flowBytes: Map<String, ByteArray> = emptyMap()
     private var pollJob: Job? = null
     private var totalFrames: Long = 0
     private var rate: Int = 0
@@ -276,6 +303,151 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         persist()
     }
 
+    /**
+     * Opens the flow contained in the given files.
+     *
+     * Expects several files from one stage; a single main file is accepted and plays as a
+     * one-part flow, which keeps "open these five" and "open this one" on the same path rather
+     * than giving the flow code a special case it would then have to keep working.
+     */
+    fun openFlow(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        _ui.value = _ui.value.copy(busy = true, status = "Reading files...", detail = null)
+        viewModelScope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                val bytes = LinkedHashMap<String, ByteArray>()
+                val parts = mutableListOf<StageFlow.Part>()
+                val rejected = mutableListOf<String>()
+
+                for (uri in uris) {
+                    val picked = when (val copied = AudioPicker.copy(getApplication(), uri)) {
+                        is AudioPicker.Result.Rejected -> {
+                            rejected += copied.reason
+                            continue
+                        }
+                        is AudioPicker.Result.Ok -> copied.picked
+                    }
+                    val data = try {
+                        picked.readBytes()
+                    } catch (e: Exception) {
+                        rejected += "${picked.displayName}: ${e.message}"
+                        continue
+                    }
+                    // The logical name must be the game file name so part roles can be found;
+                    // the cache name is a digest and carries no role.
+                    val result = StageFlowReader.readPart(picked.displayName, data)
+                    if (result.isFailure) {
+                        rejected += result.exceptionOrNull()!!.message ?: picked.displayName
+                        continue
+                    }
+                    bytes[picked.displayName] = data
+                    parts += result.getOrThrow()
+                }
+
+                Triple(parts, bytes, rejected)
+            }
+
+            val (parts, bytes, rejected) = outcome
+            _ui.value = _ui.value.copy(busy = false)
+
+            if (parts.isEmpty()) {
+                _ui.value = _ui.value.copy(
+                    status = "No usable parts",
+                    detail = rejected.firstOrNull() ?: "None of the chosen files could be read.",
+                )
+                return@launch
+            }
+
+            val group = StageFlowDiscovery.dominant(StageFlowDiscovery.group(parts))
+            if (group == null) {
+                _ui.value = _ui.value.copy(status = "No usable parts", detail = rejected.firstOrNull())
+                return@launch
+            }
+
+            val assembled = StageFlowDiscovery.flowFor(group)
+            if (assembled.isFailure) {
+                _ui.value = _ui.value.copy(
+                    status = "Cannot open this flow",
+                    detail = assembled.exceptionOrNull()?.message,
+                )
+                return@launch
+            }
+            startFlow(assembled.getOrThrow(), bytes, rejected)
+        }
+    }
+
+    private fun startFlow(flow: StageFlow, bytes: Map<String, ByteArray>, rejected: List<String>) {
+        val compiled = try {
+            StageFlowCompiler.compileFromBytes(flow, bytes)
+        } catch (e: IllegalArgumentException) {
+            _ui.value = _ui.value.copy(
+                status = "Cannot prepare this flow",
+                detail = e.message,
+            )
+            return
+        }
+
+        val entry = FlowPresentation.entrySection(compiled)
+        val state = session.loadFlow(
+            title = flow.name,
+            packet = compiled.packet,
+            assets = compiled.assetPaths.map { path -> path to bytes[path]!! },
+            frames = FlowPresentation.totalFrames(flow),
+            startSegment = entry,
+        )
+        if (state.detail != null) {
+            _ui.value = _ui.value.copy(status = "Cannot play this flow", detail = state.detail)
+            return
+        }
+
+        this.flow = flow
+        this.flowCompiled = compiled
+        this.flowBytes = bytes
+        totalFrames = FlowPresentation.totalFrames(flow)
+        rate = state.sampleRate
+
+        _ui.value = _ui.value.copy(
+            title = flow.name,
+            status = "Playing",
+            total = EngineSnapshot.formatPosition(totalFrames, rate),
+            canPause = true,
+            canStop = true,
+            outputActive = session.hasOutput,
+            flow = FlowUi(
+                title = flow.name,
+                sections = FlowPresentation.sections(flow, compiled),
+                activeSegment = entry,
+                summary = FlowPresentation.summary(flow),
+                provenance = FlowPresentation.provenanceLabel(flow),
+                isProvisional = flow.isProvisional,
+            ),
+            detail = buildList {
+                if (rejected.isNotEmpty()) add("Skipped: " + rejected.joinToString("; "))
+                if (!session.hasOutput) {
+                    add("No device output on this system; the engine is running without a speaker.")
+                }
+            }.joinToString(" ").ifEmpty { null },
+        )
+
+        PlaybackService.start(getApplication())
+        requestNotificationPermissionIfNeeded()
+        startPolling()
+    }
+
+    /** Requests a section of the open flow. */
+    fun playSection(segment: Int) {
+        val compiled = flowCompiled ?: return
+        val state = session.playSegment(segment)
+        if (state.detail != null) {
+            _ui.value = _ui.value.copy(detail = state.detail)
+            return
+        }
+        _ui.value = _ui.value.copy(
+            flow = _ui.value.flow?.copy(activeSegment = segment),
+            status = "Playing",
+        )
+    }
+
     /** Opens or closes a catalog category in the browser. */
     fun toggleCategory(category: String) {
         _ui.value = _ui.value.copy(
@@ -442,6 +614,10 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     private fun releaseTransport() {
         pollJob?.cancel()
         pollJob = null
+        flow = null
+        flowCompiled = null
+        flowBytes = emptyMap()
+        _ui.value = _ui.value.copy(flow = null)
         session.release()
         PlaybackService.stop(getApplication())
     }
