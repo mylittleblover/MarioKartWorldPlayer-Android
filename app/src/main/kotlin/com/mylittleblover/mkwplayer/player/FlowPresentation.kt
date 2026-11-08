@@ -42,6 +42,7 @@ internal object FlowPresentation {
                     StageFlow.Role.Bridge -> "Bridge"
                     StageFlow.Role.Main -> "Main"
                     StageFlow.Role.Outro -> "Outro"
+                    StageFlow.Role.Fast -> "Fast"
                 },
                 frames = part.frames,
                 sampleRate = part.sampleRate,

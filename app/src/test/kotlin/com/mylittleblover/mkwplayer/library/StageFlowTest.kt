@@ -41,6 +41,7 @@ class StageFlowTest {
         StageFlow.Role.Bridge -> "_Bridge"
         StageFlow.Role.Main -> ""
         StageFlow.Role.Outro -> "_Outro00"
+        StageFlow.Role.Fast -> "_Fast"
     }
 
     /** The measured Coaster values, used as the reference flow. */

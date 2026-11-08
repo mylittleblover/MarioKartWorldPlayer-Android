@@ -41,24 +41,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { inner ->
-                    PlayerScreen(Modifier.padding(inner))
-                }
+                val model: PlayerViewModel = viewModel()
+                val ui by model.ui.collectAsStateWithLifecycle()
+                MkwApp(model = model, ui = ui)
             }
         }
     }
 }
 
 /**
- * The player.
+ * The old single-surface test screen.
  *
- * Reads one state object and issues three commands. Every decision about what can
- * be played lives in the view model and the audio layer, so this composable holds no
- * policy of its own -- which is also why it has no tests of its own: the tests sit
- * where the rules are.
+ * Kept, and kept unreachable, because its parts are still the fastest way to drive one file through the
+ * engine by hand and it is what the instrumentation tests know. The app itself is [MkwApp]; a listener never
+ * sees this.
  */
 @Composable
-private fun PlayerScreen(modifier: Modifier = Modifier) {
+private fun LegacyPlayerScreen(modifier: Modifier = Modifier) {
     val model: PlayerViewModel = viewModel()
     val ui by model.ui.collectAsStateWithLifecycle()
     val catalogState by (model.catalogState?.collectAsStateWithLifecycle()
@@ -187,11 +186,12 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
             }
 
             item {
-                // The whole-stage control. One button that plays the stage from its first prelude and
-                // hands the ending to the listener, rather than a row of sections to assemble by hand.
+                // The console. Three events, and each is only enabled when it means something: a control that
+                // is always available is a control that is sometimes a no-op, and the listener cannot tell
+                // which.
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Perform this stage", style = MaterialTheme.typography.titleSmall)
+                        Text("Console", style = MaterialTheme.typography.titleSmall)
 
                         if (flow.performanceBlocker != null) {
                             // A disabled button with no explanation reads as a broken app.
@@ -201,30 +201,42 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
                                 Button(
                                     onClick = { model.startPerformance() },
                                     enabled = !flow.performing && !ui.busy,
-                                ) { Text("Play the whole stage") }
+                                ) { Text("Start") }
+
+                                // The next-stage event. The prelude loops until this is pressed, which is what
+                                // the game does: the race start is an event, not a timer.
+                                OutlinedButton(
+                                    onClick = { model.advancePerformance() },
+                                    enabled = flow.canAdvance,
+                                ) { Text("Next stage") }
+
                                 OutlinedButton(
                                     onClick = { model.stopPerformance() },
                                     enabled = flow.performing,
                                 ) { Text("Stop") }
                             }
 
+                            if (flow.hasFast) {
+                                // The same music at a different tempo. The compiled rule crossfades it at a
+                                // bar line, so the switch is not a cut.
+                                OutlinedButton(
+                                    onClick = { model.toggleFast() },
+                                    enabled = flow.canEnd || flow.fastPlaying,
+                                ) {
+                                    Text(if (flow.fastPlaying) "Back to normal" else "Fast version")
+                                }
+                            }
+
                             if (flow.performanceStage.isNotEmpty()) {
                                 Text(flow.performanceStage, style = MaterialTheme.typography.bodySmall)
                             }
 
-                            if (flow.outroAvailable && flow.outros.isNotEmpty()) {
-                                // The performance does not choose an ending; the listener does.
-                                Text("The main loop is done. Choose an ending:", style = MaterialTheme.typography.bodySmall)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    flow.outros.forEach { number ->
-                                        OutlinedButton(onClick = { model.takeOutro(number) }) {
-                                            Text("Outro ${number + 1}")
-                                        }
-                                    }
-                                }
-                            } else if (flow.performing) {
+                            if (flow.canEnd) {
+                                // The ending is chosen by how far into the loop playback has got; the console
+                                // offers the event, not a menu of files.
+                                Button(onClick = { model.takeOutro() }) { Text("End the stage") }
                                 Text(
-                                    "The ending is offered once the main loop has played through.",
+                                    "The ending nearest to the current position is chosen.",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }

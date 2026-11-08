@@ -7,11 +7,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * A stage performance is an ordering over time, and the two ways to get it wrong are both plausible:
- * advancing a section the listener never heard, and choosing an outro on their behalf.
+ * The performance the user described: a looping prelude, an event that moves it on, a main loop that plays
+ * the bridge on the way in, and an ending chosen by how far in the listener has got.
  *
- * Each test drives the driver the way the transport would, so what is checked is the sequence rather than
- * a single call in isolation.
+ * The tests drive it as the transport would -- by commands, never by a clock -- because the engine ends a
+ * segment by going inactive and never follows a transition by itself.
  */
 class StagePerformanceTest {
 
@@ -22,12 +22,13 @@ class StagePerformanceTest {
             if (prelude) add(part(StageFlow.Role.Pre, 400_000))
             if (shortPrelude) add(part(StageFlow.Role.PreShort, 200_000))
             if (prelude || shortPrelude) add(part(StageFlow.Role.Bridge, 90_000))
+            // Two endings of clearly different length, so "nearest" has something to choose between.
             repeat(outros) { index ->
                 add(
                     StageFlow.Part(
                         role = StageFlow.Role.Outro,
                         fileName = "Outro0$index.bwav",
-                        frames = 220_000,
+                        frames = if (index == 0) 220_000 else 900_000,
                         sampleRate = 48_000,
                         channels = 2,
                         loopStart = null,
@@ -58,227 +59,209 @@ class StagePerformanceTest {
         StageFlow.Role.Bridge to 1102,
     )
 
-    private fun outros() = mapOf(0 to 1110, 1 to 1111)
-
     private fun performance(
         stageFlow: StageFlow = flow(),
         prelude: StagePerformance.Prelude = StagePerformance.Prelude.NORMAL,
-        repeats: Int = 2,
-    ) = StagePerformance(stageFlow, segments(), outros(), prelude, repeats)
+        outros: Map<Int, Int> = mapOf(0 to 1110, 1 to 1111),
+    ) = StagePerformance(stageFlow, segments(), outros, prelude)
 
     // ---------------------------------------------------------------- opening
 
     @Test
     fun aPerformanceOpensWithTheNormalPrelude() {
         val step = performance().start()
-        assertTrue(step is StagePerformance.Step.Play, step.toString())
         assertEquals(1101, (step as StagePerformance.Step.Play).segment)
     }
 
     @Test
     fun theShortPreludeIsAChoiceNotAFallback() {
-        // The game has both and uses them in circumstances this project has not established, so the short
-        // one must be reachable on request rather than only when the normal one is missing.
         val step = performance(prelude = StagePerformance.Prelude.SHORT).start()
         assertEquals(1100, (step as StagePerformance.Step.Play).segment)
     }
 
     @Test
-    fun askingForTheShortPreludeOnAFlowWithoutOneFallsBackToNormal() {
-        // Not the other way round: the normal prelude is the longer listen, and a flow that has only a
-        // short one would otherwise refuse to start.
-        val step = performance(flow(prelude = true, shortPrelude = false), StagePerformance.Prelude.SHORT)
-            .start()
-        assertEquals(1101, (step as StagePerformance.Step.Play).segment)
-    }
-
-    @Test
-    fun aFlowWithOnlyAMainSectionStartsThere() {
-        val step = performance(flow(prelude = false, shortPrelude = false)).start()
-        assertEquals(1103, (step as StagePerformance.Step.Play).segment)
+    fun theDescriptionSaysThePreludeLoops() {
+        // The word matters: a prelude that ends is what made the performance stop dead.
+        val driver = performance()
+        driver.start()
+        assertTrue(driver.describe().contains("looping"), driver.describe())
     }
 
     @Test
     fun aFlowWithoutAMainSectionIsRefused() {
-        // Starting the prelude alone would end in silence with no stated reason.
         val broken = StageFlow(
             name = "Coaster",
             parts = listOf(part(StageFlow.Role.Pre, 400_000)),
             timing = StageFlow.DEFAULT_TIMING,
             provenance = StageFlow.Provenance.PROVISIONAL,
         )
-        val step = StagePerformance(broken, segments(), outros()).start()
-        assertTrue(step is StagePerformance.Step.Blocked, step.toString())
+        assertTrue(StagePerformance(broken, segments(), emptyMap()).start() is StagePerformance.Step.Blocked)
     }
 
-    // ---------------------------------------------------------------- ordering
+    // ---------------------------------------------------------------- the advance event
 
     @Test
-    fun thePreludeHandsOverToTheMainLoop() {
+    fun thePreludeStaysLoopingUntilTheEventArrives() {
+        // Nothing advances it: the prelude is the section the game repeats until the race starts.
         val driver = performance()
         driver.start()
-        val step = driver.segmentEnded()
+        assertEquals(StagePerformance.Stage.PRELUDE, driver.current)
+        assertEquals(1101, driver.playing)
+    }
+
+    @Test
+    fun theAdvanceEventMovesToTheMainLoop() {
+        val driver = performance()
+        driver.start()
+        val step = driver.advance()
+
         assertEquals(1103, (step as StagePerformance.Step.Play).segment)
         assertEquals(StagePerformance.Stage.MAIN, driver.current)
     }
 
     @Test
-    fun theMainLoopRepeatsBeforeAnOutroIsOffered() {
-        val driver = performance(repeats = 3)
+    fun theBridgeIsNotTheDriversBusiness() {
+        // The transition rule names the bridge, so requesting main is what makes the engine play it. A
+        // driver that scheduled the bridge itself would disagree with the compiled graph.
+        val driver = performance()
         driver.start()
-        driver.segmentEnded()   // prelude -> main
-        assertFalse(driver.outroAvailable(), "no pass has completed yet")
-
-        driver.segmentEnded()   // pass 1
-        assertFalse(driver.outroAvailable())
-        driver.segmentEnded()   // pass 2
-        assertFalse(driver.outroAvailable())
-        driver.segmentEnded()   // pass 3
-        assertTrue(driver.outroAvailable(), "three passes should make an outro available")
+        val step = driver.advance()
+        assertEquals(1103, (step as StagePerformance.Step.Play).segment, "the driver must request main")
+        assertTrue(!step.reason.contains("bridge", ignoreCase = true), step.reason)
     }
 
     @Test
-    fun theMainLoopWaitsRatherThanChoosingAnOutro() {
-        // The performance must not end on its own: which outro is taken is the listener's decision.
-        val driver = performance(repeats = 1)
+    fun advancingTwiceDoesNotRestartTheLoop() {
+        val driver = performance()
         driver.start()
-        driver.segmentEnded()
-        val step = driver.segmentEnded()
-        assertTrue(step is StagePerformance.Step.Wait, step.toString())
-        assertEquals(StagePerformance.Stage.MAIN, driver.current)
+        driver.advance()
+        val again = driver.advance()
+        assertTrue(again is StagePerformance.Step.Hold, again.toString())
     }
 
     @Test
-    fun anOutroEndsThePerformance() {
-        val driver = performance(repeats = 1)
+    fun advancingBeforeStartingStartsThePerformance() {
+        // "Begin" is a sensible first command, so it is not an error.
+        val step = performance().advance()
+        assertTrue(step is StagePerformance.Step.Play, step.toString())
+    }
+
+    // ---------------------------------------------------------------- the ending
+
+    @Test
+    fun theNearestEndingIsChosenByPosition() {
+        // Ending 0 is 220,000 frames long; ending 1 is 900,000. A position near the start must pick 0.
+        val driver = performance()
         driver.start()
-        driver.segmentEnded()
-        driver.segmentEnded()
-        driver.requestOutro(0)
-        val step = driver.segmentEnded()
+        driver.advance()
+
+        assertEquals(0, driver.nearestOutro(100_000))
+        assertEquals(1, driver.nearestOutro(800_000))
+    }
+
+    @Test
+    fun aLongPositionPicksTheLongerEnding() {
+        val driver = performance()
+        driver.start()
+        driver.advance()
+        assertEquals(1, driver.nearestOutro(5_000_000))
+    }
+
+    @Test
+    fun tiesGoToTheLowestNumber() {
+        // Deterministic rather than depending on map iteration order. With two endings of equal length the
+        // lowest number wins.
+        val even = StageFlow(
+            name = "Coaster",
+            parts = listOf(
+                part(StageFlow.Role.Main, 1_000_000),
+                StageFlow.Part(StageFlow.Role.Outro, "a.bwav", 100, 48_000, 2, null, null, 0),
+                StageFlow.Part(StageFlow.Role.Outro, "b.bwav", 100, 48_000, 2, null, null, 1),
+            ),
+            timing = StageFlow.DEFAULT_TIMING,
+            provenance = StageFlow.Provenance.PROVISIONAL,
+        )
+        val driver = StagePerformance(even, segments(), mapOf(0 to 1110, 1 to 1111))
+        assertEquals(0, driver.nearestOutro(100))
+    }
+
+    @Test
+    fun theChosenEndingPlays() {
+        val driver = performance()
+        driver.start()
+        driver.advance()
+        val step = driver.takeOutro(100_000)
+
+        assertEquals(1110, (step as StagePerformance.Step.Play).segment)
+        assertEquals(StagePerformance.Stage.OUTRO, driver.current)
+    }
+
+    @Test
+    fun anEndingCannotBeTakenFromThePrelude() {
+        val driver = performance()
+        driver.start()
+        assertTrue(driver.takeOutro(0) is StagePerformance.Step.Blocked)
+    }
+
+    @Test
+    fun aFlowWithNoEndingsSaysSoRatherThanFinishingSilently() {
+        val driver = performance(outros = mapOf())
+        driver.start()
+        driver.advance()
+        val step = driver.takeOutro(0)
+        assertTrue(step is StagePerformance.Step.Blocked, step.toString())
+        assertTrue((step as StagePerformance.Step.Blocked).reason.contains("no endings"))
+    }
+
+    // ---------------------------------------------------------------- the end
+
+    @Test
+    fun theEndingEndsThePerformance() {
+        val driver = performance()
+        driver.start()
+        driver.advance()
+        driver.takeOutro(100_000)
+        val step = driver.finalEnded()
+
         assertTrue(step is StagePerformance.Step.Done && step.finished, step.toString())
         assertTrue(driver.isComplete)
     }
 
     @Test
-    fun theRequestedOutroIsTheOneThatPlays() {
-        val driver = performance(repeats = 1)
-        driver.start()
-        driver.segmentEnded()
-        driver.segmentEnded()
-        val step = driver.requestOutro(1)
-        assertEquals(1111, (step as StagePerformance.Step.Play).segment)
-    }
-
-    // ---------------------------------------------------------------- refusals
-
-    @Test
-    fun anOutroCannotBeTakenFromThePrelude() {
+    fun aLoopingSectionHasNoNaturalEnd() {
+        // The prelude and main loop loop, so reporting them as ended is a caller bug worth naming.
         val driver = performance()
         driver.start()
-        val step = driver.requestOutro(0)
-        assertTrue(step is StagePerformance.Step.Blocked, step.toString())
+        assertTrue(driver.finalEnded() is StagePerformance.Step.Blocked)
+
+        driver.advance()
+        assertTrue(driver.finalEnded() is StagePerformance.Step.Blocked)
     }
 
-    @Test
-    fun anOutroTheFlowDoesNotCarryIsRefusedByName() {
-        // Silently substituting a different outro changes what the listener hears last.
-        val driver = performance(repeats = 1)
-        driver.start()
-        driver.segmentEnded()
-        val step = driver.requestOutro(7)
-        assertTrue(step is StagePerformance.Step.Blocked, step.toString())
-        assertTrue((step as StagePerformance.Step.Blocked).reason.contains("no outro 7"))
-    }
+    // ---------------------------------------------------------------- stopping
 
     @Test
-    fun theRefusalListsWhatIsAvailable() {
-        val driver = performance(repeats = 1)
-        driver.start()
-        driver.segmentEnded()
-        val reason = (driver.requestOutro(7) as StagePerformance.Step.Blocked).reason
-        assertTrue(reason.contains("0") && reason.contains("1"), reason)
-    }
-
-    @Test
-    fun endingBeforeStartingIsRefused() {
-        assertTrue(performance().segmentEnded() is StagePerformance.Step.Blocked)
-    }
-
-    @Test
-    fun takingAnOutroAfterTheEndIsRefused() {
-        val driver = performance(repeats = 1)
-        driver.start()
-        driver.segmentEnded()
-        driver.segmentEnded()
-        driver.requestOutro(0)
-        driver.segmentEnded()
-        val step = driver.requestOutro(1)
-        assertTrue(step is StagePerformance.Step.Done, step.toString())
-    }
-
-    // ---------------------------------------------------------------- abandoning
-
-    @Test
-    fun stoppingBeforeAnOutroIsNotACompletedPerformance() {
-        // The distinction matters: a listener who quits halfway has not heard a full stage, and anything
-        // that counts completed performances must not count this one.
+    fun stoppingIsNotACompletedPerformance() {
         val driver = performance()
         driver.start()
         val step = driver.abandon()
+
         assertTrue(step is StagePerformance.Step.Done && !step.finished, step.toString())
         assertFalse(driver.isComplete)
-        assertEquals(StagePerformance.Stage.ABANDONED, driver.current)
     }
 
     @Test
-    fun abandoningAfterTheEndDoesNotUndoTheCompletion() {
-        val driver = performance(repeats = 1)
+    fun takingAnEndingAfterTheEndIsRefused() {
+        val driver = performance()
         driver.start()
-        driver.segmentEnded()
-        driver.segmentEnded()
-        driver.requestOutro(0)
-        driver.segmentEnded()
-        val step = driver.abandon()
-        assertTrue(step is StagePerformance.Step.Done && step.finished, step.toString())
-    }
-
-    // ---------------------------------------------------------------- reporting
-
-    @Test
-    fun theDescriptionNamesTheShortPreludeAsShort() {
-        // A listener hearing it should be able to tell it was the short one, not a truncated normal one.
-        val driver = performance(prelude = StagePerformance.Prelude.SHORT)
-        driver.start()
-        assertTrue(driver.describe().contains("short", ignoreCase = true), driver.describe())
+        driver.advance()
+        driver.takeOutro(100_000)
+        driver.finalEnded()
+        assertTrue(driver.takeOutro(100_000) is StagePerformance.Step.Done)
     }
 
     @Test
-    fun theDescriptionCountsMainPasses() {
-        // Entering the main loop is not completing a pass. The first segmentEnded after the prelude only
-        // arrives at the main loop, so the counter is still zero and the label says pass 1.
-        val driver = performance(repeats = 3)
-        driver.start()
-        driver.segmentEnded()
-        assertEquals(0, driver.mainPassesCompleted(), "entering the loop is not a completed pass")
-        assertTrue(driver.describe().contains("pass 1 of 3"), driver.describe())
-
-        driver.segmentEnded()
-        assertEquals(1, driver.mainPassesCompleted())
-        assertTrue(driver.describe().contains("pass 2 of 3"), driver.describe())
-    }
-
-    @Test
-    fun everyOutroIsReportedAsAvailable() {
+    fun everyEndingIsReportedAsAvailable() {
         assertEquals(listOf(0, 1), performance().availableOutros())
-    }
-
-    @Test
-    fun theLastRequestedSegmentIsRemembered() {
-        val driver = performance(prelude = StagePerformance.Prelude.SHORT)
-        driver.start()
-        assertEquals(1100, driver.playing)
-        driver.segmentEnded()
-        assertEquals(1103, driver.playing)
     }
 }

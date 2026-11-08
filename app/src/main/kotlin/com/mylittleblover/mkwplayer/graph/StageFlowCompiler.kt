@@ -35,6 +35,9 @@ internal object StageFlowCompiler {
     private const val SEGMENT_BRIDGE = 1102
     private const val SEGMENT_MAIN = 1103
 
+    /** The fast arrangement of main. A distinct segment, because it is a distinct asset. */
+    private const val SEGMENT_FAST = 1104
+
     /** Outro segments start here; outro N gets `SEGMENT_OUTRO_BASE + N`. */
     private const val SEGMENT_OUTRO_BASE = 1110
 
@@ -62,6 +65,7 @@ internal object StageFlowCompiler {
         StageFlow.Role.Pre,
         StageFlow.Role.Bridge,
         StageFlow.Role.Main,
+        StageFlow.Role.Fast,
     )
 
     /**
@@ -93,6 +97,7 @@ internal object StageFlowCompiler {
                 StageFlow.Role.Pre -> SEGMENT_PRE
                 StageFlow.Role.Bridge -> SEGMENT_BRIDGE
                 StageFlow.Role.Main -> SEGMENT_MAIN
+                StageFlow.Role.Fast -> SEGMENT_FAST
                 StageFlow.Role.Outro -> error("outros are indexed by number, not by role")
             }
         }
@@ -123,11 +128,14 @@ internal object StageFlowCompiler {
                 index = segmentIndexOf(part, segmentByRole, segmentByOutro),
                 entry = 0,
                 exit = part.frames,
-                loop = if (part.role == StageFlow.Role.Main && part.hasLoop) {
-                    MusicGraphBuilder.Loop(part.loopStart!!, part.loopEnd!!)
-                } else {
-                    null
-                },
+                // Every section that is not an ending loops, because the engine ends a segment by going
+                // inactive and never follows a transition by itself. A prelude that simply ended would stop
+                // the performance dead, which is exactly what it did before this: the prelude played, the
+                // prelude ended, and nothing was left playing to transition from.
+                //
+                // An ending does not loop: it is the last thing heard, and looping it would mean the
+                // performance could never complete.
+                loop = loopFor(part),
             )
         }
 
@@ -156,6 +164,7 @@ internal object StageFlowCompiler {
                 bridge = segmentByRole[StageFlow.Role.Bridge],
                 prelude = segmentByRole[StageFlow.Role.Pre],
                 preludeShort = segmentByRole[StageFlow.Role.PreShort],
+                fast = segmentByRole[StageFlow.Role.Fast],
                 outros = segmentByOutro,
             ),
             firstIndex = TRANSITION_BASE,
@@ -192,6 +201,26 @@ internal object StageFlowCompiler {
             part.fileName to MessageDigest.getInstance("SHA-256").digest(bytes)
         }
         return compile(flow, digests, transportSampleRate)
+    }
+
+    /**
+     * The loop a compiled section carries, or null when it must end.
+     *
+     * Two rules, and the second is the one that makes a performance work at all:
+     *
+     * A section the flow measured a loop window for loops over that window. The window is measured from the
+     * file's own header, so it is what the game itself loops over.
+     *
+     * A section with **no** measured window still loops over its whole length, unless it is an ending. A
+     * prelude that simply ran to its end would leave the engine with nothing playing, and the engine does not
+     * follow a transition on its own -- so the performance would stop after the prelude with no way forward.
+     * Looping the whole part is also musically correct here: the prelude is the section the game repeats
+     * until the race actually starts.
+     */
+    private fun loopFor(part: StageFlow.Part): MusicGraphBuilder.Loop? = when {
+        part.role == StageFlow.Role.Outro -> null
+        part.hasLoop -> MusicGraphBuilder.Loop(part.loopStart!!, part.loopEnd!!)
+        else -> MusicGraphBuilder.Loop(0, part.frames)
     }
 
     private fun segmentIndexOf(

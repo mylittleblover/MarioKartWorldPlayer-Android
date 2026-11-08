@@ -9,11 +9,11 @@ import kotlin.test.assertTrue
 
 /**
  * A transport that behaves like the real one: asking it to play a segment resets its position and its
- * length, and until a request is processed it keeps reporting the segment it was already on.
+ * length, a request goes through a queue so the reported state lags, and the engine ends a section by going
+ * inactive.
  *
- * The earlier version of this file returned a fixed state from a lambda, which modelled a transport that
- * ignores commands. That made a real bug look like a passing test -- the driver advanced twice for one
- * segment end and nothing complained, because the fake never moved.
+ * The earlier version of this fake returned a fixed state from a lambda, which modelled a transport that
+ * ignores commands. That made a real bug look like a passing test.
  */
 private class FakeTransport {
 
@@ -27,21 +27,15 @@ private class FakeTransport {
     /** Segments the driver asked for, in order. */
     val requested = mutableListOf<Int>()
 
-    /** When false, the transport refuses every request, as a real one does when it is unrecoverable. */
+    /** When false, the transport refuses every request. */
     var accepts: Boolean = true
 
-    /**
-     * When true, a request is recorded but the reported state does not change until [commit].
-     *
-     * This is what the real engine does: `playSegment` goes through a command queue, so a poll taken
-     * immediately afterwards still describes the segment that was playing before. A fake that updates
-     * instantly cannot reproduce the failure, and that is how the double advance went unnoticed.
-     */
+    /** When true, a request is recorded but the reported state does not change until [commit]. */
     var lag: Boolean = false
 
     private var pending: Int? = null
 
-    /** The length each segment reports once it starts. Keyed by segment; unknown segments get [total]. */
+    /** The length each segment reports once it starts. */
     var lengths: Map<Int, Long> = emptyMap()
 
     fun state(): PlaybackSession.State = PlaybackSession.State(
@@ -53,7 +47,6 @@ private class FakeTransport {
         detail = detail,
     )
 
-    /** The callback the driver calls to start a segment. */
     fun start(segment: Int): Boolean {
         if (!accepts) return false
         requested += segment
@@ -79,27 +72,20 @@ private class FakeTransport {
         loaded = true
     }
 
-    /** Plays the current segment to its end, as the engine would. */
-    fun playToEnd() {
-        position = total
-    }
-
-    /** Advances the playhead by [frames], clamped at the end. */
     fun advance(frames: Long) {
         position = (position + frames).coerceAtMost(total)
     }
 }
 
 /**
- * The driver's whole job is deciding *when* to advance, and the two failures it exists to prevent are
- * advancing on a clock rather than on audio, and advancing twice for one segment end.
+ * The driver turns commands into segment requests and reports where the performance has got to.
  *
- * Every advance test drives a [FakeTransport], because a driver that works only when a segment happens to
- * end at the right moment is not working.
+ * There is deliberately no "tick advances the show" test, because there is no such behaviour: the engine ends
+ * a segment by going inactive and never follows a transition by itself, so a driver that advanced on its own
+ * would be inventing a schedule. [PerformanceDriver.tick] exists only to notice the ending's natural end and
+ * to report transport failures.
  */
 class PerformanceDriverTest {
-
-    // ---------------------------------------------------------------- fixtures
 
     private fun part(role: StageFlow.Role, frames: Long) = StageFlow.Part(
         role = role,
@@ -125,7 +111,7 @@ class PerformanceDriverTest {
         provenance = StageFlow.Provenance.PROVISIONAL,
     )
 
-    private fun performance(repeats: Int = 1) = StagePerformance(
+    private fun performance() = StagePerformance(
         flow = flow(),
         segmentByRole = mapOf(
             StageFlow.Role.Main to 1103,
@@ -133,19 +119,15 @@ class PerformanceDriverTest {
             StageFlow.Role.PreShort to 1100,
         ),
         segmentByOutro = mapOf(0 to 1110),
-        mainRepeats = repeats,
     )
 
     private fun transport() = FakeTransport().apply {
         lengths = mapOf(1101 to 400_000, 1103 to 1_000_000, 1110 to 220_000)
     }
 
-    private fun driver(
-        repeats: Int = 1,
-        transport: FakeTransport = transport(),
-    ): Pair<PerformanceDriver, FakeTransport> {
+    private fun driver(transport: FakeTransport = transport()): Pair<PerformanceDriver, FakeTransport> {
         val created = PerformanceDriver(
-            performance(repeats),
+            performance(),
             { segment -> transport.start(segment) },
             { transport.state() },
         )
@@ -168,125 +150,83 @@ class PerformanceDriverTest {
     fun startingTwiceDoesNotRestartTheShow() {
         val (driver, transport) = driver()
         driver.start()
-        val again = driver.start()
-
-        assertTrue(again is PerformanceDriver.Event.Waiting, again.toString())
-        assertEquals(1, transport.requested.size, "the performance restarted itself")
+        assertTrue(driver.start() is PerformanceDriver.Event.Waiting)
+        assertEquals(1, transport.requested.size)
     }
 
     @Test
     fun aTransportThatRefusesTheFirstSegmentStopsTheDriver() {
-        // Otherwise the driver would sit waiting for audio that never started.
         val (driver, transport) = driver()
         transport.accepts = false
-        val event = driver.start()
-
-        assertTrue(event is PerformanceDriver.Event.Blocked, event.toString())
+        assertTrue(driver.start() is PerformanceDriver.Event.Blocked)
         assertFalse(driver.isRunning)
     }
 
-    // ---------------------------------------------------------------- advancing
+    // ---------------------------------------------------------------- the advance event
 
     @Test
-    fun anIdleTransportDoesNotAdvance() {
+    fun theAdvanceEventRequestsTheMainLoop() {
         val (driver, transport) = driver()
         driver.start()
-        transport.loaded = false
-        transport.playing = false
+        val event = driver.advance()
 
-        val event = driver.tick()
-        assertTrue(event is PerformanceDriver.Event.Waiting, event.toString())
-        assertEquals(1, transport.requested.size, "only the opening segment should have been requested")
-    }
-
-    @Test
-    fun aSegmentMidPlaybackDoesNotAdvance() {
-        // This is the clock bug: a timer would fire here, the audio has not finished.
-        val (driver, transport) = driver()
-        driver.start()
-        transport.advance(100_000)
-
-        assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-    }
-
-    @Test
-    fun aPausedSegmentBeforeItsEndDoesNotAdvance() {
-        // Paused audio has not been heard. Only reaching the end counts, and a pause before the end does
-        // not reach it.
-        val (driver, transport) = driver()
-        driver.start()
-        transport.advance(10_000)
-        transport.playing = false
-        transport.paused = true
-
-        assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-    }
-
-    @Test
-    fun anUnknownLengthNeverCountsAsFinished() {
-        // A segment whose length is unknown cannot have ended, and treating it as ended would advance a
-        // performance whose audio never loaded.
-        val (driver, transport) = driver()
-        driver.start()
-        transport.total = 0
-        transport.position = 0
-
-        assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-    }
-
-    @Test
-    fun reachingTheEndAdvancesToTheMainLoop() {
-        val (driver, transport) = driver()
-        driver.start()
-        transport.playToEnd()
-
-        val event = driver.tick()
         assertTrue(event is PerformanceDriver.Event.Advanced, event.toString())
         assertEquals(listOf(1101, 1103), transport.requested)
     }
 
     @Test
-    fun aStaleStateAfterARequestDoesNotAdvanceTwice() {
-        // The real failure: playSegment goes through a command queue, so a poll taken right after the
-        // request still describes the segment that just ended. Without a guard the driver advances again
-        // and skips a section -- between two similar musical sections, where it is hardest to hear.
+    fun thePreludeIsNotAdvancedByTimePassing() {
+        // The whole reason the earlier version stalled: a driver that waited for the prelude to end waited
+        // for something that never happens, because the prelude loops.
         val (driver, transport) = driver()
-        transport.lag = true
         driver.start()
-        transport.commit()
+        transport.advance(390_000)
 
-        transport.playToEnd()
-        assertTrue(driver.tick() is PerformanceDriver.Event.Advanced, "the prelude should have ended")
-        assertEquals(listOf(1101, 1103), transport.requested)
-
-        // The request is still queued: the transport keeps reporting the prelude at its end.
-        val second = driver.tick()
-        assertTrue(second is PerformanceDriver.Event.Waiting, second.toString())
-        assertEquals(2, transport.requested.size, "the driver advanced twice for one segment end")
-
-        // Once the engine picks it up, the driver follows the new segment.
-        transport.commit()
         assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-        assertEquals(2, transport.requested.size)
+        assertEquals(listOf(1101), transport.requested, "the prelude must not advance on its own")
+    }
+
+    // ---------------------------------------------------------------- the ending
+
+    @Test
+    fun theEndingIsChosenByTheCurrentPosition() {
+        // The transport's own position decides which ending; the driver does not pick one arbitrarily.
+        val (driver, transport) = driver()
+        driver.start()
+        driver.advance()
+        transport.position = 200_000
+
+        val event = driver.takeOutro()
+        assertTrue(event is PerformanceDriver.Event.Advanced, event.toString())
+        assertEquals(1110, (event as PerformanceDriver.Event.Advanced).segment)
     }
 
     @Test
-    fun theGuardClearsWhenTheTransportMoves() {
-        // A guard that never cleared would stall the performance after one section.
-        val (driver, transport) = driver(repeats = 1)
-        transport.lag = true
+    fun takingAnEndingOutsideTheMainLoopIsReported() {
+        val (driver, transport) = driver()
         driver.start()
-        transport.commit()
-
-        transport.playToEnd()
-        driver.tick()                        // prelude -> main, queued
-        assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-
-        transport.commit()                   // the main loop starts
-        transport.advance(10_000)
-        assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
-        assertEquals(listOf(1101, 1103), transport.requested)
+        assertTrue(driver.takeOutro() is PerformanceDriver.Event.Blocked)
+        assertEquals(1, transport.requested.size)
     }
+
+    @Test
+    fun thePerformanceFinishesWhenTheEndingEnds() {
+        val (driver, transport) = driver()
+        driver.start()
+        driver.advance()
+        driver.takeOutro()
+
+        // The engine ends a section by going inactive.
+        transport.playing = false
+        transport.loaded = true
+        transport.position = transport.total
+
+        val event = driver.tick()
+        assertTrue(event is PerformanceDriver.Event.Finished, event.toString())
+        assertFalse(driver.isRunning)
+    }
+
+    // ---------------------------------------------------------------- failures
 
     @Test
     fun aTransportErrorBlocksRatherThanAdvancing() {
@@ -297,73 +237,6 @@ class PerformanceDriverTest {
         val event = driver.tick()
         assertTrue(event is PerformanceDriver.Event.Blocked, event.toString())
         assertTrue((event as PerformanceDriver.Event.Blocked).reason.contains("decoder refused"))
-        assertFalse(driver.isRunning, "a failed performance must not keep ticking")
-    }
-
-    // ---------------------------------------------------------------- outros
-
-    @Test
-    fun theMainLoopWaitsRatherThanChoosingAnOutro() {
-        val (driver, transport) = driver(repeats = 1)
-        driver.start()
-        transport.playToEnd()
-        driver.tick()                       // prelude -> main
-        transport.commit()                  // the engine picks it up
-        transport.advance(10_000)
-        driver.tick()                       // clear the stale guard
-        transport.playToEnd()               // one pass done
-
-        val event = driver.tick()
-        assertTrue(event is PerformanceDriver.Event.Waiting, event.toString())
-        assertEquals(listOf(1101, 1103), transport.requested, "the driver chose an outro by itself")
-    }
-
-    @Test
-    fun anOutroPlaysWhenTheCallerAsksForIt() {
-        val (driver, transport) = driver(repeats = 1)
-        driver.start()
-        transport.playToEnd()
-        driver.tick()
-        transport.commit()
-        transport.advance(10_000)
-        driver.tick()
-        transport.playToEnd()
-        driver.tick()
-
-        val outro = driver.requestOutro(0)
-        assertTrue(outro is PerformanceDriver.Event.Advanced, outro.toString())
-        assertEquals(1110, (outro as PerformanceDriver.Event.Advanced).segment)
-        assertEquals(1110, transport.requested.last())
-    }
-
-    @Test
-    fun requestingAnOutroTheFlowLacksIsReported() {
-        val (driver, transport) = driver(repeats = 1)
-        driver.start()
-        transport.playToEnd()
-        driver.tick()
-
-        val event = driver.requestOutro(9)
-        assertTrue(event is PerformanceDriver.Event.Blocked, event.toString())
-    }
-
-    @Test
-    fun thePerformanceFinishesWhenTheOutroEnds() {
-        val (driver, transport) = driver(repeats = 1)
-        driver.start()
-        transport.playToEnd()
-        driver.tick()                       // prelude -> main
-        transport.commit()
-        transport.advance(10_000)
-        driver.tick()
-        transport.playToEnd()
-        driver.tick()                       // main pass done, waiting
-        driver.requestOutro(0)
-
-        transport.playToEnd()               // the outro ends
-        val event = driver.tick()
-
-        assertTrue(event is PerformanceDriver.Event.Finished, event.toString())
         assertFalse(driver.isRunning)
     }
 
@@ -384,7 +257,7 @@ class PerformanceDriverTest {
     @Test
     fun tickingBeforeStartingDoesNothing() {
         val (driver, transport) = driver()
-        transport.playToEnd()
+        transport.position = 999_999
         assertTrue(driver.tick() is PerformanceDriver.Event.Waiting)
         assertTrue(transport.requested.isEmpty())
     }
@@ -409,7 +282,6 @@ class MapRoadTest {
 
     @Test
     fun eachAnchorIsJoinedToItsNearestNeighbour() {
-        // A at the left, B close to it, C far right. A's nearest is B, C's nearest is B, B's nearest is A.
         val roads = MapRoad.nearestNeighbourRoads(
             listOf(anchor("A", 0.10f, 0.5f), anchor("B", 0.20f, 0.5f), anchor("C", 0.90f, 0.5f)),
         )
@@ -420,7 +292,6 @@ class MapRoadTest {
 
     @Test
     fun aRoadAppearsOnceEvenWhenBothEndsChooseEachOther() {
-        // A's nearest is B and B's nearest is A; that is one road, not two overlapping ones.
         val roads = MapRoad.nearestNeighbourRoads(listOf(anchor("A", 0.1f, 0.1f), anchor("B", 0.2f, 0.2f)))
         assertEquals(1, roads.size)
     }
@@ -447,9 +318,7 @@ class MapRoadTest {
     @Test
     fun aRoadFromAStageToItselfIsRefused() {
         assertTrue(
-            runCatching {
-                MapRoad.Segment("A", "A", 0.1f, 0.1f, 0.2f, 0.2f)
-            }.isFailure,
+            runCatching { MapRoad.Segment("A", "A", 0.1f, 0.1f, 0.2f, 0.2f) }.isFailure,
             "a self-road is not a road",
         )
     }

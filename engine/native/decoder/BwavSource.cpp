@@ -87,6 +87,21 @@ public:
 std::unique_ptr<AudioFrameSource> openBwav(std::unique_ptr<EncodedSourceInput> input,const DecodeLimits& limits) {
     if(!input)fail(SourceStatus::InvalidRequest);
     if(limits.maximumDecodedBytes<16384)fail(SourceStatus::ResourceLimit);
+    // A codec-2 file is a set of independent mono Opus streams, so it goes to the Opus reader rather than
+    // the DSP one. Parsing the container is the only way to learn which kind this file is, and the parse is
+    // cheap: it walks chunk headers, not audio.
+    {
+        EncodedSourceBytes probe(*input,limits);
+        BwavLayout layout=parseBwav(probe,limits);
+        if(!layout.opusChannels.empty()) {
+            // One stream for now. The multichannel files are the opening cinematics and sound effects; the
+            // music that matters is mono per channel region, and mixing several Opus decoders into one
+            // source is a separate piece of work. Reported as unsupported rather than played as channel 0.
+            if(layout.opusChannels.size()!=1)fail(SourceStatus::UnsupportedChannels);
+            return projectStreamStereo(makePacketOpusSource(std::move(input),limits,
+                std::move(layout.opusChannels.front())));
+        }
+    }
     return projectStreamStereo(std::make_unique<BwavSource>(std::move(input),limits));
 }
 std::unique_ptr<AudioFrameSource> openBwav(ByteView bytes,const DecodeLimits& limits) {

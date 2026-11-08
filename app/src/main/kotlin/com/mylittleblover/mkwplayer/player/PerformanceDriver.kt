@@ -3,16 +3,19 @@ package com.mylittleblover.mkwplayer.player
 import com.mylittleblover.mkwplayer.library.StageFlow
 
 /**
- * Connects a [StagePerformance] to a transport, without either knowing about the other.
+ * Connects a [StagePerformance] to a transport, and is the console operator's interface to it.
  *
- * [StagePerformance] decides what should play next; a transport can start a segment but knows nothing
- * about preludes or outros. This is the join, and it exists as its own object for one reason: the moment a
- * segment has finished must be read from the transport, not guessed.
+ * [StagePerformance] decides what should play next; a transport can start a segment but knows nothing about
+ * preludes or endings. This is the join, and it exists as its own object for one reason: every move must be
+ * a command from the operator, never a clock.
  *
  * A timer would be the obvious shortcut and it is wrong twice over. A section that is still buffering has
- * not been heard, and a section that was paused has not been heard either — but a clock advances through
- * both. The transport's own position reaching its own length is the only signal that says the audio
- * actually played, and this class refuses to advance on anything else.
+ * not been heard, and a section that was paused has not been heard either, but a clock advances through
+ * both. Worse, the engine ends a section by going inactive and never follows a transition by itself, so no
+ * amount of watching the transport would ever move the performance on.
+ *
+ * So the three controls are: [advance] (the next-stage event), [toggleFast] (the arrangement switch) and
+ * [takeOutro] (the ending). [tick] exists only to notice the ending's natural end and to report failures.
  */
 internal class PerformanceDriver(
     private val performance: StagePerformance,
@@ -22,13 +25,7 @@ internal class PerformanceDriver(
     private val transport: () -> PlaybackSession.State,
 ) {
 
-    /**
-     * What happened on the last [tick], so a caller can act on it.
-     *
-     * A sealed result rather than a boolean because "started the next section" and "the performance
-     * finished" need different handling in the UI, and a caller that cannot tell them apart will do the
-     * wrong one.
-     */
+    /** What happened on the last call, so a caller can act on it. */
     sealed interface Event {
         /** A segment was started. */
         data class Advanced(val segment: Int, val reason: String) : Event
@@ -48,19 +45,26 @@ internal class PerformanceDriver(
     /**
      * The transport reading that prompted the last request, so a repeat of it is not mistaken for new news.
      *
-     * Without this the driver advances twice: the state it reads immediately after a request is still the
-     * one from before it, showing the previous segment at its end, and the next tick would move again --
-     * skipping a section, between two similar musical sections, where it is hardest to hear.
+     * Without this the driver advances twice: the state it reads immediately after a request is still the one
+     * from before it, showing the previous segment at its end, and the next tick would move again.
      *
      * The guard clears when the reading *changes*, not when a fixed time passes. A timer here would be the
-     * same clock the driver exists to avoid: it would expire while the engine is still loading the next
-     * segment and advance on audio nobody has heard.
+     * same clock the driver exists to avoid.
      */
     private var stalePosition: Long? = null
     private var staleTotal: Long = -1
 
+    /** True while the fast arrangement is the one playing. */
+    private var fast = false
+
     /** True once [start] has run and the driver is following the transport. */
     val isRunning: Boolean get() = armed
+
+    /** True when the fast arrangement is playing. */
+    val isFast: Boolean get() = fast
+
+    /** True when the flow carries a fast arrangement at all, so the console can hide the switch. */
+    val hasFastArrangement: Boolean get() = performance.hasFastArrangement
 
     /** Begins the performance and starts its first segment. */
     fun start(): Event {
@@ -71,11 +75,62 @@ internal class PerformanceDriver(
     }
 
     /**
-     * Follows the transport.
+     * The next-stage event: leave the prelude for the main loop.
      *
-     * Called from the poll that already exists. It only advances when the transport reports that the
-     * current segment reached its own end, so calling it more often or less often changes nothing but the
-     * timing of the advance, never whether it happens.
+     * This is what the console's first control triggers. It is deliberately not automatic: the prelude loops
+     * until someone says the race has started.
+     */
+    fun advance(): Event = act(performance.advance())
+
+    /**
+     * Switches between the main loop and its fast arrangement.
+     *
+     * The two are the same music at different tempos, so the move is a crossfade at a bar line rather than a
+     * cut -- the compiled rule says which and carries the fade. The driver only decides which direction and
+     * remembers which way it went.
+     */
+    fun toggleFast(): Event {
+        if (!performance.hasFastArrangement) {
+            return Event.Blocked("this flow has no fast arrangement, so there is nothing to switch to")
+        }
+        if (performance.current != StagePerformance.Stage.MAIN) {
+            return Event.Blocked("the fast arrangement can only be switched to from the main loop")
+        }
+        val target = performance.fastSegment()
+            ?: return Event.Blocked("this flow's fast arrangement has no segment")
+        val back = performance.mainSegment()
+            ?: return Event.Blocked("this flow has no main section")
+
+        val next = if (fast) back else target
+        // A failed request must not flip the remembered direction, or the console would show the wrong state
+        // and the next press would do nothing.
+        val accepted = if (fast) performance.leaveFast() else performance.enterFast()
+        val step = when (accepted) {
+            is StagePerformance.Step.Play -> accepted
+            else -> accepted
+        }
+        val event = act(step)
+        if (event is Event.Advanced) fast = !fast
+        return event
+    }
+
+    /** Takes the ending nearest to the current position. */
+    fun takeOutro(): Event {
+        val position = transport().positionFrames
+        return act(performance.takeOutro(position))
+    }
+
+    /** Where the performance is, for the console's status line. */
+    fun describe(): String = performance.describe()
+
+    /** True while the prelude is looping, which is the one moment the next-stage event means anything. */
+    val canAdvance: Boolean get() = performance.current == StagePerformance.Stage.PRELUDE
+
+    /** True while the main loop is playing, which is when an ending can be chosen. */
+    val canEnd: Boolean get() = performance.current == StagePerformance.Stage.MAIN
+
+    /**
+     * Follows the transport for the one thing that cannot be a command: the ending reaching its own end.
      */
     fun tick(): Event {
         if (!armed) return Event.Waiting("the performance has not started")
@@ -86,43 +141,22 @@ internal class PerformanceDriver(
             return Event.Blocked(state.detail)
         }
 
-        // Stopped between segments, which is the normal state right after a request lands. Nothing has
-        // finished, so nothing advances.
-        if (!state.active && !state.playing && !state.paused && !state.loaded) {
-            return Event.Waiting("the transport is idle")
-        }
-
         // The same reading that prompted the last request. The transport has not moved yet, so this says
         // nothing about the segment that was just started.
         val stale = stalePosition != null &&
             state.positionFrames == stalePosition &&
             state.totalFrames == staleTotal
-
         stalePosition = null
         if (stale) return Event.Waiting("waiting for the new segment to start")
 
-        if (!reachedEnd(state)) return Event.Waiting("the current segment is still playing")
-
-        // Record the reading *before* the request is issued. Reading it afterwards would capture the new
-        // segment's own state, which is the opposite of stale, and the guard would silence a real end.
-        val previousPosition = state.positionFrames
-        val previousTotal = state.totalFrames
-        val event = act(performance.segmentEnded())
-        if (event is Event.Advanced) {
-            stalePosition = previousPosition
-            staleTotal = previousTotal
+        if (performance.current != StagePerformance.Stage.OUTRO) {
+            // Every other section loops, so reaching its end means it wrapped rather than that it ended.
+            return Event.Waiting("the current section is looping")
         }
-        return event
+        if (!reachedEnd(state)) return Event.Waiting("the ending is still playing")
+
+        return act(performance.finalEnded())
     }
-
-    /** Asks for an outro. Returns the event so the caller can report a refusal. */
-    fun requestOutro(number: Int): Event = act(performance.requestOutro(number))
-
-    /** True once the main loop has run its passes, so an outro may be taken. */
-    fun outroAvailable(): Boolean = performance.outroAvailable()
-
-    /** Where the performance is, for a status line. Never invents detail. */
-    fun describe(): String = performance.describe()
 
     /** Stops before the end. */
     fun stop(): Event {
@@ -132,15 +166,13 @@ internal class PerformanceDriver(
     }
 
     /**
-     * True when the transport has played the current segment to its end.
+     * True when the transport has played the ending to its end.
      *
      * Requires a known length: an unknown length cannot be finished, and treating "no length" as "ended"
      * would advance a performance whose audio never loaded.
      */
     private fun reachedEnd(state: PlaybackSession.State): Boolean {
         if (state.totalFrames <= 0) return false
-        // The engine stops at the end of a segment; either signal is enough, but at least one must be
-        // present, so a transport that is merely idle mid-segment does not count.
         val atEnd = state.positionFrames >= state.totalFrames
         val stoppedAfterPlaying = !state.playing && !state.paused && state.loaded
         return atEnd || stoppedAfterPlaying
@@ -152,12 +184,10 @@ internal class PerformanceDriver(
                 armed = false
                 Event.Blocked("the transport refused segment ${step.segment}")
             } else {
-                // The reading that produced this request is recorded by the caller, which has it; act() has
-                // only the decision.
                 Event.Advanced(step.segment, step.reason)
             }
         }
-        is StagePerformance.Step.Wait -> Event.Waiting(step.reason)
+        is StagePerformance.Step.Hold -> Event.Waiting(step.reason)
         is StagePerformance.Step.Done -> {
             armed = false
             Event.Finished(step.reason)
@@ -172,12 +202,10 @@ internal class PerformanceDriver(
 /**
  * The straight-line road between two map anchors.
  *
- * The game's map draws roads as lines joining stages, and a straight line is what a player sees at the
- * zoom levels this app uses. An earlier attempt extracted the roads from the map image by colour and
- * produced 1021 polylines covered in coastline and foliage outlines -- worse than straight lines, because
- * a false road looks like a bug while a straight one reads as a diagram.
- *
- * So: given two anchors, the road is the segment between them. No image analysis, no data file.
+ * The game's map draws roads as lines joining stages, and a straight line is what a player sees at the zoom
+ * levels this app uses. An earlier attempt extracted the roads from the map image by colour and produced 1021
+ * polylines covered in coastline and foliage outlines -- worse than straight lines, because a false road
+ * looks like a bug while a straight one reads as a diagram.
  */
 internal object MapRoad {
 
@@ -193,7 +221,6 @@ internal object MapRoad {
         init {
             require(fromCode.isNotBlank() && toCode.isNotBlank()) { "a road needs two named ends" }
             require(fromCode != toCode) { "a road from a stage to itself is not a road" }
-            // Fractions, because the map is drawn at whatever size the screen allows.
             require(fromU in 0f..1f && toU in 0f..1f) { "u must be within 0..1" }
             require(fromV in 0f..1f && toV in 0f..1f) { "v must be within 0..1" }
         }
@@ -210,8 +237,7 @@ internal object MapRoad {
      * Roads joining each anchor to its nearest neighbour.
      *
      * Nearest rather than all-pairs: all-pairs would draw a complete graph over the map, which reads as a
-     * wiring diagram rather than a road network. Each stage gets one road, and duplicate pairs are collapsed
-     * so an anchor that is its neighbour's nearest does not produce two overlapping lines.
+     * wiring diagram rather than a road network.
      */
     fun nearestNeighbourRoads(
         stages: List<com.mylittleblover.mkwplayer.library.MapAnchors.Anchor>,

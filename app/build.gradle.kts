@@ -12,10 +12,10 @@ android {
         applicationId = "com.mylittleblover.mkwplayer"
         minSdk = 26
         targetSdk = 35
-        // Bumped for the alpha03 build: a stage can now be performed end to end with one button, the
-        // measured bridge handovers reach the engine, and every stage has its own map icon.
-        versionCode = 3
-        versionName = "0.1.0-alpha03"
+        // Bumped for alpha04: the app is navigable, the console drives a whole stage with real events, and
+        // codec 2 (chunked Opus) decodes through the libopus that was already linked.
+        versionCode = 4
+        versionName = "0.1.0-alpha04"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

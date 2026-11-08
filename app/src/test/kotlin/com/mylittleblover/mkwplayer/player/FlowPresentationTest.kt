@@ -27,6 +27,7 @@ class FlowPresentationTest {
             StageFlow.Role.Bridge -> "_Bridge"
             StageFlow.Role.Main -> ""
             StageFlow.Role.Outro -> "_Outro%02d".format(outroNumber ?: 0)
+            StageFlow.Role.Fast -> "_Fast"
         }
         return StageFlow.Part(
             role = role,

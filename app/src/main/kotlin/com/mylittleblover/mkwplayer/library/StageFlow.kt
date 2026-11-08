@@ -45,6 +45,15 @@ internal data class StageFlow(
 
         /** An ending. The game has several; which one is used is not established. */
         Outro,
+
+        /**
+         * The fast arrangement of [Main].
+         *
+         * The archive carries `BGM_Stage_<Stage>_Fast.bwav` alongside the main file for 61 stages. It is the
+         * same music at a faster tempo, played while the race is running behind, and the game switches to it
+         * and back without stopping.
+         */
+        Fast,
     }
 
     data class Part(
@@ -66,12 +75,28 @@ internal data class StageFlow(
          * `null` for every non-outro role.
          */
         val outroNumber: Int? = null,
+        /**
+         * Which arrangement of the same music this part is.
+         *
+         * `BGM_Stage_DonkeyKong_Pattern2.bwav` and `BGM_Stage_DonkeyKong.bwav` are the same course's music
+         * in different versions, and the game switches between them while playing. 8 files carry a pattern
+         * number today. `null` means the part is the base arrangement.
+         *
+         * Kept apart from [outroNumber] because the two answer different questions: an outro is where the
+         * performance ends, a pattern is which version of the same section is playing.
+         */
+        val pattern: Int? = null,
     ) {
         val hasLoop: Boolean get() = loopStart != null && loopEnd != null
         val seconds: Double get() = if (sampleRate <= 0) 0.0 else frames.toDouble() / sampleRate
 
         /** Stable label, so two outros never look like the same part in a list. */
-        val label: String get() = outroNumber?.let { "Outro%02d".format(it) } ?: role.name
+        val label: String
+            get() = when {
+                outroNumber != null -> "Outro%02d".format(outroNumber)
+                pattern != null -> "${role.name} %02d".format(pattern)
+                else -> role.name
+            }
     }
 
     /**
@@ -101,6 +126,14 @@ internal data class StageFlow(
         val bridgeFadeOutBeats: Double,
         /** Fade applied when the bridge hands over to the main loop. */
         val bridgeFadeInBeats: Double,
+        /**
+         * Fade applied when crossing between the main loop and its fast arrangement.
+         *
+         * A switch between two arrangements of the same music has to be a crossfade, not a cut: the two
+         * parts do not share a sample position, so a hard cut lands mid-phrase. Zero means "no fade", which
+         * is a choice worth stating explicitly rather than defaulting to silence.
+         */
+        val fastFadeBeats: Double = 0.0,
     )
 
     /** Where the numbers came from. */

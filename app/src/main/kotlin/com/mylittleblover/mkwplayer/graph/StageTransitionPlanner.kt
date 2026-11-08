@@ -31,6 +31,8 @@ internal object StageTransitionPlanner {
         val hasMeasuredBridge: Boolean,
         /** The bridge plan, for its explanation. Null when the flow has no bridge at all. */
         val bridge: MeasuredTransition.Plan?,
+        /** The fast arrangement's segment, or null when the flow has none. */
+        val fastSegment: Int? = null,
     )
 
     /** Segment indices the caller has already compiled. */
@@ -39,6 +41,8 @@ internal object StageTransitionPlanner {
         val bridge: Int? = null,
         val prelude: Int? = null,
         val preludeShort: Int? = null,
+        /** The fast arrangement of main, when the flow carries one. */
+        val fast: Int? = null,
         /** Outro number to segment index. */
         val outros: Map<Int, Int> = emptyMap(),
     )
@@ -125,12 +129,36 @@ internal object StageTransitionPlanner {
             }
         }
 
+        // The fast arrangement is the same music, so the move between it and main is a crossfade rather
+        // than a splice at a shared sample position -- the two parts do not share one. Both directions get
+        // their own rule, because a caller toggling the switch needs both and the engine matches on the
+        // source.
+        val fast = segments.fast
+        if (fast != null && flow.parts.any { it.role == StageFlow.Role.Fast }) {
+            for ((from, to, reason) in listOf(
+                Triple(segments.main, fast, "to the fast arrangement"),
+                Triple(fast, segments.main, "back to the main loop"),
+            )) {
+                transitions += MusicGraphBuilder.Transition(
+                    index = next++,
+                    sources = listOf(from),
+                    destinations = listOf(to),
+                    // On a bar: a switch mid-phrase sounds like a mistake even with a fade.
+                    sync = MusicGraphBuilder.SyncPoint.NextBar,
+                    entry = MusicGraphBuilder.EntryMode.EntryCue,
+                    fadeOut = MusicGraphBuilder.Fade(flow.timing.fastFadeBeats),
+                    fadeIn = MusicGraphBuilder.Fade(flow.timing.fastFadeBeats),
+                )
+            }
+        }
+
         return Plan(
             transitions = transitions,
             hasMeasuredBridge = bridgePlan.isMeasured && bridgeSegment >= 0,
             // Null when the flow has no bridge part, even if the caller passed a segment index: the plan
             // describes what was compiled, not what was offered.
             bridge = if (!flowHasBridge) null else bridgePlan,
+            fastSegment = if (fast != null && flow.parts.any { it.role == StageFlow.Role.Fast }) fast else null,
         )
     }
 
