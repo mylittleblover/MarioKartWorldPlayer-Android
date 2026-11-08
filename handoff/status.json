@@ -1,11 +1,11 @@
 {
     "schemaVersion":  "3.0",
     "project":  "MKW standalone music player",
-    "updatedAt":  "2026-11-08T16:15:00+08:00",
+    "updatedAt":  "2026-11-08T17:15:00+08:00",
     "worktree":  {
                      "repository":  "mylittleblover/MarioKartWorldPlayer-Android",
                      "branch":  "main",
-                     "lastCommit":  "095ba7f",
+                     "lastCommit":  "c0c9c43",
                      "dirty":  false
                  },
     "applicationId":  "com.mylittleblover.mkwplayer",
@@ -41,7 +41,11 @@
                   "PHASE_00_OST":  "TOOLS_DONE_INVENTORY_INCOMPLETE",
                   "PHASE_01_VERIFY":  "PARTIAL",
                   "PHASE_02_INDEX":  "ID_CONTRACT_DONE",
-                  "INDEX_FREEZE":  "BLOCKED_NO_FULL_OST"
+                  "INDEX_FREEZE":  "BLOCKED_NO_FULL_OST",
+                  "ANDROID_AUDIO_FOCUS":  "PASS_PARTIAL",
+                  "MULTI_SEGMENT_GRAPH_WRITER":  "PASS",
+                  "MULTI_SEGMENT_PLAYBACK":  "PASS_S5",
+                  "MUSIC_TRANSITION_EXECUTION":  "NOT_VERIFIED"
               },
     "listeningEvidence":  {
                               "verdict":  "PASS",
@@ -190,13 +194,21 @@
                   "AND-23":  {
                                  "status":  "DONE_S6",
                                  "note":  "user listening confirmation on real arm64 device"
+                             },
+                  "AND-24":  {
+                                 "status":  "DONE_PARTIAL",
+                                 "note":  "audio focus + route receiver + service polling; platform broadcast delivery NOT_VERIFIED"
+                             },
+                  "AND-25":  {
+                                 "status":  "DONE_S5",
+                                 "note":  "multi-asset/multi-segment writer; engine plays 3 assets x 3 segments on device"
                              }
               },
     "testTotals":  {
                        "python":  143,
-                       "kotlinJvm":  242,
-                       "androidInstrumentation":  69,
-                       "total":  454,
+                       "kotlinJvm":  279,
+                       "androidInstrumentation":  78,
+                       "total":  500,
                        "manualVerifications":  1
                    },
     "keyFindings":  {
@@ -215,9 +227,10 @@
                      "catalog covers 4 of 499 archives; INDEX_FREEZE still blocked",
                      "marker name-\u003eposition binding UNCONFIRMED (two analysis artifacts disagree 127/165)",
                      "only one track has listening evidence",
-                     "remaining 495 .bars.zs not individually audited"
+                     "transition execution, cue triggers, bridge overlap and musical loop runtime are NOT_VERIFIED",
+                     "AUDIO_BECOMING_NOISY platform delivery cannot be simulated (system-only broadcast)"
                  ],
-    "notes":  "454 automated tests green plus one S6 listening confirmation. The listening evidence is a user report, not a replayable assertion, and is accounted separately so machine evidence and human evidence stay distinguishable.",
+    "notes":  "500 automated tests green plus one S6 listening confirmation. Stage A closed audio focus except the un-simulatable route broadcast. Stage B proved the native engine plays a three-asset three-segment graph; transition execution is still unverified.",
     "evidence":  [
                      "evidence/bootstrap/and-01-skeleton.md",
                      "evidence/bootstrap/and-02-native.md",
@@ -253,5 +266,15 @@
                      "evidence/bootstrap/ver-01-pcm.md",
                      "evidence/bootstrap/ver-02-loop-map.md",
                      "evidence/bootstrap/ver-03-markers.md"
-                 ]
+                 ],
+    "nextTask":  {
+                     "id":  "AND-26",
+                     "title":  "Coaster five-part flow: Pre_Short -\u003e Pre -\u003e Bridge -\u003e Main -\u003e Outro",
+                     "requires":  [
+                                      "MusicGraphBuilder (done)",
+                                      "transition execution path",
+                                      "asset binding for five files"
+                                  ],
+                     "blocker":  "transition firing needs event-driven verification; no confirmed original cue semantics"
+                 }
 }
