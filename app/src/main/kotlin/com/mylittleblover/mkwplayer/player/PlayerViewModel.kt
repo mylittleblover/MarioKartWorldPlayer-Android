@@ -99,6 +99,21 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val summary: String,
         val provenance: String,
         val isProvisional: Boolean,
+        /** Outros this flow can end with, in the order the flow lists them. */
+        val outros: List<Int> = emptyList(),
+        /** True while a whole-stage performance is running. */
+        val performing: Boolean = false,
+        /** Where the performance is, in words. Empty when nothing is performing. */
+        val performanceStage: String = "",
+        /** True once the main loop has run its passes, so an outro may be taken. */
+        val outroAvailable: Boolean = false,
+        /**
+         * Why the performance cannot start, or null when it can.
+         *
+         * A reason rather than a disabled button: a control that is greyed with no explanation makes the
+         * listener guess, and the usual guess is that the app is broken.
+         */
+        val performanceBlocker: String? = null,
     )
 
     /**
@@ -136,6 +151,14 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     private var flow: StageFlow? = null
     private var flowCompiled: StageFlowCompiler.Compiled? = null
     private var flowBytes: Map<String, ByteArray> = emptyMap()
+
+    /**
+     * The running stage performance, or null when the listener is driving sections by hand.
+     *
+     * One driver at a time: two would both advance on the same transport end and between them skip every
+     * other section.
+     */
+    private var performance: PerformanceDriver? = null
     private var pollJob: Job? = null
     private var totalFrames: Long = 0
     private var rate: Int = 0
@@ -591,6 +614,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 summary = FlowPresentation.summary(flow),
                 provenance = FlowPresentation.provenanceLabel(flow),
                 isProvisional = flow.isProvisional,
+                outros = compiled.segmentByOutro.keys.sorted(),
             ),
             detail = buildList {
                 if (rejected.isNotEmpty()) add("Skipped: " + rejected.joinToString("; "))
@@ -655,16 +679,126 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     /** Requests a section of the open flow. */
     fun playSection(segment: Int) {
         val compiled = flowCompiled ?: return
+        // Taking a section by hand ends the performance: the listener has taken over, and a driver still
+        // following the transport would fight them for the next section.
+        performance = null
         val state = session.playSegment(segment)
         if (state.detail != null) {
             _ui.value = _ui.value.copy(detail = state.detail)
             return
         }
         _ui.value = _ui.value.copy(
-            flow = _ui.value.flow?.copy(activeSegment = segment),
+            flow = _ui.value.flow?.copy(
+                activeSegment = segment,
+                performing = false,
+                performanceStage = "",
+                outroAvailable = false,
+            ),
             status = "Playing",
         )
     }
+
+    /**
+     * Performs the whole open stage: prelude, main loop, then the outro the listener picks.
+     *
+     * Refuses with a stated reason rather than doing nothing, because a Start button that silently fails is
+     * indistinguishable from a broken app.
+     */
+    fun startPerformance() {
+        val compiled = flowCompiled ?: return
+        val open = flow ?: return
+        if (performance?.isRunning == true) return
+
+        val segments = compiled.segmentByRole
+        val driver = PerformanceDriver(
+            performance = StagePerformance(
+                flow = open,
+                segmentByRole = segments,
+                segmentByOutro = compiled.segmentByOutro,
+            ),
+            startSegment = { segment -> session.playSegment(segment).detail == null },
+            transport = { session.state.value },
+        )
+
+        when (val event = driver.start()) {
+            is PerformanceDriver.Event.Advanced -> {
+                performance = driver
+                publishPerformance(event.segment, "Opening the performance")
+            }
+            is PerformanceDriver.Event.Blocked -> {
+                _ui.value = _ui.value.copy(
+                    flow = _ui.value.flow?.copy(performanceBlocker = event.reason),
+                    detail = event.reason,
+                )
+            }
+            else -> Unit
+        }
+    }
+
+    /** Takes one of the flow's outros, ending the performance with it. */
+    fun takeOutro(number: Int) {
+        val driver = performance ?: return
+        when (val event = driver.requestOutro(number)) {
+            is PerformanceDriver.Event.Advanced -> {
+                _ui.value = _ui.value.copy(
+                    flow = _ui.value.flow?.copy(
+                        activeSegment = event.segment,
+                        performanceStage = "Outro $number",
+                        outroAvailable = false,
+                        performing = true,
+                    ),
+                    status = "Playing",
+                )
+            }
+            is PerformanceDriver.Event.Blocked -> {
+                _ui.value = _ui.value.copy(detail = event.reason)
+            }
+            else -> Unit
+        }
+    }
+
+    /** Stops a performance without ending the stage. */
+    fun stopPerformance() {
+        val driver = performance ?: return
+        performance = null
+        driver.stop()
+        _ui.value = _ui.value.copy(
+            flow = _ui.value.flow?.copy(
+                performing = false,
+                performanceStage = "Stopped",
+                outroAvailable = false,
+            ),
+        )
+    }
+
+    /**
+     * Carries a driver event into the screen state.
+     *
+     * The blocker is only ever cleared by a successful start: clearing it on every event would erase the
+     * reason before the listener could read it.
+     */
+    private fun publishPerformance(segment: Int, stage: String) {
+        val driver = performance
+        _ui.value = _ui.value.copy(
+            flow = _ui.value.flow?.copy(
+                activeSegment = segment,
+                performing = driver?.isRunning == true,
+                performanceStage = stage,
+                outroAvailable = driver?.let { outroReady(it) } == true,
+                performanceBlocker = null,
+            ),
+            status = "Playing",
+        )
+    }
+
+    /**
+     * Whether an outro may be taken now.
+     *
+     * Read from the driver rather than recomputed here: the rule for "the main loop has run its passes"
+     * lives in one place, and a second copy in the view model would eventually disagree with it.
+     */
+    private fun outroReady(driver: PerformanceDriver): Boolean =
+        driver.outroAvailable()
 
     /** Opens or closes a catalog category in the browser. */
     fun toggleCategory(category: String) {
@@ -771,10 +905,68 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         pollJob = viewModelScope.launch {
             while (true) {
                 publish(session.poll())
+                followPerformance()
                 delay(POLL_INTERVAL_MS)
             }
         }
     }
+
+    /**
+     * Lets the running performance react to the transport.
+     *
+     * Runs after the state has been published, so an advance is decided on the same reading the screen is
+     * about to show rather than on one the listener never saw.
+     */
+    private fun followPerformance() {
+        val driver = performance ?: return
+        val open = flow ?: return
+        val compiled = flowCompiled ?: return
+
+        when (val event = driver.tick()) {
+            is PerformanceDriver.Event.Advanced -> {
+                publishPerformance(event.segment, describeStage(driver))
+            }
+            is PerformanceDriver.Event.Finished -> {
+                performance = null
+                _ui.value = _ui.value.copy(
+                    flow = _ui.value.flow?.copy(
+                        performing = false,
+                        performanceStage = if (event.reason.contains("stopped")) "Stopped" else "Finished",
+                        outroAvailable = false,
+                    ),
+                )
+            }
+            is PerformanceDriver.Event.Blocked -> {
+                performance = null
+                _ui.value = _ui.value.copy(
+                    flow = _ui.value.flow?.copy(
+                        performing = false,
+                        performanceStage = "Stopped",
+                        outroAvailable = false,
+                    ),
+                    detail = event.reason,
+                )
+            }
+            is PerformanceDriver.Event.Waiting -> {
+                // The availability flag can turn on without a segment changing, so it is refreshed every
+                // tick rather than only on an advance.
+                val available = driver.outroAvailable()
+                val current = _ui.value.flow
+                if (current != null && current.outroAvailable != available) {
+                    _ui.value = _ui.value.copy(
+                        flow = current.copy(outroAvailable = available, performanceStage = describeStage(driver)),
+                    )
+                } else if (current != null && driver.isRunning) {
+                    _ui.value = _ui.value.copy(
+                        flow = current.copy(performanceStage = describeStage(driver)),
+                    )
+                }
+            }
+        }
+    }
+
+    /** Where the performance is, in words the screen can show. */
+    private fun describeStage(driver: PerformanceDriver): String = driver.describe()
 
     private fun publish(state: PlaybackSession.State) {
         creditListening(state)

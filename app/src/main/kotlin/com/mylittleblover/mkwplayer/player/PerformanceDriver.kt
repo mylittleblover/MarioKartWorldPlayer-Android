@@ -118,6 +118,12 @@ internal class PerformanceDriver(
     /** Asks for an outro. Returns the event so the caller can report a refusal. */
     fun requestOutro(number: Int): Event = act(performance.requestOutro(number))
 
+    /** True once the main loop has run its passes, so an outro may be taken. */
+    fun outroAvailable(): Boolean = performance.outroAvailable()
+
+    /** Where the performance is, for a status line. Never invents detail. */
+    fun describe(): String = performance.describe()
+
     /** Stops before the end. */
     fun stop(): Event {
         if (!armed) return Event.Finished("not running")

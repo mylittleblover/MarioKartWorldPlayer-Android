@@ -185,6 +185,54 @@ private fun PlayerScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
+
+            item {
+                // The whole-stage control. One button that plays the stage from its first prelude and
+                // hands the ending to the listener, rather than a row of sections to assemble by hand.
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Perform this stage", style = MaterialTheme.typography.titleSmall)
+
+                        if (flow.performanceBlocker != null) {
+                            // A disabled button with no explanation reads as a broken app.
+                            Text(flow.performanceBlocker, style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { model.startPerformance() },
+                                    enabled = !flow.performing && !ui.busy,
+                                ) { Text("Play the whole stage") }
+                                OutlinedButton(
+                                    onClick = { model.stopPerformance() },
+                                    enabled = flow.performing,
+                                ) { Text("Stop") }
+                            }
+
+                            if (flow.performanceStage.isNotEmpty()) {
+                                Text(flow.performanceStage, style = MaterialTheme.typography.bodySmall)
+                            }
+
+                            if (flow.outroAvailable && flow.outros.isNotEmpty()) {
+                                // The performance does not choose an ending; the listener does.
+                                Text("The main loop is done. Choose an ending:", style = MaterialTheme.typography.bodySmall)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    flow.outros.forEach { number ->
+                                        OutlinedButton(onClick = { model.takeOutro(number) }) {
+                                            Text("Outro ${number + 1}")
+                                        }
+                                    }
+                                }
+                            } else if (flow.performing) {
+                                Text(
+                                    "The ending is offered once the main loop has played through.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             items(flow.sections, key = { "sec-${it.segment}" }) { section ->
                 val active = section.segment == flow.activeSegment
                 Card(
