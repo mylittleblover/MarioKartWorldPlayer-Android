@@ -1,0 +1,1356 @@
+{
+ "schemaVersion": 1,
+ "provenance": "L1_MARKER_ONLY",
+ "provenanceNote": "Cue positions are AMTA marker records (L1 metadata). Which cue the game schedules, and when, is not established by this source.",
+ "source": "M_Bgm.bars.zs + M_BgmRainbow.bars.zs",
+ "sourceDate": "2026-10-28",
+ "courseCount": 30,
+ "cueCount": 174,
+ "courses": [
+  {
+   "code": "FirstCircuit",
+   "name": "Mario Bros. Circuit",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1838,
+     "frames": 289909,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1837,
+     "frames": 663934,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1836,
+     "frames": 1037960,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1820,
+     "frames": 1636401,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1819,
+     "frames": 2384452,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 5,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "WestCity",
+   "name": "Crown City",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1883,
+     "frames": 545625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1897,
+     "frames": 720000,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1851,
+     "frames": 905625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1835,
+     "frames": 1085625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1864,
+     "frames": 1254375,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 5,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Coaster",
+   "name": "Whistlestop Summit",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2005,
+     "frames": 637714,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2004,
+     "frames": 884571,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2003,
+     "frames": 1460570,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2002,
+     "frames": 2036569,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1926,
+     "frames": 2345141,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2000,
+     "frames": 2859426,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1969,
+     "frames": 3106283,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DonkeyKong",
+   "name": "DK Spaceport",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2167,
+     "frames": 728275,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2166,
+     "frames": 1241377,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2120,
+     "frames": 1522756,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2149,
+     "frames": 1779307,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2163,
+     "frames": 2044134,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2132,
+     "frames": 2308962,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2041,
+     "frames": 2697926,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DesertHills",
+   "name": "Desert Hills",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1761,
+     "frames": 443076,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1760,
+     "frames": 753230,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1744,
+     "frames": 1107691,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1728,
+     "frames": 1462152,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 4,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "ShyGuyBazaar",
+   "name": "Shy Guy Bazaar",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1742,
+     "frames": 385553,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1741,
+     "frames": 797142,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1740,
+     "frames": 1208571,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1769,
+     "frames": 1645713,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1723,
+     "frames": 1825713,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1752,
+     "frames": 2237142,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1706,
+     "frames": 2648570,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 1615,
+     "frames": 3059998,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "WarioStadium",
+   "name": "Wario Stadium",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2190,
+     "frames": 349714,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2174,
+     "frames": 678856,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2158,
+     "frames": 1172570,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2142,
+     "frames": 1501713,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 4,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "AirshipFortress",
+   "name": "Airship Fortress",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2333,
+     "frames": 441600,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2332,
+     "frames": 1147200,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2331,
+     "frames": 1761600,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2330,
+     "frames": 2376000,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2329,
+     "frames": 2990400,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2238,
+     "frames": 3590400,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 6,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DKPass",
+   "name": "DK Pass",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1850,
+     "frames": 0,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1729,
+     "frames": 661464,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1788,
+     "frames": 1036098,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1742,
+     "frames": 1410732,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1741,
+     "frames": 1785366,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1680,
+     "frames": 2066342,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1679,
+     "frames": 2440976,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "SnowMountain",
+   "name": "Starview Peak",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2196,
+     "frames": 406588,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2150,
+     "frames": 643764,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2089,
+     "frames": 1219764,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2088,
+     "frames": 1490823,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2117,
+     "frames": 1761881,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2071,
+     "frames": 2032940,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1995,
+     "frames": 2303999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 1994,
+     "frames": 2575058,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "IceBuildings",
+   "name": "Sky-High Sundae",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2332,
+     "frames": 574284,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2331,
+     "frames": 1122854,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2330,
+     "frames": 1671425,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2329,
+     "frames": 2219995,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2253,
+     "frames": 2759993,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2222,
+     "frames": 3248564,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 6,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "WarioShipyard",
+   "name": "Wario Shipyard",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2059,
+     "frames": 871577,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2088,
+     "frames": 1155787,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2042,
+     "frames": 1496839,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2071,
+     "frames": 1913680,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2025,
+     "frames": 2425258,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2009,
+     "frames": 2728415,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 6,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "KoopaTroopaBeach",
+   "name": "Koopa Troopa Beach",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1419,
+     "frames": 255483,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1373,
+     "frames": 719999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1372,
+     "frames": 1184514,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1326,
+     "frames": 1370320,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1295,
+     "frames": 1834835,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 5,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DKJungleParkway",
+   "name": "Faraway Oasis",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2221,
+     "frames": 448346,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2220,
+     "frames": 743730,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2219,
+     "frames": 1039114,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2218,
+     "frames": 1389883,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2232,
+     "frames": 1685268,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2201,
+     "frames": 1980652,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2215,
+     "frames": 2257575,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 2094,
+     "frames": 2848343,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Central",
+   "name": "Peach Stadium",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2294,
+     "frames": 0,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2158,
+     "frames": 433125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2157,
+     "frames": 721125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2231,
+     "frames": 1009125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2140,
+     "frames": 1369125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2154,
+     "frames": 1720125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2153,
+     "frames": 2008125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 2152,
+     "frames": 2233125,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "PeachBeach",
+   "name": "Peach Beach",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2010,
+     "frames": 708480,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1949,
+     "frames": 1077120,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1948,
+     "frames": 1445760,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1977,
+     "frames": 1814400,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1976,
+     "frames": 2183040,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1975,
+     "frames": 2551680,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1974,
+     "frames": 2920320,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 1883,
+     "frames": 3288960,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "LagoonCity",
+   "name": "Salty Salty Speedway",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2040,
+     "frames": 384657,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2084,
+     "frames": 700272,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2023,
+     "frames": 1015888,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2067,
+     "frames": 1331504,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2006,
+     "frames": 1647120,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2005,
+     "frames": 2120543,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2034,
+     "frames": 2593967,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro07",
+     "markerId": 1913,
+     "frames": 3067391,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 8,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DinoDinoJungle",
+   "name": "Dino Dino Jungle",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2052,
+     "frames": 483503,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2036,
+     "frames": 651679,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2020,
+     "frames": 1324379,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 3,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "StormClouds",
+   "name": "Great ? Block Ruins",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1803,
+     "frames": 315616,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1817,
+     "frames": 621368,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1756,
+     "frames": 858080,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1800,
+     "frames": 1420271,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1754,
+     "frames": 1854242,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1693,
+     "frames": 2288214,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1662,
+     "frames": 2603830,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "RaftingRiver",
+   "name": "Cheep Cheep Falls",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1963,
+     "frames": 530525,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1962,
+     "frames": 833682,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1961,
+     "frames": 1136840,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1960,
+     "frames": 1439997,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1959,
+     "frames": 1970522,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1958,
+     "frames": 2425258,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1957,
+     "frames": 2728415,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Cave",
+   "name": "Dandelion Depths",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1950,
+     "frames": 0,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1904,
+     "frames": 342500,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1843,
+     "frames": 702501,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1827,
+     "frames": 1022501,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1871,
+     "frames": 1342501,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 5,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Cinema",
+   "name": "Boo Cinema",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2503,
+     "frames": 0,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2427,
+     "frames": 685714,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2456,
+     "frames": 905142,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2380,
+     "frames": 1343999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2349,
+     "frames": 1782855,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2378,
+     "frames": 2221712,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 6,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "DinoBones",
+   "name": "Dry Bones Burnout",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1540,
+     "frames": 470769,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1524,
+     "frames": 736615,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 2,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "MooMooFarm",
+   "name": "Moo Moo Meadows",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1944,
+     "frames": 534375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1868,
+     "frames": 894375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1867,
+     "frames": 1254375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1911,
+     "frames": 1501875,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1850,
+     "frames": 1974375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 1849,
+     "frames": 2334375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1773,
+     "frames": 2694375,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "ChocoMountain",
+   "name": "Choco Mountain",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2770,
+     "frames": 614400,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2769,
+     "frames": 1228800,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2768,
+     "frames": 1843200,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2767,
+     "frames": 2476800,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2766,
+     "frames": 3091200,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2765,
+     "frames": 3705600,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2659,
+     "frames": 4300800,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "ToadFactory",
+   "name": "Toad's Factory",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3133,
+     "frames": 162818,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 1,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Lava",
+   "name": "Bowser's Castle",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2363,
+     "frames": 705999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2347,
+     "frames": 961999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2361,
+     "frames": 1729998,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 3,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "BigTree",
+   "name": "Acorn Heights",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2923,
+     "frames": 417857,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2877,
+     "frames": 578571,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2861,
+     "frames": 732857,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2845,
+     "frames": 887142,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2874,
+     "frames": 1034999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro05",
+     "markerId": 2873,
+     "frames": 1343571,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 2872,
+     "frames": 2114999,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 7,
+   "hasBridge": false,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "SFCMarioCircuit",
+   "name": "Mario Circuit",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1169,
+     "frames": 354461,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1153,
+     "frames": 708922,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1152,
+     "frames": 1041230,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1151,
+     "frames": 1395691,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 4,
+   "hasBridge": true,
+   "hasShortPre": true,
+   "hasFast": true
+  },
+  {
+   "code": "Rainbow",
+   "name": "Rainbow Road",
+   "cues": [
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2146,
+     "frames": 2180502,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2145,
+     "frames": 2472146,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2144,
+     "frames": 2763791,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2143,
+     "frames": 3055436,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2142,
+     "frames": 3347081,
+     "sampleRate": 48000
+    }
+   ],
+   "outroCount": 5,
+   "hasBridge": true,
+   "hasShortPre": false,
+   "hasFast": false
+  }
+ ],
+ "unmappedCourses": []
+}
