@@ -19,6 +19,8 @@ internal interface PlaybackEngine {
     fun loadLinearBwav(bytes: ByteArray, assetId: String, loop: Boolean = false, streamed: Boolean = true): Int = 1
     fun loadLinearFile(file: java.io.File, assetId: String, loop: Boolean = false, streamed: Boolean = true): Int = 1
     fun setLinearRepeat(enabled: Boolean, begin: Long = -1L, end: Long = -1L): Int = 1
+    /** Configures live finite playback end & linear fade-out window on a linear runtime (`endFrame <= 0` disables). */
+    fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long): Int = 0
     fun sourceSnapshot(slot: Int): LongArray? = null
     fun play(target: Int): Int
     fun stop(): Int
@@ -46,6 +48,8 @@ internal class NativePlaybackEngine(private val engine: AudioEngine) : PlaybackE
         engine.loadLinearFile(file, assetId, loop, streamed)
     override fun setLinearRepeat(enabled: Boolean, begin: Long, end: Long): Int =
         engine.setLinearRepeat(enabled, begin, end)
+    override fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long): Int =
+        engine.setLinearFadeWindow(endFrame, fadeOutFrames)
     override fun sourceSnapshot(slot: Int): LongArray? = engine.sourceSnapshot(slot)
     override fun play(target: Int): Int = engine.play(target)
     override fun stop(): Int = engine.stop()

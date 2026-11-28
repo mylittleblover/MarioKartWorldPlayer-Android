@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #24 Mystery Course & Special Cup unlock banner, notifications, ceremony, and congratulations -->
+    <string name="unlock_mystery_course_name">Mystery Course</string>
+    <string name="unlock_mystery_banner_title">Mystery Course ready to unlock!</string>
+    <string name="unlock_mystery_banner_subtitle">Watch the unlock ceremony to reveal the Mystery Course.</string>
+    <string name="unlock_mystery_banner_action">Enter Ceremony</string>
+    <string name="unlock_mystery_notif_title">Mystery Course Ready</string>
+    <string name="unlock_mystery_notif_body">The Mystery Course unlock condition is met. Tap to enter the unlock ceremony.</string>
+    <string name="unlock_notice_badge_new">NEW</string>
+
+    <string name="unlock_ceremony_congrats_title">Special Cup Unlocked!</string>
+    <string name="unlock_ceremony_congrats_body">Thank you for your love and support for Mario Kart music and JukeKart. Now please enjoy the final Grand Prix — the Special Cup.</string>
+    <string name="unlock_ceremony_congrats_enter">Enter Special Cup</string>
+    <string name="unlock_ceremony_congrats_close">Back to Library</string>
+
+    <string name="unlock_ceremony_screen_readonly_hint">The progress bar is read-only during the ceremony.</string>
+    <string name="unlock_ceremony_screen_controls_hint">Pause, seek, skip, and track changes are disabled while the ceremony plays. Only leaving is available.</string>
+    <string name="unlock_ceremony_screen_leave">Leave Ceremony</string>
+
+    <!-- #24 Locked Mystery Course dialog -->
+    <string name="mystery_dialog_title">Mystery Course</string>
+    <string name="mystery_dialog_subtitle">Listen to the remaining courses for 30 seconds each, or complete the 10-question challenge to enter the unlock ceremony.</string>
+    <string name="mystery_dialog_progress_fmt">%1$d / %2$d courses heard</string>
+    <string name="mystery_dialog_tab_remaining">Remaining Courses</string>
+    <string name="mystery_dialog_tab_quiz">Knowledge Quiz</string>
+    <string name="mystery_dialog_remaining_header">Remaining Courses (%1$d)</string>
+    <string name="mystery_dialog_remaining_hint">Listen to each course below for at least 30 seconds.</string>
+    <string name="mystery_dialog_remaining_all_done">All required courses have been heard! Enter the ceremony to reveal the Mystery Course.</string>
+    <string name="mystery_dialog_course_seconds_fmt">%1$ds / %2$ds</string>
+    <string name="mystery_dialog_course_unheard">Not heard yet</string>
+    <string name="mystery_dialog_close">Close</string>
+
+    <!-- #24 10-Question Special Cup Quiz -->
+    <string name="quiz_title">JukeKart Special Cup Unlock Challenge</string>
+    <string name="quiz_subtitle">Answer all 10 questions correctly to trigger the unlock ceremony.</string>
+    <string name="quiz_progress_fmt">%1$d / %2$d</string>
+    <string name="quiz_final_challenge_badge">Final Challenge</string>
+    <string name="quiz_wrong_feedback">Not quite right — try again!</string>
+    <string name="quiz_retry_button">Try Again</string>
+    <string name="quiz_congrats_title">Congratulations! All 10 answers correct!</string>
+    <string name="quiz_congrats_body">The Mystery Course unlock ceremony is now ready. Watch the ceremony to officially unlock it.</string>
+    <string name="quiz_ready_title">Unlock Condition Met!</string>
+    <string name="quiz_ready_body">The Mystery Course ceremony is ready. Enter the ceremony now to reveal what awaits.</string>
+    <string name="quiz_enter_ceremony_button">Enter Ceremony</string>
+
+    <string name="quiz_q1_question">On what date was Mario Kart World released?</string>
+    <string name="quiz_q1_a">June 5, 2024</string>
+    <string name="quiz_q1_b">April 2, 2025</string>
+    <string name="quiz_q1_c">June 5, 2025</string>
+    <string name="quiz_q1_d">July 17, 2025</string>
+
+    <string name="quiz_q2_question">How many Grand Prix cups were included at launch?</string>
+    <string name="quiz_q2_a">6</string>
+    <string name="quiz_q2_b">8</string>
+    <string name="quiz_q2_c">10</string>
+    <string name="quiz_q2_d">12</string>
+
+    <string name="quiz_q3_question">How many Knockout Tour rally routes were included at launch?</string>
+    <string name="quiz_q3_a">8</string>
+    <string name="quiz_q3_b">10</string>
+    <string name="quiz_q3_c">12</string>
+    <string name="quiz_q3_d">16</string>
+
+    <string name="quiz_q4_question">How many courses are in each Grand Prix cup?</string>
+    <string name="quiz_q4_a">3</string>
+    <string name="quiz_q4_b">5</string>
+    <string name="quiz_q4_c">6</string>
+    <string name="quiz_q4_d">4</string>
+
+    <string name="quiz_q5_question">What is the maximum number of racers in a single Mario Kart World race?</string>
+    <string name="quiz_q5_a">8</string>
+    <string name="quiz_q5_b">12</string>
+    <string name="quiz_q5_c">24</string>
+    <string name="quiz_q5_d">32</string>
+
+    <string name="quiz_q6_question">In a standard 24-racer Knockout Tour, how many racers are eliminated at each checkpoint?</string>
+    <string name="quiz_q6_a">2</string>
+    <string name="quiz_q6_b">4</string>
+    <string name="quiz_q6_c">6</string>
+    <string name="quiz_q6_d">8</string>
+
+    <string name="quiz_q7_question">Which mode lets players freely explore the game world?</string>
+    <string name="quiz_q7_a">Time Trials</string>
+    <string name="quiz_q7_b">Balloon Battle</string>
+    <string name="quiz_q7_c">Grand Prix</string>
+    <string name="quiz_q7_d">Free Roam</string>
+
+    <string name="quiz_q8_question">Which of the following courses is brand-new to Mario Kart World?</string>
+    <string name="quiz_q8_a">Crown City</string>
+    <string name="quiz_q8_b">Choco Mountain</string>
+    <string name="quiz_q8_c">Toad\'s Factory</string>
+    <string name="quiz_q8_d">Dino Dino Jungle</string>
+
+    <string name="quiz_q9_question">What typically happens to the course music when you enter the Final Lap?</string>
+    <string name="quiz_q9_a">All background music stops immediately</string>
+    <string name="quiz_q9_b">It switches to the award ceremony music</string>
+    <string name="quiz_q9_c">It switches to a faster-tempo Final Lap music version</string>
+    <string name="quiz_q9_d">It restarts from the course prelude</string>
+
+    <string name="quiz_q10_question">What is the name of the course you are about to unlock, and which Grand Prix cup does it belong to?</string>
+    <string name="quiz_q10_a">Bowser\'s Castle, Lightning Cup</string>
+    <string name="quiz_q10_b">Rainbow Road, Special Cup</string>
+    <string name="quiz_q10_c">Starview Peak, Star Cup</string>
+    <string name="quiz_q10_d">Peach Stadium, Shell Cup</string>
+
+    <!-- #28 7 Character Accent Themes -->
+    <string name="settings_theme_title">Theme Accent</string>
+    <string name="settings_theme_hint">Choose a character accent color. The interface updates immediately without restarting.</string>
+    <string name="theme_accent_mario_red">Mario Red</string>
+    <string name="theme_accent_luigi_green">Luigi Green</string>
+    <string name="theme_accent_peach_pink">Peach Pink</string>
+    <string name="theme_accent_wario_yellow">Wario Yellow</string>
+    <string name="theme_accent_waluigi_purple">Waluigi Purple</string>
+    <string name="theme_accent_daisy_orange">Daisy Orange</string>
+    <string name="theme_accent_rosalina_blue">Rosalina Blue</string>
+
+    <!-- #26 Settings Audio Export Folder, Updates & Links -->
+    <string name="settings_export_folder_title">Audio Export Folder</string>
+    <string name="settings_export_folder_hint">Destination folder used when exporting rendered audio tracks.</string>
+    <string name="settings_export_folder_default">Default (Music/JukeKart)</string>
+    <string name="settings_export_folder_change">Choose</string>
+
+    <string name="settings_updates_links_title">Updates &amp; Links</string>
+    <string name="settings_updates_links_hint">Check GitHub Releases for new versions, report issues, or visit the author\'s page.</string>
+    <string name="settings_update_check_btn">Check for Updates</string>
+    <string name="settings_update_checking">Checking for updates…</string>
+    <string name="settings_update_up_to_date">You\'re on the latest version (%1$s).</string>
+    <string name="settings_update_available_title">New version available: %1$s</string>
+    <string name="settings_update_available_subtitle">Current version: %1$s</string>
+    <string name="settings_update_download_btn">Go to Download</string>
+    <string name="settings_update_err_network">Could not connect to GitHub. Check your internet connection and try again.</string>
+    <string name="settings_update_err_rate_limited">GitHub API rate limit reached. Please try again later.</string>
+    <string name="settings_update_err_http">Update check failed (HTTP %1$s).</string>
+    <string name="settings_update_err_no_releases">No published releases found on GitHub yet.</string>
+    <string name="settings_update_err_parse">Could not read release information from GitHub.</string>
+
+    <string name="settings_link_github_title">GitHub Project Home</string>
+    <string name="settings_link_github_subtitle">github.com/mylittleblover/JukeKart-Android</string>
+    <string name="settings_link_issues_title">Issues &amp; Feedback</string>
+    <string name="settings_link_issues_subtitle">Report bugs or suggest features on GitHub Issues</string>
+    <string name="settings_link_bilibili_title">Author\'s Bilibili Page</string>
+    <string name="settings_link_bilibili_subtitle">b23.tv/mWNhhtI</string>
+    <string name="settings_link_open_failed">No browser app found to open this link.</string>
+</resources>

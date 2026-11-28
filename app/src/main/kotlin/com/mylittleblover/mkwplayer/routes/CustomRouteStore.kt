@@ -18,7 +18,15 @@ internal data class CustomRouteEdgeConfig(
     val to: String,
     val musicEnabled: Boolean = true,
     val selectedJukeboxKey: String? = null,
-)
+    val freeRoamTrackCountOverride: Int? = null,
+    val freeRoamDurationMinutesOverride: Int? = null,
+) {
+    fun toFreeRoamOverride(): RoadJukeboxCatalog.EdgeFreeRoamOverride =
+        RoadJukeboxCatalog.EdgeFreeRoamOverride(
+            trackCountOverride = freeRoamTrackCountOverride,
+            durationMinutesOverride = freeRoamDurationMinutesOverride,
+        ).normalized()
+}
 
 internal data class CustomRoute(
     val id: String,
@@ -28,8 +36,9 @@ internal data class CustomRoute(
     val loopWholeRoute: Boolean = false,
     val updatedAtEpochMs: Long = 0L,
     val lastUsedEpochMs: Long = 0L,
-    val roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
+    val roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode = RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE,
     val routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+    val pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(),
 ) {
     fun edgeFor(index: Int): CustomRouteEdgeConfig? = edges.getOrNull(index)
 
@@ -70,9 +79,10 @@ internal class CustomRouteStore(private val file: File) {
         edges: List<CustomRouteEdgeConfig>,
         connections: StageConnections.Catalog,
         loopWholeRoute: Boolean = false,
-        roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
+        roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode = RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE,
         routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
         nowEpochMs: Long = System.currentTimeMillis(),
+        pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(),
     ): Result<CustomRoute> {
         val createdId = UUID.randomUUID().toString()
         return update { current ->
@@ -91,6 +101,7 @@ internal class CustomRouteStore(private val file: File) {
                 lastUsedEpochMs = nowEpochMs,
                 roadRuleMode = roadRuleMode,
                 routeSuiteMode = routeSuiteMode,
+                pureFreeRoamConfig = pureFreeRoamConfig.normalized(),
             )
             listOf(route) + current
         }.map { list -> list.first { it.id == createdId } }
@@ -107,6 +118,7 @@ internal class CustomRouteStore(private val file: File) {
         roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode? = null,
         routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode? = null,
         nowEpochMs: Long = System.currentTimeMillis(),
+        pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig? = null,
     ): Result<CustomRoute> = update { current ->
         val existing = current.firstOrNull { it.id == existingId }
             ?: error("Custom route '$existingId' not found")
@@ -129,6 +141,7 @@ internal class CustomRouteStore(private val file: File) {
             updatedAtEpochMs = nowEpochMs,
             roadRuleMode = roadRuleMode ?: existing.roadRuleMode,
             routeSuiteMode = routeSuiteMode ?: existing.routeSuiteMode,
+            pureFreeRoamConfig = (pureFreeRoamConfig ?: existing.pureFreeRoamConfig).normalized(),
         )
         current.map { if (it.id == existingId) updated else it }
     }.map { list -> list.first { it.id == existingId } }
@@ -298,6 +311,49 @@ internal class CustomRouteStore(private val file: File) {
         }
     }
 
+    fun setPureFreeRoamConfig(
+        id: String,
+        config: RoadJukeboxCatalog.PureFreeRoamConfig,
+        nowEpochMs: Long = System.currentTimeMillis(),
+    ): Result<List<CustomRoute>> = update { current ->
+        val normalized = config.normalized()
+        current.map { route ->
+            if (route.id != id) route else route.copy(pureFreeRoamConfig = normalized, updatedAtEpochMs = nowEpochMs)
+        }
+    }
+
+    fun setEdgeFreeRoamOverride(
+        id: String,
+        edgeIndex: Int,
+        trackCountOverride: Int?,
+        durationMinutesOverride: Int?,
+        nowEpochMs: Long = System.currentTimeMillis(),
+    ): Result<List<CustomRoute>> = update { current ->
+        val cleanTrack = trackCountOverride?.coerceIn(
+            RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+            RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+        )
+        val cleanMinutes = durationMinutesOverride?.coerceIn(
+            RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+            RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+        )
+        current.map { route ->
+            if (route.id != id) route
+            else {
+                require(edgeIndex in route.edges.indices)
+                val updatedEdges = route.edges.mapIndexed { idx, edge ->
+                    if (idx == edgeIndex) {
+                        edge.copy(
+                            freeRoamTrackCountOverride = cleanTrack,
+                            freeRoamDurationMinutesOverride = cleanMinutes,
+                        )
+                    } else edge
+                }
+                route.copy(edges = updatedEdges, updatedAtEpochMs = nowEpochMs)
+            }
+        }
+    }
+
     fun rename(
         id: String,
         name: String,
@@ -363,6 +419,14 @@ internal class CustomRouteStore(private val file: File) {
                     to = to,
                     musicEnabled = cfg?.musicEnabled ?: true,
                     selectedJukeboxKey = cfg?.selectedJukeboxKey?.takeIf { it.isNotBlank() },
+                    freeRoamTrackCountOverride = cfg?.freeRoamTrackCountOverride?.coerceIn(
+                        RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                        RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+                    ),
+                    freeRoamDurationMinutesOverride = cfg?.freeRoamDurationMinutesOverride?.coerceIn(
+                        RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                        RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+                    ),
                 )
             }
             val cleanId = raw.id.trim().ifEmpty { UUID.randomUUID().toString() }
@@ -371,6 +435,7 @@ internal class CustomRouteStore(private val file: File) {
                 name = cleanName,
                 stops = stops,
                 edges = edges,
+                pureFreeRoamConfig = raw.pureFreeRoamConfig.normalized(),
             )
         }
         return out.values.toList()
@@ -398,6 +463,14 @@ internal class CustomRouteStore(private val file: File) {
                 to = to,
                 musicEnabled = cfg?.musicEnabled ?: true,
                 selectedJukeboxKey = cfg?.selectedJukeboxKey?.takeIf { it.isNotBlank() },
+                freeRoamTrackCountOverride = cfg?.freeRoamTrackCountOverride?.coerceIn(
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+                ),
+                freeRoamDurationMinutesOverride = cfg?.freeRoamDurationMinutesOverride?.coerceIn(
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+                ),
             )
         }
         return normalized
@@ -440,7 +513,9 @@ internal class CustomRouteStore(private val file: File) {
                     .put("from", edge.from)
                     .put("to", edge.to)
                     .put("musicEnabled", edge.musicEnabled)
-                    .put("selectedJukeboxKey", edge.selectedJukeboxKey ?: JSONObject.NULL),
+                    .put("selectedJukeboxKey", edge.selectedJukeboxKey ?: JSONObject.NULL)
+                    .put("freeRoamTrackCountOverride", edge.freeRoamTrackCountOverride ?: JSONObject.NULL)
+                    .put("freeRoamDurationMinutesOverride", edge.freeRoamDurationMinutesOverride ?: JSONObject.NULL),
             )
         }
         return JSONObject()
@@ -453,6 +528,7 @@ internal class CustomRouteStore(private val file: File) {
             .put("lastUsedEpochMs", route.lastUsedEpochMs)
             .put("roadRuleMode", route.roadRuleMode.name)
             .put("routeSuiteMode", route.routeSuiteMode.name)
+            .put("pureFreeRoamConfig", route.pureFreeRoamConfig.toJsonObject())
     }
 
     private fun decodeRoute(obj: JSONObject): CustomRoute {
@@ -467,6 +543,18 @@ internal class CustomRouteStore(private val file: File) {
         val edgesArr = obj.optJSONArray("edges") ?: JSONArray()
         val edges = (0 until edgesArr.length()).map { i ->
             val e = edgesArr.getJSONObject(i)
+            val trackOv = if (e.has("freeRoamTrackCountOverride") && !e.isNull("freeRoamTrackCountOverride")) {
+                e.optInt("freeRoamTrackCountOverride").coerceIn(
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+                )
+            } else null
+            val minOv = if (e.has("freeRoamDurationMinutesOverride") && !e.isNull("freeRoamDurationMinutesOverride")) {
+                e.optInt("freeRoamDurationMinutesOverride").coerceIn(
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                    RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+                )
+            } else null
             CustomRouteEdgeConfig(
                 from = e.getString("from").removeSuffix("_00"),
                 to = e.getString("to").removeSuffix("_00"),
@@ -474,6 +562,8 @@ internal class CustomRouteStore(private val file: File) {
                 selectedJukeboxKey = if (e.has("selectedJukeboxKey") && !e.isNull("selectedJukeboxKey")) {
                     e.getString("selectedJukeboxKey").takeIf { it.isNotBlank() }
                 } else null,
+                freeRoamTrackCountOverride = trackOv,
+                freeRoamDurationMinutesOverride = minOv,
             )
         }
         return CustomRoute(
@@ -486,6 +576,7 @@ internal class CustomRouteStore(private val file: File) {
             lastUsedEpochMs = obj.optLong("lastUsedEpochMs", 0L),
             roadRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.fromStored(obj.optString("roadRuleMode", "")),
             routeSuiteMode = RoadJukeboxCatalog.RouteSuiteMode.fromStored(obj.optString("routeSuiteMode", "")),
+            pureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(obj.optJSONObject("pureFreeRoamConfig")),
         )
     }
 
@@ -494,5 +585,152 @@ internal class CustomRouteStore(private val file: File) {
 
         fun canRemoveStopAt(stopCount: Int, index: Int): Boolean =
             stopCount >= 3 && index == stopCount - 1
+    }
+}
+
+/**
+ * Per-official-route Pure Free Roam music configuration and optional per-leg pacing overrides.
+ */
+internal data class OfficialRouteFreeRoamEntry(
+    val config: RoadJukeboxCatalog.PureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(),
+    val edgeOverrides: Map<Int, RoadJukeboxCatalog.EdgeFreeRoamOverride> = emptyMap(),
+) {
+    fun normalized(): OfficialRouteFreeRoamEntry {
+        val cleanOverrides = edgeOverrides
+            .filterKeys { it >= 0 }
+            .mapValues { (_, v) -> v.normalized() }
+            .filterValues { !it.isEmpty }
+        return OfficialRouteFreeRoamEntry(
+            config = config.normalized(),
+            edgeOverrides = cleanOverrides,
+        )
+    }
+}
+
+/**
+ * Lightweight atomic JSON store persisting Pure Free Roam music settings for Official Routes
+ * (`Grand Prix` cups & `Knockout Tour` rallies) keyed by [OfficialRoute.id].
+ */
+internal class OfficialRouteFreeRoamPrefs(private val file: File) {
+
+    fun readAll(): Result<Map<String, OfficialRouteFreeRoamEntry>> = synchronized(MetadataFile.lock(file)) {
+        runCatching { decode() }
+    }
+
+    fun get(routeId: String): OfficialRouteFreeRoamEntry =
+        readAll().getOrDefault(emptyMap())[routeId] ?: OfficialRouteFreeRoamEntry()
+
+    fun setConfig(
+        routeId: String,
+        config: RoadJukeboxCatalog.PureFreeRoamConfig,
+    ): Result<OfficialRouteFreeRoamEntry> = update(routeId) { existing ->
+        existing.copy(config = config.normalized())
+    }
+
+    fun setEdgeOverride(
+        routeId: String,
+        edgeIndex: Int,
+        override: RoadJukeboxCatalog.EdgeFreeRoamOverride?,
+    ): Result<OfficialRouteFreeRoamEntry> = update(routeId) { existing ->
+        require(edgeIndex >= 0) { "Edge index must be non-negative" }
+        val clean = override?.normalized()?.takeUnless { it.isEmpty }
+        val updatedMap = if (clean == null) {
+            existing.edgeOverrides - edgeIndex
+        } else {
+            existing.edgeOverrides + (edgeIndex to clean)
+        }
+        existing.copy(edgeOverrides = updatedMap)
+    }
+
+    fun clear(routeId: String): Result<Unit> = synchronized(MetadataFile.lock(file)) {
+        runCatching {
+            val map = decode().toMutableMap()
+            if (map.remove(routeId) != null) {
+                write(map)
+            }
+        }
+    }
+
+    private fun update(
+        routeId: String,
+        transform: (OfficialRouteFreeRoamEntry) -> OfficialRouteFreeRoamEntry,
+    ): Result<OfficialRouteFreeRoamEntry> = synchronized(MetadataFile.lock(file)) {
+        runCatching {
+            val cleanId = routeId.trim()
+            require(cleanId.isNotEmpty()) { "Official route ID must not be blank" }
+            val map = decode().toMutableMap()
+            val updated = transform(map[cleanId] ?: OfficialRouteFreeRoamEntry()).normalized()
+            map[cleanId] = updated
+            write(map)
+            updated
+        }
+    }
+
+    private fun write(entries: Map<String, OfficialRouteFreeRoamEntry>) {
+        val routesObj = JSONObject()
+        entries.entries.sortedBy { it.key }.forEach { (routeId, entry) ->
+            val clean = entry.normalized()
+            val ovObj = JSONObject()
+            clean.edgeOverrides.entries.sortedBy { it.key }.forEach { (idx, ov) ->
+                ovObj.put(
+                    idx.toString(),
+                    JSONObject()
+                        .put("trackCountOverride", ov.trackCountOverride ?: JSONObject.NULL)
+                        .put("durationMinutesOverride", ov.durationMinutesOverride ?: JSONObject.NULL),
+                )
+            }
+            routesObj.put(
+                routeId,
+                JSONObject()
+                    .put("config", clean.config.toJsonObject())
+                    .put("edgeOverrides", ovObj),
+            )
+        }
+        val root = JSONObject()
+            .put("schemaVersion", SCHEMA_VERSION)
+            .put("routes", routesObj)
+        MetadataFile.write(file, root.toString())
+    }
+
+    private fun decode(): Map<String, OfficialRouteFreeRoamEntry> {
+        if (!file.exists()) return emptyMap()
+        val root = JSONObject(file.readText())
+        require(root.optInt("schemaVersion", SCHEMA_VERSION) == SCHEMA_VERSION) {
+            "Unsupported official route free roam prefs schemaVersion"
+        }
+        val routesObj = root.optJSONObject("routes") ?: return emptyMap()
+        val out = linkedMapOf<String, OfficialRouteFreeRoamEntry>()
+        val keys = routesObj.keys()
+        while (keys.hasNext()) {
+            val routeId = keys.next()
+            val obj = routesObj.optJSONObject(routeId) ?: continue
+            val config = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(obj.optJSONObject("config"))
+            val ovObj = obj.optJSONObject("edgeOverrides")
+            val overrides = linkedMapOf<Int, RoadJukeboxCatalog.EdgeFreeRoamOverride>()
+            if (ovObj != null) {
+                val ovKeys = ovObj.keys()
+                while (ovKeys.hasNext()) {
+                    val idxKey = ovKeys.next()
+                    val idx = idxKey.toIntOrNull() ?: continue
+                    val e = ovObj.optJSONObject(idxKey) ?: continue
+                    val trackOv = if (e.has("trackCountOverride") && !e.isNull("trackCountOverride")) {
+                        e.optInt("trackCountOverride")
+                    } else null
+                    val minOv = if (e.has("durationMinutesOverride") && !e.isNull("durationMinutesOverride")) {
+                        e.optInt("durationMinutesOverride")
+                    } else null
+                    val parsed = RoadJukeboxCatalog.EdgeFreeRoamOverride(trackOv, minOv).normalized()
+                    if (!parsed.isEmpty && idx >= 0) {
+                        overrides[idx] = parsed
+                    }
+                }
+            }
+            out[routeId] = OfficialRouteFreeRoamEntry(config, overrides).normalized()
+        }
+        return out
+    }
+
+    companion object {
+        const val SCHEMA_VERSION = 1
     }
 }

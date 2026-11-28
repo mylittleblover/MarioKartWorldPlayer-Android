@@ -1,294 +1,304 @@
 {
-    "provenance":  "EXTRACTED_ANCHORS",
-    "provenanceNote":  "Native 2857x2400 map canvas using Stage Icon Positions.csv pixel coordinates (scale 1.549038*GameX+1427.6010, -1.549030*GameY+1206.6325) and aligned cup/rally emblem anchors.",
-    "canvas":  [
-                   2857,
-                   2400
-               ],
-    "stages":  [
-                   {
-                       "code":  "AirshipFortress_00",
-                       "u":  0.173287,
-                       "v":  0.318171,
-                       "artSize":  183.49
-                   },
-                   {
-                       "code":  "BigTree_00",
-                       "u":  0.496972,
-                       "v":  0.118729,
-                       "artSize":  184.68
-                   },
-                   {
-                       "code":  "Cave_00",
-                       "u":  0.610833,
-                       "v":  0.367221,
-                       "artSize":  186.08
-                   },
-                   {
-                       "code":  "Central_00",
-                       "u":  0.500228,
-                       "v":  0.557625,
-                       "artSize":  187.48
-                   },
-                   {
-                       "code":  "ChocoMountain_00",
-                       "u":  0.386367,
-                       "v":  0.507925,
-                       "artSize":  187.48
-                   },
-                   {
-                       "code":  "Cinema_00",
-                       "u":  0.624389,
-                       "v":  0.178754,
-                       "artSize":  186.0
-                   },
-                   {
-                       "code":  "Coaster",
-                       "u":  0.256783,
-                       "v":  0.780946,
-                       "artSize":  186.29
-                   },
-                   {
-                       "code":  "DKJungleParkway_00",
-                       "u":  0.613546,
-                       "v":  0.670575,
-                       "artSize":  187.52
-                   },
-                   {
-                       "code":  "DKPass_00",
-                       "u":  0.715478,
-                       "v":  0.427892,
-                       "artSize":  184.78
-                   },
-                   {
-                       "code":  "DesertHills_00",
-                       "u":  0.147802,
-                       "v":  0.684129,
-                       "artSize":  187.58
-                   },
-                   {
-                       "code":  "DinoBones_00",
-                       "u":  0.391246,
-                       "v":  0.187792,
-                       "artSize":  183.41
-                   },
-                   {
-                       "code":  "DinoDinoJungle_00",
-                       "u":  0.636318,
-                       "v":  0.846133,
-                       "artSize":  184.96
-                   },
-                   {
-                       "code":  "DonkeyKong",
-                       "u":  0.400462,
-                       "v":  0.821608,
-                       "artSize":  186.29
-                   },
-                   {
-                       "code":  "FirstCircuit",
-                       "u":  0.249734,
-                       "v":  0.586671,
-                       "artSize":  184.9
-                   },
-                   {
-                       "code":  "IceBuildings_00",
-                       "u":  0.821747,
-                       "v":  0.346567,
-                       "artSize":  183.43
-                   },
-                   {
-                       "code":  "KoopaTroopaBeach_00",
-                       "u":  0.497515,
-                       "v":  0.793208,
-                       "artSize":  186.27
-                   },
-                   {
-                       "code":  "LagoonCity_00",
-                       "u":  0.7209,
-                       "v":  0.598288,
-                       "artSize":  186.16
-                   },
-                   {
-                       "code":  "Lava_00",
-                       "u":  0.283892,
-                       "v":  0.192308,
-                       "artSize":  186.05
-                   },
-                   {
-                       "code":  "MooMooFarm_00",
-                       "u":  0.500228,
-                       "v":  0.414983,
-                       "artSize":  187.42
-                   },
-                   {
-                       "code":  "PeachBeach_00",
-                       "u":  0.826083,
-                       "v":  0.677029,
-                       "artSize":  184.87
-                   },
-                   {
-                       "code":  "RaftingRiver_00",
-                       "u":  0.618967,
-                       "v":  0.513733,
-                       "artSize":  186.14
-                   },
-                   {
-                       "code":  "Rainbow_00",
-                       "u":  0.499685,
-                       "v":  0.687358,
-                       "artSize":  184.91
-                   },
-                   {
-                       "code":  "SFCMarioCircuit_00",
-                       "u":  0.505107,
-                       "v":  0.276217,
-                       "artSize":  184.75
-                   },
-                   {
-                       "code":  "ShyGuyBazaar_00",
-                       "u":  0.155394,
-                       "v":  0.495662,
-                       "artSize":  183.56
-                   },
-                   {
-                       "code":  "SnowMountain_00",
-                       "u":  0.719272,
-                       "v":  0.243946,
-                       "artSize":  183.4
-                   },
-                   {
-                       "code":  "StormClouds_00",
-                       "u":  0.747466,
-                       "v":  0.788688,
-                       "artSize":  183.62
-                   },
-                   {
-                       "code":  "ToadFactory_00",
-                       "u":  0.39721,
-                       "v":  0.34915,
-                       "artSize":  183.48
-                   },
-                   {
-                       "code":  "WarioShipyard_00",
-                       "u":  0.832048,
-                       "v":  0.530517,
-                       "artSize":  183.5
-                   },
-                   {
-                       "code":  "WarioStadium",
-                       "u":  0.277385,
-                       "v":  0.423375,
-                       "artSize":  187.45
-                   },
-                   {
-                       "code":  "WestCity",
-                       "u":  0.389618,
-                       "v":  0.693167,
-                       "artSize":  187.55
-                   }
-               ],
-    "cups":  [
-                 {
-                     "code":  "GP00",
-                     "u":  0.3484,
-                     "v":  0.6671
-                 },
-                 {
-                     "code":  "GP01",
-                     "u":  0.2451,
-                     "v":  0.4872
-                 },
-                 {
-                     "code":  "GP02",
-                     "u":  0.7154,
-                     "v":  0.4126
-                 },
-                 {
-                     "code":  "GP03",
-                     "u":  0.4922,
-                     "v":  0.6408
-                 },
-                 {
-                     "code":  "GP04",
-                     "u":  0.6733,
-                     "v":  0.6746
-                 },
-                 {
-                     "code":  "GP05",
-                     "u":  0.5424,
-                     "v":  0.3294
-                 },
-                 {
-                     "code":  "GP06",
-                     "u":  0.4033,
-                     "v":  0.3922
-                 },
-                 {
-                     "code":  "GP07",
-                     "u":  0.4971,
-                     "v":  0.4802
-                 }
-             ],
-    "survival":  [
-                     {
-                         "code":  "SV00",
-                         "u":  0.4021,
-                         "v":  0.4509
-                     },
-                     {
-                         "code":  "SV01",
-                         "u":  0.5802,
-                         "v":  0.4694
-                     },
-                     {
-                         "code":  "SV02",
-                         "u":  0.4906,
-                         "v":  0.4332
-                     },
-                     {
-                         "code":  "SV03",
-                         "u":  0.6882,
-                         "v":  0.4569
-                     },
-                     {
-                         "code":  "SV04",
-                         "u":  0.4869,
-                         "v":  0.7076
-                     },
-                     {
-                         "code":  "SV05",
-                         "u":  0.4787,
-                         "v":  0.477
-                     },
-                     {
-                         "code":  "SV06",
-                         "u":  0.4156,
-                         "v":  0.5863
-                     },
-                     {
-                         "code":  "SV07",
-                         "u":  0.3791,
-                         "v":  0.3904
-                     },
-                     {
-                         "code":  "SV08",
-                         "u":  0.5481,
-                         "v":  0.3744
-                     },
-                     {
-                         "code":  "SV09",
-                         "u":  0.4491,
-                         "v":  0.5539
-                     },
-                     {
-                         "code":  "SV10",
-                         "u":  0.4628,
-                         "v":  0.3393
-                     },
-                     {
-                         "code":  "SV11",
-                         "u":  0.4418,
-                         "v":  0.4935
-                     }
-                 ]
+  "provenance": "EXTRACTED_ANCHORS",
+  "provenanceNote": "Native 2857x2400 map canvas using Stage Icon Positions.csv pixel coordinates (scale 1.549038*GameX+1427.6010, -1.549030*GameY+1206.6325) and aligned cup/rally emblem anchors.",
+  "canvas": [
+    2857,
+    2400
+  ],
+  "stages": [
+    {
+      "code": "AirshipFortress_00",
+      "u": 0.173287,
+      "v": 0.318171,
+      "artSize": 183.49
+    },
+    {
+      "code": "BigTree_00",
+      "u": 0.496972,
+      "v": 0.118729,
+      "artSize": 184.68
+    },
+    {
+      "code": "Cave_00",
+      "u": 0.610833,
+      "v": 0.367221,
+      "artSize": 186.08
+    },
+    {
+      "code": "Central_00",
+      "u": 0.500228,
+      "v": 0.557625,
+      "artSize": 187.48
+    },
+    {
+      "code": "ChocoMountain_00",
+      "u": 0.386367,
+      "v": 0.507925,
+      "artSize": 187.48
+    },
+    {
+      "code": "Cinema_00",
+      "u": 0.624389,
+      "v": 0.178754,
+      "artSize": 186.0
+    },
+    {
+      "code": "Coaster",
+      "u": 0.256783,
+      "v": 0.780946,
+      "artSize": 186.29
+    },
+    {
+      "code": "DKJungleParkway_00",
+      "u": 0.613546,
+      "v": 0.670575,
+      "artSize": 187.52
+    },
+    {
+      "code": "DKPass_00",
+      "u": 0.715478,
+      "v": 0.427892,
+      "artSize": 184.78
+    },
+    {
+      "code": "DesertHills_00",
+      "u": 0.147802,
+      "v": 0.684129,
+      "artSize": 187.58
+    },
+    {
+      "code": "DinoBones_00",
+      "u": 0.391246,
+      "v": 0.187792,
+      "artSize": 183.41
+    },
+    {
+      "code": "DinoDinoJungle_00",
+      "u": 0.636318,
+      "v": 0.846133,
+      "artSize": 184.96
+    },
+    {
+      "code": "DonkeyKong",
+      "u": 0.400462,
+      "v": 0.821608,
+      "artSize": 186.29
+    },
+    {
+      "code": "FirstCircuit",
+      "u": 0.249734,
+      "v": 0.586671,
+      "artSize": 184.9
+    },
+    {
+      "code": "IceBuildings_00",
+      "u": 0.821747,
+      "v": 0.346567,
+      "artSize": 183.43
+    },
+    {
+      "code": "KoopaTroopaBeach_00",
+      "u": 0.497515,
+      "v": 0.793208,
+      "artSize": 186.27
+    },
+    {
+      "code": "LagoonCity_00",
+      "u": 0.7209,
+      "v": 0.598288,
+      "artSize": 186.16
+    },
+    {
+      "code": "Lava_00",
+      "u": 0.283892,
+      "v": 0.192308,
+      "artSize": 186.05
+    },
+    {
+      "code": "MooMooFarm_00",
+      "u": 0.500228,
+      "v": 0.414983,
+      "artSize": 187.42
+    },
+    {
+      "code": "PeachBeach_00",
+      "u": 0.826083,
+      "v": 0.677029,
+      "artSize": 184.87
+    },
+    {
+      "code": "RaftingRiver_00",
+      "u": 0.618967,
+      "v": 0.513733,
+      "artSize": 186.14
+    },
+    {
+      "code": "Rainbow_00",
+      "u": 0.499685,
+      "v": 0.687358,
+      "artSize": 184.91
+    },
+    {
+      "code": "SFCMarioCircuit_00",
+      "u": 0.505107,
+      "v": 0.276217,
+      "artSize": 184.75
+    },
+    {
+      "code": "ShyGuyBazaar_00",
+      "u": 0.155394,
+      "v": 0.495662,
+      "artSize": 183.56
+    },
+    {
+      "code": "SnowMountain_00",
+      "u": 0.719272,
+      "v": 0.243946,
+      "artSize": 183.4
+    },
+    {
+      "code": "StormClouds_00",
+      "u": 0.747466,
+      "v": 0.788688,
+      "artSize": 183.62
+    },
+    {
+      "code": "ToadFactory_00",
+      "u": 0.39721,
+      "v": 0.34915,
+      "artSize": 183.48
+    },
+    {
+      "code": "WarioShipyard_00",
+      "u": 0.832048,
+      "v": 0.530517,
+      "artSize": 183.5
+    },
+    {
+      "code": "WarioStadium",
+      "u": 0.277385,
+      "v": 0.423375,
+      "artSize": 187.45
+    },
+    {
+      "code": "WestCity",
+      "u": 0.389618,
+      "v": 0.693167,
+      "artSize": 187.55
+    }
+  ],
+  "cups": [
+    {
+      "code": "GP00",
+      "u": 0.3484,
+      "v": 0.6671
+    },
+    {
+      "code": "GP01",
+      "u": 0.2451,
+      "v": 0.4872
+    },
+    {
+      "code": "GP02",
+      "u": 0.7154,
+      "v": 0.4126
+    },
+    {
+      "code": "GP03",
+      "u": 0.4922,
+      "v": 0.6408
+    },
+    {
+      "code": "GP04",
+      "u": 0.6733,
+      "v": 0.6746
+    },
+    {
+      "code": "GP05",
+      "u": 0.5424,
+      "v": 0.3294
+    },
+    {
+      "code": "GP06",
+      "u": 0.4033,
+      "v": 0.3922
+    },
+    {
+      "code": "GP07",
+      "u": 0.4971,
+      "v": 0.4802
+    }
+  ],
+  "survival": [
+    {
+      "code": "SV00",
+      "u": 0.4021,
+      "v": 0.4509
+    },
+    {
+      "code": "SV01",
+      "u": 0.5802,
+      "v": 0.4694
+    },
+    {
+      "code": "SV02",
+      "u": 0.4906,
+      "v": 0.4332
+    },
+    {
+      "code": "SV03",
+      "u": 0.6882,
+      "v": 0.4569
+    },
+    {
+      "code": "SV04",
+      "u": 0.4869,
+      "v": 0.7076
+    },
+    {
+      "code": "SV05",
+      "u": 0.4787,
+      "v": 0.477
+    },
+    {
+      "code": "SV06",
+      "u": 0.4156,
+      "v": 0.5863
+    },
+    {
+      "code": "SV07",
+      "u": 0.3791,
+      "v": 0.3904
+    },
+    {
+      "code": "SV08",
+      "u": 0.5481,
+      "v": 0.3744
+    },
+    {
+      "code": "SV09",
+      "u": 0.4491,
+      "v": 0.5539
+    },
+    {
+      "code": "SV10",
+      "u": 0.4628,
+      "v": 0.3393
+    },
+    {
+      "code": "SV11",
+      "u": 0.4418,
+      "v": 0.4935
+    },
+    {
+      "code": "SV12",
+      "u": 0.4251,
+      "v": 0.3221
+    },
+    {
+      "code": "SV13",
+      "u": 0.7065,
+      "v": 0.4764
+    }
+  ]
 }

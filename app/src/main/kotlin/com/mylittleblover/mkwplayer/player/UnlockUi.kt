@@ -23,12 +23,17 @@ internal data class UnlockUi(
     val ceremonyCompleted: Boolean,
     val congratulationOwed: Boolean,
     val canEnter: Boolean,
-    /** True when the cup should appear in the normal list at all. */
+    /** True when the Special Cup and Rainbow Road are officially unlocked (after ceremony completion). */
     val visible: Boolean,
     /** Why the cup is not visible yet, for a detail view; null once it is. */
     val hiddenReason: String?,
     val completedCount: Int = 0,
     val eligibleCount: Int = 0,
+    val ceremonyReady: Boolean = false,
+    val shouldShowPersistentBanner: Boolean = false,
+    val remainingStages: Set<String> = emptySet(),
+    val stageSeconds: Map<String, Int> = emptyMap(),
+    val quizPassed: Boolean = false,
 ) {
     companion object {
         /**
@@ -42,6 +47,7 @@ internal data class UnlockUi(
             return build(
                 state = bridge.snapshot,
                 eligibleCount = bridge.eligibleCount,
+                remainingStages = bridge.remainingStages(),
                 offered = offered,
             )
         }
@@ -50,34 +56,46 @@ internal data class UnlockUi(
         fun from(unlock: SpecialCupUnlock, offered: Boolean): UnlockUi = build(
             state = unlock.snapshot,
             eligibleCount = unlock.eligibleCount,
+            remainingStages = unlock.remainingStages(),
             offered = offered,
         )
 
         private fun build(
             state: SpecialCupUnlock.UnlockState,
             eligibleCount: Int,
+            remainingStages: Set<String>,
             offered: Boolean,
         ): UnlockUi {
             val completed = state.completedStages.size
             val remaining = (eligibleCount - completed).coerceAtLeast(0)
             val progress = "$completed of $eligibleCount stage${if (eligibleCount == 1) "" else "s"} heard"
+            val officiallyUnlocked = state.specialUnlocked
+            val rate = state.currentSampleRate.takeIf { it > 0 } ?: 48_000
+            val stageSeconds = state.listenedFrames.mapValues { (_, frames) ->
+                (frames.coerceAtLeast(0L) / rate.toLong()).toInt()
+                    .coerceIn(0, SpecialCupUnlock.REQUIRED_SECONDS)
+            }
 
             return UnlockUi(
                 progress = progress,
-                remaining = if (remaining == 0) null else "$remaining still to hear",
+                remaining = if (remaining == 0 || state.quizPassed) null else "$remaining still to hear",
                 ruleNotice = com.mylittleblover.mkwplayer.unlock.SpecialCupRules.describe(eligibleCount),
-                offered = offered,
+                offered = offered || state.ceremonyReady,
                 ceremonyPlaying = state.ceremony == SpecialCupUnlock.CeremonyPhase.PLAYING,
                 ceremonyCompleted = state.ceremony == SpecialCupUnlock.CeremonyPhase.COMPLETED,
                 congratulationOwed = state.ceremony == SpecialCupUnlock.CeremonyPhase.COMPLETED &&
                     !state.congratulated,
-                canEnter = state.entitled && state.ceremony != SpecialCupUnlock.CeremonyPhase.PLAYING,
-                // Hidden until earned: appearing early would remove the surprise, and showing a locked
-                // entry would announce that there is something to unlock.
-                visible = state.entitled,
-                hiddenReason = if (state.entitled) null else UnlockPresentation.emptyLabel(),
+                canEnter = state.ceremonyReady && state.ceremony != SpecialCupUnlock.CeremonyPhase.PLAYING,
+                // Special Cup & Rainbow Road remain locked until the unlock ceremony completes (#24).
+                visible = officiallyUnlocked,
+                hiddenReason = if (officiallyUnlocked) null else UnlockPresentation.emptyLabel(),
                 completedCount = completed,
                 eligibleCount = eligibleCount,
+                ceremonyReady = state.ceremonyReady,
+                shouldShowPersistentBanner = state.shouldShowPersistentCeremonyBanner,
+                remainingStages = remainingStages,
+                stageSeconds = stageSeconds,
+                quizPassed = state.quizPassed,
             )
         }
     }

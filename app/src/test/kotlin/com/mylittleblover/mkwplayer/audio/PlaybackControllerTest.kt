@@ -1,4 +1,4 @@
-﻿package com.mylittleblover.mkwplayer.audio
+package com.mylittleblover.mkwplayer.audio
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -207,5 +207,107 @@ class PlaybackControllerTest {
         val polled = c.poll()
         assertTrue(polled is PlaybackController.State.Playing, "got $polled")
         assertEquals("Rainbow Road", (polled as PlaybackController.State.Playing).title)
+    }
+
+    @Test
+    fun stopDoesNotRevertToPlayingOrLatchWhenNativeStopDrainsAsynchronously() {
+        // Models the real native SPSC command queue: stop() returns Ok while snapshot()
+        // continues reporting PLAYING for several polls before draining to STOPPED (frame=0).
+        val asyncEngine = object : PlaybackEngine {
+            override val sampleRate: Int = 48_000
+            var transport: Long = 0L
+            var frame: Long = 0L
+            override fun loadGraph(packet: ByteArray): Int = 0
+            override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = 0
+            override fun play(target: Int): Int { transport = 1L; return 0 }
+            override fun stop(): Int = 0 // Async: does not mutate transport yet
+            override fun pause(): Int { transport = 2L; return 0 }
+            override fun resume(): Int { transport = 1L; return 0 }
+            override fun seek(frame: Long): Int { this.frame = frame; return 0 }
+            override fun snapshot(): LongArray = LongArray(65).also {
+                it[0] = EngineSnapshot.WIRE_VERSION
+                it[1] = frame
+                it[2] = transport
+                it[3] = if (transport == 1L) 1L else 0L
+            }
+            override fun close() {}
+        }
+
+        val c = controller(asyncEngine)
+        c.load("Mario Bros. Circuit", packet, audio, "a.bwav")
+        c.setDuration(480_000L)
+        asyncEngine.frame = 24_000L
+        assertTrue(c.poll() is PlaybackController.State.Playing)
+
+        // Single click of Stop:
+        val afterStop = c.stop()
+        assertTrue(afterStop is PlaybackController.State.Stopped)
+        assertEquals(false, afterStop.naturalEnd)
+
+        // Stale pre-drain polls while AudioTrack hasn't drained COMMAND_STOP yet:
+        assertTrue(c.poll() is PlaybackController.State.Stopped)
+        assertTrue(c.poll() is PlaybackController.State.Stopped)
+
+        // Now COMMAND_STOP drains on native engine (transport = 0, frame = 0):
+        asyncEngine.transport = 0L
+        asyncEngine.frame = 0L
+        val afterDrain = c.poll()
+        assertTrue(afterDrain is PlaybackController.State.Stopped)
+        assertEquals(false, afterDrain.naturalEnd)
+    }
+
+    @Test
+    fun linearFadeWindowReportsMonotonicProgressInsteadOfWrappingToSourceFrame() {
+        val engine = object : PlaybackEngine {
+            override val sampleRate: Int = 48_000
+            var transport: Long = 0L
+            var transportFrame: Long = 0L
+            var sourceFrame: Long = 0L
+            var fadeEnd: Long = -1L
+            var fadeDur: Long = 0L
+            override fun loadGraph(packet: ByteArray): Int = 0
+            override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = 0
+            override fun loadLinearBwav(bytes: ByteArray, assetId: String, loop: Boolean, streamed: Boolean): Int = 0
+            override fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long): Int {
+                fadeEnd = endFrame
+                fadeDur = fadeOutFrames
+                return 0
+            }
+            override fun sourceSnapshot(slot: Int): LongArray = LongArray(11).also {
+                it[1] = 1L
+                it[10] = sourceFrame
+            }
+            override fun play(target: Int): Int { transport = 1L; return 0 }
+            override fun stop(): Int { transport = 0L; return 0 }
+            override fun pause(): Int = 0
+            override fun resume(): Int = 0
+            override fun seek(frame: Long): Int { transportFrame = frame; return 0 }
+            override fun snapshot(): LongArray = LongArray(65).also {
+                it[0] = EngineSnapshot.WIRE_VERSION
+                it[1] = transportFrame
+                it[2] = transport
+                it[3] = 1L
+            }
+            override fun close() {}
+        }
+
+        val c = controller(engine)
+        c.loadLinear("Course Select", audio, "sha", loop = true, streamed = true)
+        c.setLinearFadeWindow(endFrame = 600_000L, fadeOutFrames = 480_000L, displayTotalFrames = 600_000L)
+        assertEquals(600_000L, engine.fadeEnd)
+        assertEquals(480_000L, engine.fadeDur)
+
+        // Second pass: source wrapped back to 50_000, transport is at 350_000 -> monotonic 350_000!
+        engine.transportFrame = 350_000L
+        engine.sourceFrame = 50_000L
+        val finite = c.poll() as PlaybackController.State.Playing
+        assertEquals(350_000L, finite.positionFrames)
+        assertEquals(600_000L, finite.totalFrames)
+
+        // Switch to Repeat-One (disable fade window) -> switches cleanly to wrapped source frame!
+        c.setLinearFadeWindow(endFrame = -1L, fadeOutFrames = 0L, displayTotalFrames = 300_000L)
+        val infinite = c.poll() as PlaybackController.State.Playing
+        assertEquals(50_000L, infinite.positionFrames)
+        assertEquals(300_000L, infinite.totalFrames)
     }
 }

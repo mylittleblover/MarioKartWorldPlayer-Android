@@ -2,9 +2,13 @@ package com.mylittleblover.mkwplayer.ui.kit
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.mylittleblover.mkwplayer.ui.theme.AppThemeAccent
 
 /**
  * Single source of truth for the MKW Player custom UI component library (`ui.kit`).
@@ -13,12 +17,29 @@ import androidx.compose.ui.unit.dp
  * - Crisp high-key `#FFFFFF` / `#F8F8FA` / `#F5F5F8` surfaces with zero murky elevation tint.
  * - Consistent `1.dp` hairline borders (`#E2E4EA`), reserving elevation shadows strictly for
  *   floating docks, overlays, and menus.
- * - MKW Crimson (`#C52D49`) + Soft Rose (`#FCE8ED` / `#851C32`) paired with Charcoal Ink
- *   (`#20232B`) for primary transport controls and high-contrast chrome.
+ * - Dynamic character accent theme (default Mario Red `#D91E2A` / `#FCE8EA` / `#A8121D`) paired
+ *   with Charcoal Ink (`#20232B`) for primary transport controls and high-contrast chrome.
  * - Five strict corner radii (`thumb`, `control`, `card`, `sheet`, `pill`) eliminating ad-hoc
  *   `4.dp`/`8.dp`/`20.dp`/`32.dp` mismatches.
  */
 internal object MkwKitTokens {
+
+    @Volatile
+    private var lastAppliedAccent: AppThemeAccent = AppThemeAccent.Default
+
+    private var _currentAccent by mutableStateOf(AppThemeAccent.Default)
+
+    /** Live Compose-observable active character theme accent. */
+    val currentAccent: AppThemeAccent
+        get() = _currentAccent
+
+    /** Updates the dynamic accent palette across every screen immediately with zero restart. */
+    fun applyAccent(accent: AppThemeAccent) {
+        if (lastAppliedAccent == accent) return
+        lastAppliedAccent = accent
+        _currentAccent = accent
+        Palette.apply(accent)
+    }
 
     object Palette {
         val ground = Color(0xFFFFFFFF)
@@ -32,10 +53,22 @@ internal object MkwKitTokens {
         val inkSecondary = Color(0xFF565A66)
         val outlineInk = Color(0xFF747884)
 
-        val crimson = Color(0xFFC52D49)
-        val crimsonDeep = Color(0xFF851C32)
-        val rose = Color(0xFFFCE8ED)
-        val roseHover = Color(0xFFF9DCE4)
+        private var _crimson by mutableStateOf(AppThemeAccent.Default.primary)
+        private var _crimsonDeep by mutableStateOf(AppThemeAccent.Default.primaryDeep)
+        private var _rose by mutableStateOf(AppThemeAccent.Default.tint)
+        private var _roseHover by mutableStateOf(AppThemeAccent.Default.tintHover)
+
+        val crimson: Color get() = _crimson
+        val crimsonDeep: Color get() = _crimsonDeep
+        val rose: Color get() = _rose
+        val roseHover: Color get() = _roseHover
+
+        internal fun apply(accent: AppThemeAccent) {
+            _crimson = accent.primary
+            _crimsonDeep = accent.primaryDeep
+            _rose = accent.tint
+            _roseHover = accent.tintHover
+        }
 
         val danger = Color(0xFFB3261E)
         val dangerTint = Color(0xFFFDECEC)

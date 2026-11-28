@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #24 神秘賽道與特別盃解鎖橫幅、通知、演出與恭喜提示 -->
+    <string name="unlock_mystery_course_name">神秘賽道</string>
+    <string name="unlock_mystery_banner_title">神秘賽道已達成解鎖條件！</string>
+    <string name="unlock_mystery_banner_subtitle">觀看解鎖演出以正式揭曉神秘賽道。</string>
+    <string name="unlock_mystery_banner_action">進入演出</string>
+    <string name="unlock_mystery_notif_title">神秘賽道已就緒</string>
+    <string name="unlock_mystery_notif_body">神秘賽道已達成解鎖條件，點選進入解鎖演出。</string>
+    <string name="unlock_notice_badge_new">新</string>
+
+    <string name="unlock_ceremony_congrats_title">特別盃已解鎖！</string>
+    <string name="unlock_ceremony_congrats_body">感謝您對《瑪利歐賽車》音樂與本軟體的支持與熱愛，接下來請聆聽最後的大獎賽——特別盃。</string>
+    <string name="unlock_ceremony_congrats_enter">前往特別盃</string>
+    <string name="unlock_ceremony_congrats_close">返回樂庫</string>
+
+    <string name="unlock_ceremony_screen_readonly_hint">解鎖演出進行期間，進度條為唯讀狀態。</string>
+    <string name="unlock_ceremony_screen_controls_hint">演出期間已停用暫停、拖動、跳過與切歌操作，僅支援離開演出。</string>
+    <string name="unlock_ceremony_screen_leave">離開演出</string>
+
+    <!-- #24 神秘賽道鎖定彈窗 -->
+    <string name="mystery_dialog_title">神秘賽道</string>
+    <string name="mystery_dialog_subtitle">聆聽剩餘賽道各滿 30 秒，或通過 10 道知識問答挑戰即可進入解鎖演出。</string>
+    <string name="mystery_dialog_progress_fmt">已聆聽 %1$d / %2$d 條賽道</string>
+    <string name="mystery_dialog_tab_remaining">剩餘曲目清單</string>
+    <string name="mystery_dialog_tab_quiz">知識問答解鎖</string>
+    <string name="mystery_dialog_remaining_header">剩餘賽道（%1$d）</string>
+    <string name="mystery_dialog_remaining_hint">每條賽道累計有效聆聽滿 30 秒即可完成紀錄。</string>
+    <string name="mystery_dialog_remaining_all_done">所有前置賽道均已聆聽完成！請進入解鎖演出揭曉神秘賽道。</string>
+    <string name="mystery_dialog_course_seconds_fmt">已聽 %1$d / %2$d 秒</string>
+    <string name="mystery_dialog_course_unheard">尚未聆聽</string>
+    <string name="mystery_dialog_close">關閉</string>
+
+    <!-- #24 10 題特別盃知識問答 -->
+    <string name="quiz_title">JukeKart 特別盃解鎖挑戰</string>
+    <string name="quiz_subtitle">連續答對全部 10 道題目，即可直接進入神秘賽道解鎖演出。</string>
+    <string name="quiz_progress_fmt">%1$d / %2$d</string>
+    <string name="quiz_final_challenge_badge">最終挑戰</string>
+    <string name="quiz_wrong_feedback">回答不正確，請再試一次！</string>
+    <string name="quiz_retry_button">重新作答</string>
+    <string name="quiz_congrats_title">恭喜全部答對！</string>
+    <string name="quiz_congrats_body">神秘賽道解鎖演出已就緒，觀看完整演出後即可正式解鎖。</string>
+    <string name="quiz_ready_title">已達成解鎖條件！</string>
+    <string name="quiz_ready_body">神秘賽道解鎖演出已準備就緒，立即進入演出揭曉最後的大獎賽。</string>
+    <string name="quiz_enter_ceremony_button">進入演出</string>
+
+    <string name="quiz_q1_question">《瑪利歐賽車世界》於哪一天發售？</string>
+    <string name="quiz_q1_a">2024 年 6 月 5 日</string>
+    <string name="quiz_q1_b">2025 年 4 月 2 日</string>
+    <string name="quiz_q1_c">2025 年 6 月 5 日</string>
+    <string name="quiz_q1_d">2025 年 7 月 17 日</string>
+
+    <string name="quiz_q2_question">遊戲發售時共有多少個大獎賽盃賽？</string>
+    <string name="quiz_q2_a">6 個</string>
+    <string name="quiz_q2_b">8 個</string>
+    <string name="quiz_q2_c">10 個</string>
+    <string name="quiz_q2_d">12 個</string>
+
+    <string name="quiz_q3_question">遊戲發售時共有多少條生存賽拉力賽路線？</string>
+    <string name="quiz_q3_a">8 條</string>
+    <string name="quiz_q3_b">10 條</string>
+    <string name="quiz_q3_c">12 條</string>
+    <string name="quiz_q3_d">16 條</string>
+
+    <string name="quiz_q4_question">每個大獎賽盃賽包含幾條賽道？</string>
+    <string name="quiz_q4_a">3 條</string>
+    <string name="quiz_q4_b">5 條</string>
+    <string name="quiz_q4_c">6 條</string>
+    <string name="quiz_q4_d">4 條</string>
+
+    <string name="quiz_q5_question">《瑪利歐賽車世界》最多支援多少名車手在同一場比賽中競速？</string>
+    <string name="quiz_q5_a">8 名</string>
+    <string name="quiz_q5_b">12 名</string>
+    <string name="quiz_q5_c">24 名</string>
+    <string name="quiz_q5_d">32 名</string>
+
+    <string name="quiz_q6_question">在標準 24 人生存賽中，每經過一個淘汰檢查點，會有多少名車手被淘汰？</string>
+    <string name="quiz_q6_a">2 名</string>
+    <string name="quiz_q6_b">4 名</string>
+    <string name="quiz_q6_c">6 名</string>
+    <string name="quiz_q6_d">8 名</string>
+
+    <string name="quiz_q7_question">以下哪個模式允許玩家在遊戲世界中自由探索？</string>
+    <string name="quiz_q7_a">計時賽</string>
+    <string name="quiz_q7_b">氣球對戰</string>
+    <string name="quiz_q7_c">大獎賽</string>
+    <string name="quiz_q7_d">自由行駛</string>
+
+    <string name="quiz_q8_question">以下哪條賽道是《瑪利歐賽車世界》首次推出的全新賽道？</string>
+    <string name="quiz_q8_a">獎盃城</string>
+    <string name="quiz_q8_b">巧克力山</string>
+    <string name="quiz_q8_c">奇諾比奧工廠</string>
+    <string name="quiz_q8_d">龍龍叢林</string>
+
+    <string name="quiz_q9_question">在賽道比賽進入最後一圈時，通常會發生怎樣的音樂變化？</string>
+    <string name="quiz_q9_a">所有背景音樂立即停止</string>
+    <string name="quiz_q9_b">切換為頒獎音樂</string>
+    <string name="quiz_q9_c">進入速度更快的最後一圈音樂版本</string>
+    <string name="quiz_q9_d">從賽道前奏重新播放</string>
+
+    <string name="quiz_q10_question">你將要解鎖的賽道叫什麼名字，屬於哪個大獎賽盃賽？</string>
+    <string name="quiz_q10_a">庫巴城堡，閃電盃</string>
+    <string name="quiz_q10_b">彩虹之路，特別盃</string>
+    <string name="quiz_q10_c">羅潔塔天文台，星星盃</string>
+    <string name="quiz_q10_d">碧姬競技場，龜殼盃</string>
+
+    <!-- #28 7 種角色主題配色 -->
+    <string name="settings_theme_title">主題配色</string>
+    <string name="settings_theme_hint">選擇角色主題強調色，切換後全域介面即時生效，無需重啟。</string>
+    <string name="theme_accent_mario_red">瑪利歐紅</string>
+    <string name="theme_accent_luigi_green">路易吉綠</string>
+    <string name="theme_accent_peach_pink">碧姬粉</string>
+    <string name="theme_accent_wario_yellow">瓦利歐黃</string>
+    <string name="theme_accent_waluigi_purple">瓦路易吉紫</string>
+    <string name="theme_accent_daisy_orange">黛西橙</string>
+    <string name="theme_accent_rosalina_blue">羅潔塔藍</string>
+
+    <!-- #26 音訊匯出目錄、檢查更新與外鏈 -->
+    <string name="settings_export_folder_title">音訊匯出目錄</string>
+    <string name="settings_export_folder_hint">匯出混音或渲染音訊檔案時預設儲存的目標目錄。</string>
+    <string name="settings_export_folder_default">預設目錄（Music/JukeKart）</string>
+    <string name="settings_export_folder_change">選擇</string>
+
+    <string name="settings_updates_links_title">更新與連結</string>
+    <string name="settings_updates_links_hint">透過 GitHub Releases 檢查新版本、回報問題或造訪作者主頁。</string>
+    <string name="settings_update_check_btn">檢查更新</string>
+    <string name="settings_update_checking">正在檢查更新…</string>
+    <string name="settings_update_up_to_date">已是最新版本（%1$s）。</string>
+    <string name="settings_update_available_title">發現新版本 %1$s</string>
+    <string name="settings_update_available_subtitle">目前版本：%1$s</string>
+    <string name="settings_update_download_btn">前往下載</string>
+    <string name="settings_update_err_network">無法連線至 GitHub，請檢查網路連線後再試。</string>
+    <string name="settings_update_err_rate_limited">GitHub API 請求頻率受限，請稍後再試。</string>
+    <string name="settings_update_err_http">檢查更新失敗（HTTP %1$s）。</string>
+    <string name="settings_update_err_no_releases">GitHub 上暫未找到已發布的版本。</string>
+    <string name="settings_update_err_parse">無法解析 GitHub 回傳的版本資訊。</string>
+
+    <string name="settings_link_github_title">GitHub 專案主頁</string>
+    <string name="settings_link_github_subtitle">github.com/mylittleblover/JukeKart-Android</string>
+    <string name="settings_link_issues_title">問題回饋與建議</string>
+    <string name="settings_link_issues_subtitle">前往 GitHub Issues 提交錯誤回報或功能建議</string>
+    <string name="settings_link_bilibili_title">作者 Bilibili 主頁</string>
+    <string name="settings_link_bilibili_subtitle">b23.tv/mWNhhtI</string>
+    <string name="settings_link_open_failed">找不到可開啟該連結的瀏覽器應用程式。</string>
+</resources>

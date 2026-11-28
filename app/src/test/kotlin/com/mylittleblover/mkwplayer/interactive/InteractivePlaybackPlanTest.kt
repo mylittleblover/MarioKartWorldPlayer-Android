@@ -24,8 +24,13 @@ class InteractivePlaybackPlanTest {
             assertTrue(p.entry in p.labels,dir.name)
             if(dir.name=="Rainbow") {
                 assertTrue(p.streamed);assertEquals(15,p.assetPaths.size)
-                listOf("Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre", "Final").forEach { label ->
+                listOf("Area1", "Area2", "Area3_Pre", "Area3").forEach { label ->
                     assertEquals(label, p.labels[p.startingAt(label).entry])
+                }
+                listOf("Final_Pre", "Final").forEach { label ->
+                    val segId = p.labels.entries.single { it.value == label }.key
+                    assertFalse(segId in p.initialSegments, "Rainbow must not allow direct entry at $label")
+                    assertFailsWith<IllegalStateException> { p.startingAt(label) }
                 }
                 assertEquals(setOf(p.labels.entries.single { it.value == "Area2" }.key), p.advanceViaOutro)
                 assertEquals(6,p.automaticNext.size)

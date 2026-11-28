@@ -26,4 +26,11 @@
     <string name="stage_title_brasscut">短版（Brasscut）</string>
     <string name="stage_battle_fast">即将结束</string>
     <string name="stage_outro_numbered">尾奏 %1$d</string>
+    <string name="stage_pattern_normal">普通</string>
+    <string name="stage_pattern_water">水上</string>
+    <string name="stage_pattern_inside_screen">荧幕内</string>
+    <string name="stage_rainbow_area1">第一圈</string>
+    <string name="stage_rainbow_area1_inst">第一圈（仅伴奏）</string>
+    <string name="stage_rainbow_area3">太空站</string>
+    <string name="stage_dk_lap">第 %1$d 圈</string>
 </resources>

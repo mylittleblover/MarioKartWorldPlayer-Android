@@ -10,8 +10,14 @@ import kotlin.math.sin
 /** Ordinary courses only. Rainbow has its own independently verified fanfare graph. */
 internal object FinalLapFanfareCompiler {
     const val ASSET = "BGM_Seq_FinalLapFF.bwav"
-    // Median measured from three gameplay recordings, not a MINF event. See research note.
-    private const val FAST_START = 188_880L
+    // Verified v1.8.0 Default.game__SoundBgmSetting.bgyml values at 48 kHz:
+    // stopAllBgm fadeout = 0.10s (4,800 f), FinalLapFanfareDelay = 0.133s (6,384 f),
+    // FastDelay = 4.05s (194,400 f; i.e. 188,016 f after FinalLapFF frame 0).
+    const val FULL_FADE_OUT_SEC = 0.10
+    const val FULL_FADE_OUT_FRAMES = 4_800L
+    const val FANFARE_DELAY_FRAMES = 6_384L
+    const val FAST_DELAY_FRAMES = 194_400L
+    const val FANFARE_EXIT_FRAMES = FAST_DELAY_FRAMES - FANFARE_DELAY_FRAMES
     internal const val SHA256 = "60790cdf84a2e04c9fffca7ccee8bafa5be2bfb6ceb6dfd4f98ecfc8bdd8ce94"
 
     /**
@@ -114,21 +120,26 @@ internal object FinalLapFanfareCompiler {
                 G.SyncPoint.NextBar to null
             }
         }
+        val fullFadeOut = G.Fade(
+            beats = FULL_FADE_OUT_SEC * base.spec.bpm / 60.0,
+            offset = 0.0,
+            shape = G.Shape.Linear,
+        )
         val spec=base.spec.copy(
-            assets=base.spec.assets+G.Asset(ASSET,48000,2,268759,digest),
-            segments=base.spec.segments+G.Segment(ff,exit=FAST_START),
+            assets=base.spec.assets+G.Asset(ASSET,48000,2,268759,digest,lookAheadFrames=48000L*2L),
+            segments=base.spec.segments+G.Segment(ff,exit=FANFARE_EXIT_FRAMES),
             tracks=base.spec.tracks+G.Track(id++,ff,listOf(G.Clip(id++,base.spec.assets.size,sourceLength=268759))),
             transitions=base.spec.transitions.map { rule ->
                 if(rule !in rules) rule else {
                     val (syncPoint, cueName) = downbeatSyncFor(rule.sources.firstOrNull())
                     rule.copy(sync=syncPoint,sourceCue=cueName,
-                        bridge=ff,fadeOut=G.Fade(),fadeIn=G.Fade(),postExit=true,preEntry=false,
-                        timeline=G.TransitionTimeline(0,FAST_START,FAST_START,0))
+                        bridge=ff,fadeOut=fullFadeOut,fadeIn=G.Fade(),postExit=true,preEntry=false,
+                        timeline=G.TransitionTimeline(FANFARE_DELAY_FRAMES,FAST_DELAY_FRAMES,FAST_DELAY_FRAMES,0L))
                 }
             },
         )
-        // With an Immediate rule and zero outgoing fade, Native cuts the Full voice at sourceSync.
-        // postExit retains the bridge's physical tail after Fast starts, not the looping Full.
+        // Outgoing Full fades out over 0.10s (4,800 f) from sourceSync while FinalLapFF enters at
+        // +0.133s (6,384 f) and Fast enters at +4.05s (194,400 f); postExit retains FF's natural tail.
         val packet=G.build(spec)
         val paths=base.assetPaths+ASSET
         val bridgeSources = rules.flatMapTo(mutableSetOf()) { it.sources }

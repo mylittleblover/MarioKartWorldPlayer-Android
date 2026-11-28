@@ -24,19 +24,26 @@
         },
         {
           "start": 4035613,
+          "sourceOffset": 94917,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_ChocoMountain_SFC"
+        },
+        {
+          "start": 4041997,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 4224493,
+          "start": 4230013,
           "sourceOffset": 0,
           "sourceLength": 1601097,
           "stem": "BGM_Stage_ChocoMountain_SFC_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5825590,
+          "start": 5831110,
           "sourceOffset": 108297,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ChocoMountain_SFC_Fast"
@@ -53,8 +60,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ChocoMountain_SFC_Fast"
       ],
-      "durationMs": 131366,
-      "totalFrames": 6305590
+      "durationMs": 131481,
+      "totalFrames": 6311110
     },
     {
       "names": {
@@ -79,19 +86,26 @@
         },
         {
           "start": 3342705,
+          "sourceOffset": 197085,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_SFCMarioCircuit_SFC"
+        },
+        {
+          "start": 3349089,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3531585,
+          "start": 3537105,
           "sourceOffset": 0,
           "sourceLength": 1425130,
           "stem": "BGM_Stage_SFCMarioCircuit_SFC_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 4956715,
+          "start": 4962235,
           "sourceOffset": 210990,
           "sourceLength": 480000,
           "stem": "BGM_Stage_SFCMarioCircuit_SFC_Fast"
@@ -108,8 +122,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_SFCMarioCircuit_SFC_Fast"
       ],
-      "durationMs": 113264,
-      "totalFrames": 5436715
+      "durationMs": 113379,
+      "totalFrames": 5442235
     },
     {
       "names": {
@@ -134,19 +148,26 @@
         },
         {
           "start": 4689224,
+          "sourceOffset": 1406580,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_Cinema_SFC"
+        },
+        {
+          "start": 4695608,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 4878104,
+          "start": 4883624,
           "sourceOffset": 0,
           "sourceLength": 1645516,
           "stem": "BGM_Stage_Cinema_SFC_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6523620,
+          "start": 6529140,
           "sourceOffset": 595119,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Cinema_SFC_Fast"
@@ -163,8 +184,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Cinema_SFC_Fast"
       ],
-      "durationMs": 145908,
-      "totalFrames": 7003620
+      "durationMs": 146023,
+      "totalFrames": 7009140
     },
     {
       "names": {
@@ -189,19 +210,26 @@
         },
         {
           "start": 2940794,
+          "sourceOffset": 64202,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_IceBuildings_SFC"
+        },
+        {
+          "start": 2947178,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3129674,
+          "start": 3135194,
           "sourceOffset": 0,
           "sourceLength": 1139644,
           "stem": "BGM_Stage_IceBuildings_SFC_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 4269318,
+          "start": 4274838,
           "sourceOffset": 43788,
           "sourceLength": 480000,
           "stem": "BGM_Stage_IceBuildings_SFC_Fast"
@@ -218,8 +246,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_IceBuildings_SFC_Fast"
       ],
-      "durationMs": 98944,
-      "totalFrames": 4749318
+      "durationMs": 99059,
+      "totalFrames": 4754838
     },
     {
       "names": {
@@ -244,19 +272,26 @@
         },
         {
           "start": 3892546,
+          "sourceOffset": 117772,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_KoopaTroopaBeach_SFC"
+        },
+        {
+          "start": 3898930,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 4081426,
+          "start": 4086946,
           "sourceOffset": 0,
           "sourceLength": 1555205,
           "stem": "BGM_Stage_KoopaTroopaBeach_SFC_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5636631,
+          "start": 5642151,
           "sourceOffset": 125032,
           "sourceLength": 480000,
           "stem": "BGM_Stage_KoopaTroopaBeach_SFC_Fast"
@@ -273,8 +308,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_KoopaTroopaBeach_SFC_Fast"
       ],
-      "durationMs": 127429,
-      "totalFrames": 6116631
+      "durationMs": 127544,
+      "totalFrames": 6122151
     },
     {
       "names": {
@@ -299,19 +334,20 @@
         },
         {
           "start": 12695811,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 391727,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_01"
         },
         {
-          "start": 12884691,
+          "start": 12695811,
           "sourceOffset": 0,
           "sourceLength": 5841552,
           "stem": "BGM_Battle_01_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 18726243,
+          "start": 18537363,
           "sourceOffset": 350559,
           "sourceLength": 480000,
           "stem": "BGM_Battle_01_FL"
@@ -325,11 +361,10 @@
       "artwork": "t_075.webp",
       "uniqueStems": [
         "BGM_Battle_01",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_01_FL"
       ],
-      "durationMs": 400130,
-      "totalFrames": 19206243
+      "durationMs": 396195,
+      "totalFrames": 19017363
     },
     {
       "names": {
@@ -354,19 +389,20 @@
         },
         {
           "start": 12368983,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 242667,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_05"
         },
         {
-          "start": 12557863,
+          "start": 12368983,
           "sourceOffset": 0,
           "sourceLength": 5361556,
           "stem": "BGM_Battle_05_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 17919419,
+          "start": 17730539,
           "sourceOffset": 218691,
           "sourceLength": 480000,
           "stem": "BGM_Battle_05_FL"
@@ -380,11 +416,10 @@
       "artwork": "t_076.webp",
       "uniqueStems": [
         "BGM_Battle_05",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_05_FL"
       ],
-      "durationMs": 383321,
-      "totalFrames": 18399419
+      "durationMs": 379386,
+      "totalFrames": 18210539
     },
     {
       "names": {
@@ -409,19 +444,20 @@
         },
         {
           "start": 11519917,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 563833,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_00"
         },
         {
-          "start": 11708797,
+          "start": 11519917,
           "sourceOffset": 0,
           "sourceLength": 5237035,
           "stem": "BGM_Battle_00_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 16945832,
+          "start": 16756952,
           "sourceOffset": 489099,
           "sourceLength": 480000,
           "stem": "BGM_Battle_00_FL"
@@ -435,11 +471,10 @@
       "artwork": "t_077.webp",
       "uniqueStems": [
         "BGM_Battle_00",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_00_FL"
       ],
-      "durationMs": 363038,
-      "totalFrames": 17425832
+      "durationMs": 359103,
+      "totalFrames": 17236952
     },
     {
       "names": {
@@ -464,19 +499,20 @@
         },
         {
           "start": 12459308,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 122930,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_04"
         },
         {
-          "start": 12648188,
+          "start": 12459308,
           "sourceOffset": 0,
           "sourceLength": 5326727,
           "stem": "BGM_Battle_04_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 17974915,
+          "start": 17786035,
           "sourceOffset": 104328,
           "sourceLength": 480000,
           "stem": "BGM_Battle_04_FL"
@@ -490,11 +526,10 @@
       "artwork": "t_078.webp",
       "uniqueStems": [
         "BGM_Battle_04",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_04_FL"
       ],
-      "durationMs": 384477,
-      "totalFrames": 18454915
+      "durationMs": 380542,
+      "totalFrames": 18266035
     },
     {
       "names": {
@@ -519,19 +554,20 @@
         },
         {
           "start": 11332259,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 313127,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_07"
         },
         {
-          "start": 11521139,
+          "start": 11332259,
           "sourceOffset": 0,
           "sourceLength": 5218599,
           "stem": "BGM_Battle_07_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 16739738,
+          "start": 16550858,
           "sourceOffset": 281462,
           "sourceLength": 480000,
           "stem": "BGM_Battle_07_FL"
@@ -545,11 +581,10 @@
       "artwork": "t_079.webp",
       "uniqueStems": [
         "BGM_Battle_07",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_07_FL"
       ],
-      "durationMs": 358744,
-      "totalFrames": 17219738
+      "durationMs": 354809,
+      "totalFrames": 17030858
     },
     {
       "names": {
@@ -574,19 +609,20 @@
         },
         {
           "start": 11283539,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 369857,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_03"
         },
         {
-          "start": 11472419,
+          "start": 11283539,
           "sourceOffset": 0,
           "sourceLength": 4920327,
           "stem": "BGM_Battle_03_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 16392746,
+          "start": 16203866,
           "sourceOffset": 312294,
           "sourceLength": 480000,
           "stem": "BGM_Battle_03_FL"
@@ -600,11 +636,10 @@
       "artwork": "t_080.webp",
       "uniqueStems": [
         "BGM_Battle_03",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_03_FL"
       ],
-      "durationMs": 351515,
-      "totalFrames": 16872746
+      "durationMs": 347580,
+      "totalFrames": 16683866
     },
     {
       "names": {
@@ -629,19 +664,20 @@
         },
         {
           "start": 16531243,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 385101,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_02"
         },
         {
-          "start": 16720123,
+          "start": 16531243,
           "sourceOffset": 0,
           "sourceLength": 7566047,
           "stem": "BGM_Battle_02_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 24286170,
+          "start": 24097290,
           "sourceOffset": 345883,
           "sourceLength": 480000,
           "stem": "BGM_Battle_02_FL"
@@ -655,11 +691,10 @@
       "artwork": "t_081.webp",
       "uniqueStems": [
         "BGM_Battle_02",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_02_FL"
       ],
-      "durationMs": 515961,
-      "totalFrames": 24766170
+      "durationMs": 512026,
+      "totalFrames": 24577290
     },
     {
       "names": {
@@ -684,19 +719,20 @@
         },
         {
           "start": 14647156,
-          "sourceOffset": 0,
-          "sourceLength": 268759,
-          "stem": "BGM_Seq_FinalLapFF"
+          "sourceOffset": 411730,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Battle_06"
         },
         {
-          "start": 14836036,
+          "start": 14647156,
           "sourceOffset": 0,
           "sourceLength": 6548646,
           "stem": "BGM_Battle_06_FL"
         },
         {
           "fadeOut": 480000,
-          "start": 21384682,
+          "start": 21195802,
           "sourceOffset": 359327,
           "sourceLength": 480000,
           "stem": "BGM_Battle_06_FL"
@@ -710,11 +746,10 @@
       "artwork": "t_082.webp",
       "uniqueStems": [
         "BGM_Battle_06",
-        "BGM_Seq_FinalLapFF",
         "BGM_Battle_06_FL"
       ],
-      "durationMs": 455514,
-      "totalFrames": 21864682
+      "durationMs": 451579,
+      "totalFrames": 21675802
     },
     {
       "names": {
@@ -724,19 +759,23 @@
         "en": "Title Theme"
       },
       "targetId": "title_theme",
-      "clips": [{
-        "start": 0,
-        "sourceOffset": 0,
-        "sourceLength": 4160000,
-        "stem": "BGM_Seq_Title"
-      }],
+      "clips": [
+        {
+          "start": 0,
+          "sourceOffset": 0,
+          "sourceLength": 4160000,
+          "stem": "BGM_Seq_Title"
+        }
+      ],
       "courseCode": "extra:title_theme",
       "variant": "medley",
       "index": 14,
       "targetType": "title",
       "id": "extra_14_title_theme_medley",
       "artwork": "t_001.webp",
-      "uniqueStems": ["BGM_Seq_Title"],
+      "uniqueStems": [
+        "BGM_Seq_Title"
+      ],
       "durationMs": 86666,
       "totalFrames": 4160000
     }

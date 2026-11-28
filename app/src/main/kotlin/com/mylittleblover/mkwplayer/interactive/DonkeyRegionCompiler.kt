@@ -7,6 +7,23 @@ import java.security.MessageDigest
 
 /** Region changes use each departing source's real bar-one grid, never SameTime. */
 internal object DonkeyRegionCompiler {
+    /**
+     * Verified v1.8.0 DonkeyKong section transition grids:
+     * - Region 1 (`Main`) -> Region 2: 4 beats (every `label == 1` bar)
+     * - Regions 2..5 (`Pattern2..5`): 8 beats (every 2 bars anchored to the `label == 1` downbeat
+     *   nearest `loopStart`, including pre-loop bars congruent mod 8).
+     */
+    internal fun regionExitFrames(record: MinfCatalog.Record, regionNumber: Int): List<Long> {
+        val downbeats = record.beats.mapIndexedNotNull { idx, beat ->
+            if (beat.label == 1) idx to beat.frame else null
+        }
+        if (regionNumber <= 1 || downbeats.isEmpty()) return downbeats.map { it.second }
+        val anchorIdx = downbeats.minBy { (_, frame) -> kotlin.math.abs(frame - record.loopStart) }.first
+        return downbeats.mapNotNull { (idx, frame) ->
+            if (Math.floorMod(idx - anchorIdx, 8) == 0) frame else null
+        }
+    }
+
     fun extend(base: InteractivePlaybackPlan,flow: StageFlow,bytes: Map<String,ByteArray>,catalog: MinfCatalog): InteractivePlaybackPlan {
         if(flow.name.removePrefix("BGM_Stage_")!="DonkeyKong") return base
         val patterns=(2..5).mapNotNull { number ->
@@ -21,7 +38,7 @@ internal object DonkeyRegionCompiler {
             patterns.associate { (number,_) -> number to nextId++ }
         fun record(number: Int)=catalog.part(if(number==1) "DonkeyKong" else "DonkeyKong_Pattern$number","Full")
             ?: error("Missing DonkeyKong region $number MINF")
-        fun cues(number: Int)=record(number).beats.filter { it.label==1 }.map { G.Cue(nextId++,"region.exit",it.frame) }
+        fun cues(number: Int)=regionExitFrames(record(number), number).map { G.Cue(nextId++,"region.exit",it) }
         val first=regions.getValue(1)
         val segments=base.spec.segments.map { if(it.index==first) it.copy(cues=(it.cues+cues(1)).sortedBy { cue -> cue.frame }) else it }+
             patterns.map { (number,part) ->
@@ -32,7 +49,7 @@ internal object DonkeyRegionCompiler {
                 G.Segment(regions.getValue(number),exit=part.frames,loop=G.Loop(r.loopStart,r.loopEnd),cues=cues(number))
             }
         val assets=base.spec.assets+patterns.map { (_,part) -> G.Asset(part.fileName,part.sampleRate,part.channels,part.frames,
-            MessageDigest.getInstance("SHA-256").digest(bytes.getValue(part.fileName))) }
+            MessageDigest.getInstance("SHA-256").digest(bytes.getValue(part.fileName)),lookAheadFrames=part.sampleRate*2L) }
         val tracks=base.spec.tracks+patterns.mapIndexed { i,(number,part) ->
             G.Track(nextId++,regions.getValue(number),listOf(G.Clip(nextId++,base.spec.assets.size+i,sourceLength=part.frames)))
         }

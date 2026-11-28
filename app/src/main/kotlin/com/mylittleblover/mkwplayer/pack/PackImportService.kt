@@ -107,16 +107,17 @@ class PackImportService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        val displayName = state.displayName.ifBlank { ".mkwpack" }
         val title = when (state.phase) {
-            PackImportPhase.COMMITTING -> "Applying ${state.displayName.ifBlank { ".mkwpack" }}"
-            PackImportPhase.PROBING -> "Reading ${state.displayName.ifBlank { ".mkwpack" }}"
-            else -> "Importing ${state.displayName.ifBlank { ".mkwpack" }}"
+            PackImportPhase.COMMITTING -> getString(com.mylittleblover.mkwplayer.R.string.import_notif_applying_fmt, displayName)
+            PackImportPhase.PROBING -> getString(com.mylittleblover.mkwplayer.R.string.import_notif_reading_fmt, displayName)
+            else -> getString(com.mylittleblover.mkwplayer.R.string.import_notif_importing_fmt, displayName)
         }
 
         val text = when {
-            state.phase == PackImportPhase.COMMITTING -> "Updating internal library (cannot cancel now)"
+            state.phase == PackImportPhase.COMMITTING -> getString(com.mylittleblover.mkwplayer.R.string.settings_import_committing)
             state.totalMembers > 0 -> "${state.processedMembers}/${state.totalMembers} · ${state.currentMember}"
-            else -> "Verifying archive directory..."
+            else -> getString(com.mylittleblover.mkwplayer.R.string.import_notif_verifying)
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -141,7 +142,11 @@ class PackImportService : Service() {
                 Intent(this, PackImportService::class.java).setAction(ACTION_CANCEL_IMPORT),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-            builder.addAction(com.mylittleblover.mkwplayer.R.drawable.ic_notif_stop, "Cancel", cancelIntent)
+            builder.addAction(
+                com.mylittleblover.mkwplayer.R.drawable.ic_notif_stop,
+                getString(com.mylittleblover.mkwplayer.R.string.discovery_cancel),
+                cancelIntent,
+            )
         }
         return builder.build()
     }
@@ -154,15 +159,23 @@ class PackImportService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val details = buildString {
-            append("${log.packName} v${log.packVersion} · ${log.playableLibraryTracks}/${log.totalLibraryTracks} playable")
+            append(
+                getString(
+                    com.mylittleblover.mkwplayer.R.string.import_notif_done_body,
+                    log.packName,
+                    log.packVersion,
+                    log.playableLibraryTracks,
+                    log.totalLibraryTracks,
+                ),
+            )
             if (log.poolStatus == PoolUpdateStatus.REPLACED && log.poolDataVersion != null) {
-                append(" · Roads v${log.poolDataVersion}")
+                append(getString(com.mylittleblover.mkwplayer.R.string.import_notif_done_roads_suffix, log.poolDataVersion))
             }
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(com.mylittleblover.mkwplayer.R.drawable.ic_stat_jukekart)
             .setColor(0xFFC52D49.toInt())
-            .setContentTitle("Library updated")
+            .setContentTitle(getString(com.mylittleblover.mkwplayer.R.string.import_notif_done_title))
             .setContentText(details)
             .setContentIntent(openApp)
             .setAutoCancel(true)
@@ -180,7 +193,7 @@ class PackImportService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(com.mylittleblover.mkwplayer.R.drawable.ic_stat_jukekart)
             .setColor(0xFFC52D49.toInt())
-            .setContentTitle("Pack import stopped")
+            .setContentTitle(getString(com.mylittleblover.mkwplayer.R.string.import_notif_stopped_title))
             .setContentText(reason)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
             .setContentIntent(openApp)
@@ -193,10 +206,10 @@ class PackImportService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Library import",
+            getString(com.mylittleblover.mkwplayer.R.string.notif_channel_import_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Shows progress and controls while importing .mkwpack soundtracks."
+            description = getString(com.mylittleblover.mkwplayer.R.string.notif_channel_import_desc)
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)

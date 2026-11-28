@@ -236,13 +236,16 @@ class CourseFlowRecipeBuilderTest {
         )
         val compiled = CourseFlowRecipeBuilder.compileUserPreset(preset, inv, minfCatalog, resolver)
         assertNotNull(compiled)
+        val mainClip = compiled.medley.clips.firstOrNull { it.stem == "BGM_Stage_FirstCircuit" }
         val ffClip = compiled.medley.clips.firstOrNull { it.stem == "BGM_Seq_FinalLapFF" }
         val fastClip = compiled.medley.clips.firstOrNull { it.stem == "BGM_Stage_FirstCircuit_Fast" }
+        assertNotNull(mainClip)
         assertNotNull(ffClip)
         assertNotNull(fastClip)
-        assertEquals(beatExit, ffClip.start)
+        assertEquals(4_800L, mainClip.fadeOut)
+        assertEquals(beatExit + 6_384L, ffClip.start)
         assertEquals(268_759L, ffClip.sourceLength)
-        assertEquals(beatExit + 188_880L, fastClip.start)
+        assertEquals(beatExit + 194_400L, fastClip.start)
         assertEquals(0L, fastClip.sourceOffset)
         assertTrue(mainPart.beats.isNotEmpty())
     }
@@ -544,5 +547,236 @@ class CourseFlowRecipeBuilderTest {
             resolver = anyResolver,
         )!!
         assertEquals("a", fcAltFallback.medley.normalizedSuiteVariant)
+    }
+
+    @Test
+    fun acornHeightsBigTreeOutro03PreLoopTriggerCompilesCleanlyWithoutClamping() {
+        val sr = 48_000
+        val minfCatalog = minf()
+        val medleys = medleyCatalog()
+        val fullMinf = minfCatalog.part("BigTree", "Full")!!
+        val preMinf = minfCatalog.part("BigTree", "Pre")!!
+        val outro03Trigger = ConfirmedOutroCatalog.forStage("BigTree")!!.getValue(3).single()
+        val outro00Trigger = ConfirmedOutroCatalog.forStage("BigTree")!!.getValue(0).single()
+        assertEquals(417_857L, outro03Trigger)
+        assertTrue(
+            outro03Trigger < fullMinf.loopStart,
+            "BigTree Outro03 trigger ($outro03Trigger) must be strictly before Main loopStart (${fullMinf.loopStart})",
+        )
+        assertTrue(outro00Trigger > fullMinf.loopStart)
+
+        val resolver = object : CourseFlowRecipeBuilder.SourceResolver {
+            override fun findByFileName(fileName: String): CourseFlowRecipeBuilder.AssetHeader? {
+                val stem = fileName.removeSuffix(".bwav")
+                if (!stem.contains("BigTree")) return null
+                val rec = minfCatalog.records.firstOrNull {
+                    it.stage == "BigTree" && it.logicalName.equals(stem, ignoreCase = true)
+                }
+                val isOutro = stem.contains("_Outro")
+                val frames = rec?.loopEnd ?: 240_000L
+                val hasLoop = !isOutro && rec != null && rec.loopStart < rec.loopEnd
+                return CourseFlowRecipeBuilder.AssetHeader(
+                    stem = stem,
+                    digest = "sha-$stem",
+                    frames = frames,
+                    sampleRate = sr,
+                    loopStart = if (hasLoop) rec!!.loopStart else null,
+                    loopEnd = if (hasLoop) rec!!.loopEnd else null,
+                )
+            }
+        }
+
+        val inv = CourseFlowRecipeBuilder.inspectCourse("BigTree", minfCatalog, medleys, resolver)
+        val prePart = inv.part("Pre")!!
+        val mainPart = inv.part("Main")!!
+        val outro03 = inv.outros.first { it.number == 3 }
+        assertEquals(listOf(417_857L), outro03.mainTriggerPoints)
+        assertEquals(237_858L, outro03.frames)
+        assertEquals(173_571L, outro03.outroToNextPreFrame)
+        assertTrue(outro03.supportsNativeHandover)
+
+        // Default editor flow (Pre -> Main with loopCount = 1) entering pre-loop-only Outro03 must NOT clamp
+        // targetExit up to loopStart + 1 (578,572) and must emit valid non-negative splice frames aligned to 417,857.
+        val preset = CoursePreset(
+            id = "user:bigtree-outro03",
+            courseCode = "BigTree",
+            name = "Acorn Heights Outro03",
+            steps = listOf(
+                FlowStep("Pre", loopCount = 0, exitFrame = prePart.defaultExitFrame),
+                FlowStep("Main", loopCount = 1, exitFrame = mainPart.defaultExitFrame),
+            ),
+            outroNumber = 3,
+            fadeOutMs = 0,
+            outroToNextPre = true,
+        )
+        val compiled = CourseFlowRecipeBuilder.compileUserPreset(preset, inv, minfCatalog, resolver)
+        assertNotNull(compiled, "BigTree Pre -> Main(loop=1) -> Outro03 must compile cleanly")
+        val estimatedFrames = CourseFlowRecipeBuilder.estimateTimelineFrames(preset.steps, outroNumber = 3, fadeOutMs = 0, inventory = inv)
+        assertEquals(estimatedFrames, compiled.medley.totalFrames, "estimateTimelineFrames must match compiled totalFrames")
+
+        for (clip in compiled.medley.clips) {
+            assertTrue(clip.start >= 0L, "negative clip.start in ${clip.stem}: ${clip.start}")
+            assertTrue(clip.sourceOffset >= 0L, "negative clip.sourceOffset in ${clip.stem}: ${clip.sourceOffset}")
+            assertTrue(clip.sourceLength > 0L, "non-positive clip.sourceLength in ${clip.stem}: ${clip.sourceLength}")
+        }
+
+        val preClip = compiled.medley.clips.single { it.stem == "BGM_Stage_BigTree_Pre" }
+        val mainClips = compiled.medley.clips.filter { it.stem == "BGM_Stage_BigTree" }
+        val outroClip = compiled.medley.clips.single { it.stem == "BGM_Stage_BigTree_Outro03" }
+        assertEquals(0L, preClip.start)
+        assertEquals(prePart.defaultExitFrame, preClip.sourceLength)
+        assertEquals(1, mainClips.size, "Pre-loop-only Outro03 must emit a single Main clip without looping past trigger")
+        assertEquals(preClip.sourceLength, mainClips.single().start)
+        assertEquals(0L, mainClips.single().sourceOffset)
+        assertEquals(outro03Trigger, mainClips.single().sourceLength, "Main must splice cleanly at Outro03 trigger 417,857")
+        assertEquals(preClip.sourceLength + outro03Trigger, outroClip.start)
+        assertEquals(0L, outroClip.sourceOffset)
+        assertEquals(outro03.frames, outroClip.sourceLength)
+        assertEquals(outroClip.start + 173_571L, compiled.outroHandoverFrame)
+
+        // Graph compilation & probe must succeed cleanly.
+        val bytesByStem = compiled.medley.uniqueStems.associateWith { stem ->
+            val maxNeeded = compiled.medley.clips
+                .filter { it.stem == stem }
+                .maxOf { (it.sourceOffset + it.sourceLength).toInt() } + 1_000
+            syntheticBwav(frames = maxNeeded, sampleRate = sr)
+        }
+        val graph = CourseMedleyCompiler.compileGraph(compiled.medley, compiled.sampleRate, bytesByStem)
+        assertTrue(GraphProbe.inspect(graph.packet) is GraphProbe.Result.Ok, "GraphProbe must pass for BigTree Outro03")
+
+        // Seam preview centered on Main -> Outro03 (seamIndex = 1) must align Main tail and Outro03 head cleanly.
+        val seamPreview = CourseFlowRecipeBuilder.compileSeamPreview(
+            preset = preset,
+            seamIndex = 1,
+            inventory = inv,
+            minf = minfCatalog,
+            resolver = resolver,
+        )
+        assertNotNull(seamPreview, "Main -> Outro03 seam preview must compile")
+        for (clip in seamPreview.medley.clips) {
+            assertTrue(clip.start >= 0L && clip.sourceOffset >= 0L && clip.sourceLength > 0L)
+        }
+        val seamMain = seamPreview.medley.clips.last { it.stem == "BGM_Stage_BigTree" }
+        val seamOutro = seamPreview.medley.clips.single { it.stem == "BGM_Stage_BigTree_Outro03" }
+        assertEquals(outro03Trigger, seamMain.sourceOffset + seamMain.sourceLength)
+        assertEquals(seamMain.start + seamMain.sourceLength, seamOutro.start)
+
+        // Contrast: an in-loop outro (Outro00 at 2,584,284 > loopStart) still honors loopCount = 1.
+        val loopPreset = preset.copy(id = "user:bigtree-outro00", outroNumber = 0)
+        val compiledLoop = CourseFlowRecipeBuilder.compileUserPreset(loopPreset, inv, minfCatalog, resolver)!!
+        val loopMainClips = compiledLoop.medley.clips.filter { it.stem == "BGM_Stage_BigTree" }
+        val loopOutroClip = compiledLoop.medley.clips.single { it.stem == "BGM_Stage_BigTree_Outro00" }
+        assertEquals(2, loopMainClips.size, "In-loop Outro00 must preserve requested loopCount = 1")
+        assertEquals(fullMinf.loopStart, loopMainClips[1].sourceOffset)
+        assertEquals(outro00Trigger - fullMinf.loopStart, loopMainClips[1].sourceLength)
+        assertEquals(loopMainClips[1].start + loopMainClips[1].sourceLength, loopOutroClip.start)
+        assertEquals(preMinf.loopEnd, prePart.frames)
+    }
+
+    @Test
+    fun snowMountainCinemaAndKoopaTroopaBeachFlowRulesAndLabelsMatchVerifiedV180Spec() {
+        val sr = 48_000
+        val minfCatalog = minf()
+        val medleys = medleyCatalog()
+
+        fun resolverFor(course: String) = object : CourseFlowRecipeBuilder.SourceResolver {
+            override fun findByFileName(fileName: String): CourseFlowRecipeBuilder.AssetHeader? {
+                val stem = fileName.removeSuffix(".bwav")
+                if (!stem.contains(course)) return null
+                val rec = minfCatalog.records.firstOrNull { it.logicalName.equals(stem, ignoreCase = true) }
+                val isOutroOrBridge = stem.contains("_Outro") || stem.contains("_Bridge")
+                val frames = maxOf(rec?.loopEnd ?: 2_600_000L, if (isOutroOrBridge) 240_000L else 2_600_000L)
+                val hasLoop = !isOutroOrBridge && rec != null && rec.loopStart < rec.loopEnd
+                return CourseFlowRecipeBuilder.AssetHeader(
+                    stem = stem,
+                    digest = "sha-$stem",
+                    frames = frames,
+                    sampleRate = sr,
+                    loopStart = if (hasLoop) rec!!.loopStart else null,
+                    loopEnd = if (hasLoop) rec!!.loopEnd else null,
+                )
+            }
+        }
+
+        // 1. SnowMountain: Pattern2 restricts outros strictly to Outro00..05 (rejects Outro06/Outro07),
+        //    and crossfades are asymmetric (0.5s enter Pattern2, 2.0s exit back to Main).
+        val snowRes = resolverFor("SnowMountain")
+        val snowInv = CourseFlowRecipeBuilder.inspectCourse("SnowMountain", minfCatalog, medleys, snowRes)
+        val snowPattern2Steps = listOf(FlowStep("Main", exitFrame = 500_000L), FlowStep("Pattern2", exitFrame = 1_500_000L))
+        assertEquals((0..7).toList(), snowInv.availableOutrosForTail(listOf(FlowStep("Main"))).map { it.number })
+        assertEquals((0..5).toList(), snowInv.availableOutrosForTail(snowPattern2Steps).map { it.number })
+        val illegalOutro6 = CourseFlowRecipeBuilder.compileUserPreset(
+            preset = CoursePreset("user:snow-p2-o6", "SnowMountain", "Snow P2 O6", snowPattern2Steps, outroNumber = 6),
+            inventory = snowInv,
+            minf = minfCatalog,
+            resolver = snowRes,
+        )!!
+        assertTrue(
+            illegalOutro6.medley.clips.none { it.stem.contains("Outro06") },
+            "SnowMountain Pattern2 must reject illegal Outro06 during compilation",
+        )
+        val legalOutro5 = CourseFlowRecipeBuilder.compileUserPreset(
+            preset = CoursePreset("user:snow-p2-o5", "SnowMountain", "Snow P2 O5", snowPattern2Steps, outroNumber = 5),
+            inventory = snowInv,
+            minf = minfCatalog,
+            resolver = snowRes,
+        )!!
+        assertTrue(legalOutro5.medley.clips.any { it.stem == "BGM_Stage_SnowMountain_Outro05" })
+        val snowRoundTrip = CourseFlowRecipeBuilder.compileUserPreset(
+            preset = CoursePreset(
+                "user:snow-asym-check",
+                "SnowMountain",
+                "Snow Asym",
+                listOf(FlowStep("Main", exitFrame = 500_000L), FlowStep("Pattern2", exitFrame = 1_000_000L), FlowStep("Main", exitFrame = 1_500_000L)),
+            ),
+            inventory = snowInv,
+            minf = minfCatalog,
+            resolver = snowRes,
+        )!!
+        assertEquals(24_000L, snowRoundTrip.medley.clips[0].fadeOut)
+        assertEquals(24_000L, snowRoundTrip.medley.clips[1].fadeIn)
+        assertEquals(96_000L, snowRoundTrip.medley.clips[1].fadeOut)
+        assertEquals(96_000L, snowRoundTrip.medley.clips[2].fadeIn)
+
+        // 2. Cinema: Pre (16) and Pre_Short (4) strictly use 8-beat Pre_TransitionGrid, and Pattern2 is bidirectional 0.5s.
+        val cinRes = resolverFor("Cinema")
+        val cinInv = CourseFlowRecipeBuilder.inspectCourse("Cinema", minfCatalog, medleys, cinRes)
+        assertTrue(cinInv.part("Pre")!!.isGridConstrained)
+        assertTrue(cinInv.part("Pre_Short")!!.isGridConstrained)
+        assertEquals(16, cinInv.part("Pre")!!.exitCandidates.size)
+        assertEquals(4, cinInv.part("Pre_Short")!!.exitCandidates.size)
+        assertEquals((0..5).toList(), cinInv.availableOutrosForTail(listOf(FlowStep("Main"), FlowStep("Pattern2"))).map { it.number })
+        val cinRoundTrip = CourseFlowRecipeBuilder.compileUserPreset(
+            preset = CoursePreset(
+                "user:cin-sym-check",
+                "Cinema",
+                "Cinema Sym",
+                listOf(FlowStep("Main", exitFrame = 500_000L), FlowStep("Pattern2", exitFrame = 1_000_000L), FlowStep("Main", exitFrame = 1_500_000L)),
+            ),
+            inventory = cinInv,
+            minf = minfCatalog,
+            resolver = cinRes,
+        )!!
+        assertEquals(24_000L, cinRoundTrip.medley.clips[0].fadeOut)
+        assertEquals(24_000L, cinRoundTrip.medley.clips[1].fadeIn)
+        assertEquals(24_000L, cinRoundTrip.medley.clips[1].fadeOut)
+        assertEquals(24_000L, cinRoundTrip.medley.clips[2].fadeIn)
+
+        // 3. KoopaTroopaBeach: Speaker overlay event label explicitly includes 1.0s fade timing.
+        val koopaInv = CourseFlowRecipeBuilder.inspectCourse("KoopaTroopaBeach", minfCatalog, medleys, resolverFor("KoopaTroopaBeach"))
+        assertTrue(koopaInv.describeTransitionEvent("Main", "Main_Speaker").contains("1.0s"))
+        assertTrue(koopaInv.describeTransitionEvent("Fast", "Fast_Speaker").contains("1.0s"))
+
+        // 4. Course-aware sync beat-grid label resolution (3 / 4 / 8 / 16 beats).
+        assertEquals(8, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("Cinema", "Pre", "pre.exit"))
+        assertEquals(8, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("Cinema", "Pre_Short", "pre.exit"))
+        assertEquals(8, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("Lava", "Pre", "pre.exit"))
+        assertEquals(3, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("BigTree", "Pre", "pre.exit"))
+        assertEquals(3, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("DinoBones", "Pre_Short", "pre.exit"))
+        assertEquals(16, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("Rainbow", "Area1_Pre", "pre.exit"))
+        assertEquals(4, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("Rainbow", "Area3_Pre", "pre.exit"))
+        assertEquals(4, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("SnowMountain", "Pre", "pre.exit"))
+        assertEquals(4, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("DonkeyKong", "Main", "region.exit"))
+        assertEquals(8, com.mylittleblover.mkwplayer.ui.interactive.resolvedGridBeatsForSync("DonkeyKong", "Region 2", "region.exit"))
     }
 }

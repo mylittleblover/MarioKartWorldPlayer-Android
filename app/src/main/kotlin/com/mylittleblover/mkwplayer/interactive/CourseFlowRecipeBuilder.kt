@@ -39,6 +39,7 @@ internal object CourseFlowRecipeBuilder {
         val bridgeHandoverFrame: Long? = null,
         val fromBridgeFrame: Long? = null,
         val preAfterShortOffset: Long? = null,
+        val isGridConstrained: Boolean = false,
     ) {
         val isBridgeLocked: Boolean
             get() = roleKey in setOf("Bridge", "Area1_Bridge")
@@ -80,17 +81,23 @@ internal object CourseFlowRecipeBuilder {
 
         fun defaultEditorSteps(): List<FlowStep> {
             val preferred = when {
-                courseCode == "Rainbow" -> listOf("Area1_Pre", "Area1_Bridge", "Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre", "Final")
+                courseCode == "Rainbow" -> listOf("Area1_Pre", "Area1_Bridge", "Area1", "Area2", "Area2_Outro04", "Area3_Pre", "Area3", "Final_Pre", "Final")
                 courseCode.startsWith("extra:") && part("Harmonica") != null -> listOf("Harmonica", "Main")
                 courseCode.startsWith("extra:") -> listOf("Main")
                 else -> listOf("Pre", "Bridge", "Main")
             }
             val present = preferred.mapNotNull { role ->
                 part(role)?.let { p ->
+                    val exitFrame = when {
+                        p.isBridgeLocked -> null
+                        courseCode == "Rainbow" && role == "Area2" && part("Area2_Outro04") != null ->
+                            outros.firstOrNull { it.number == 4 }?.mainTriggerPoints?.firstOrNull() ?: p.defaultExitFrame
+                        else -> p.defaultExitFrame
+                    }
                     FlowStep(
                         roleKey = role,
                         loopCount = if (p.supportsLoop && role in setOf("Main", "Area1", "Area2", "Area3", "Final", "BrassCut")) 1 else 0,
-                        exitFrame = if (p.isBridgeLocked) null else p.defaultExitFrame,
+                        exitFrame = exitFrame,
                     )
                 }
             }
@@ -213,10 +220,23 @@ internal object CourseFlowRecipeBuilder {
             return raw.filter { part(it) != null }.distinct()
         }
 
-        fun supportsOutroEnding(steps: List<FlowStep>): Boolean {
-            if (outros.isEmpty() || steps.isEmpty()) return false
-            return isOutroHostRole(steps.last().roleKey)
+        /** Verified Outros legally reachable from the tail step (e.g. SnowMountain Pattern2 only has Outro00..05). */
+        fun availableOutrosForTail(steps: List<FlowStep>): List<OutroOption> {
+            if (outros.isEmpty() || steps.isEmpty()) return emptyList()
+            val tailRole = steps.last().roleKey
+            if (!isOutroHostRole(tailRole)) return emptyList()
+            if (tailRole == "Pattern2" && courseCode in setOf("Cinema", "SnowMountain")) {
+                val pattern2Triggers = ConfirmedOutroCatalog.forStage("${courseCode}_Pattern2") ?: return emptyList()
+                return outros.mapNotNull { outro ->
+                    val triggers = pattern2Triggers[outro.number] ?: return@mapNotNull null
+                    outro.copy(mainTriggerPoints = triggers.distinct().sorted())
+                }
+            }
+            return outros
         }
+
+        fun supportsOutroEnding(steps: List<FlowStep>): Boolean =
+            availableOutrosForTail(steps).isNotEmpty()
 
         fun describeTransitionEvent(prevRole: String?, nextRole: String): String = when {
             prevRole == null -> "Entry -> $nextRole"
@@ -231,30 +251,35 @@ internal object CourseFlowRecipeBuilder {
             courseCode in setOf("Cinema", "SnowMountain") &&
                 prevRole in setOf("Main", "Pattern2", "Fast", "Fast_Pattern2") &&
                 nextRole in setOf("Main", "Pattern2", "Fast", "Fast_Pattern2") &&
-                (prevRole in setOf("Main", "Pattern2")) == (nextRole in setOf("Main", "Pattern2")) ->
-                "Parallel Sync (1s Crossfade) -> $nextRole"
+                (prevRole in setOf("Main", "Pattern2")) == (nextRole in setOf("Main", "Pattern2")) -> {
+                val exitingSnowP2 = courseCode == "SnowMountain" && prevRole in setOf("Pattern2", "Fast_Pattern2")
+                val fadeText = if (exitingSnowP2) "2.0s" else "0.5s"
+                "Parallel Sync ($fadeText Crossfade) -> $nextRole"
+            }
+            courseCode == "Rainbow" && prevRole in setOf("Area1", "Area1_Inst") && nextRole == "Area2" ->
+                "Split-Stem 0.3s Fade -> Area2"
             courseCode == "Rainbow" && prevRole == "Area3" && nextRole == "Final_Pre" ->
-                "1s Crossfade -> Final_Pre"
+                "1.2s+3.0s / 2.5s Crossfade -> Final_Pre"
             courseCode == "KoopaTroopaBeach" &&
                 ((prevRole == "Main" && nextRole == "Main_Speaker") ||
                     (prevRole == "Main_Speaker" && nextRole == "Main") ||
                     (prevRole == "Fast" && nextRole == "Fast_Speaker") ||
                     (prevRole == "Fast_Speaker" && nextRole == "Fast")) ->
-                "Speaker Overlay Fade -> $nextRole"
+                "Speaker Overlay Fade (1.0s) -> $nextRole"
             courseCode == "Rainbow" &&
                 ((prevRole == "Area1_Inst" && nextRole == "Area1") ||
                     (prevRole == "Area1" && nextRole == "Area1_Inst")) ->
                 "Melody Overlay Fade -> $nextRole"
             courseCode == "Rainbow" && nextRole == "Final" &&
-                prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area3_Pre", "Area3", "Final_Pre") &&
+                prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre") &&
                 hasFanfareAsset ->
-                "FinalLapFanfare -> Final"
+                "FinalLapFanfare (+0.20s) -> Final"
             nextRole in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") &&
                 prevRole !in setOf("Bridge", "Fast", "Fast_Pattern2", "Fast_Speaker") &&
                 hasFanfareAsset && courseCode != "Rainbow" ->
-                "NextBeat + FinalLapFF -> $nextRole"
+                "FinalLapFF (+0.133s / +4.05s) -> $nextRole"
             nextRole in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") ->
-                "NextBeat / ExitCue -> $nextRole"
+                "Direct 0.1s Fade -> $nextRole"
             else -> "NextBar / Phase Sync -> $nextRole"
         }
     }
@@ -361,11 +386,14 @@ internal object CourseFlowRecipeBuilder {
                     ?.takeIf { it > 0L }
                     ?: record?.phase?.takeIf { it > 0L }
             } else null
+            val gridConstrained = isGridConstrainedRole(logical, def.roleKey, record)
             val candidates = collectExitCandidates(
+                courseCode = logical,
                 roleKey = def.roleKey,
                 record = record,
                 frames = primaryHeader.frames,
                 sampleRate = primaryHeader.sampleRate,
+                gridConstrained = gridConstrained,
             )
             val beats = record?.beats?.takeIf { it.isNotEmpty() }
                 ?: if (def.roleKey in setOf("Bridge", "Area1_Bridge")) emptyList()
@@ -388,6 +416,7 @@ internal object CourseFlowRecipeBuilder {
                 bridgeHandoverFrame = bridgeHandover,
                 fromBridgeFrame = fromBridge,
                 preAfterShortOffset = preAfterShort,
+                isGridConstrained = gridConstrained,
             )
         }
 
@@ -559,7 +588,8 @@ internal object CourseFlowRecipeBuilder {
             parts = parts,
             outros = emptyList(),
             builtInPresets = builtIns,
-            hasFanfareAsset = hasFanfareAsset,
+            // Verified v1.8.0: Battle mode switches directly to BattleFL without FinalLapFF.
+            hasFanfareAsset = if (battleTrack != null) false else hasFanfareAsset,
             sampleRate = twoState.main.sampleRate,
         )
     }
@@ -575,12 +605,12 @@ internal object CourseFlowRecipeBuilder {
         segmentSwitchFadeOutMs: Int = 0,
     ): CourseMedleyCompiler.ResolvedMedley? {
         val logical = courseCode.removeSuffix("_00")
-        val inventory = inspectCourse(logical, minf, medleyCatalog, resolver)
         if (PresetRefs.isUser(presetRef)) {
             val found = userPresets.firstOrNull {
                 it.id == presetRef && it.courseCode.equals(logical, ignoreCase = true)
             }
             if (found != null) {
+                val inventory = inspectCourse(logical, minf, medleyCatalog, resolver)
                 compileUserPreset(
                     found,
                     inventory,
@@ -591,34 +621,51 @@ internal object CourseFlowRecipeBuilder {
             }
             // Deleted or unavailable user preset falls back cleanly to system default (#50).
         }
+        val builtIns = medleyCatalog.forCourse(logical)
+            .sortedBy { it.suiteSortOrder }
+            .map { medley ->
+                BuiltInPresetSummary(
+                    ref = PresetRefs.forSuiteVariant(medley.normalizedSuiteVariant),
+                    medley = medley,
+                    isKnockout = medley.isKnockoutVariant,
+                    outroToNextPreFrame = resolveMedleyHandoverFrame(medley, minf),
+                    incomingPrePhase = resolveIncomingPhase(medley, minf),
+                )
+            }
         val targetBuiltIn = when (presetRef) {
-            PresetRefs.SYSTEM_KNOCKOUT -> inventory.builtInPresets.firstOrNull { it.isKnockout }
-                ?: inventory.builtInPresets.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT }
-                ?: inventory.builtInPresets.firstOrNull()
+            PresetRefs.SYSTEM_KNOCKOUT -> builtIns.firstOrNull { it.isKnockout }
+                ?: builtIns.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT }
+                ?: builtIns.firstOrNull()
             PresetRefs.SYSTEM_SUITE_A_ALT,
             PresetRefs.SYSTEM_SUITE_B,
             PresetRefs.SYSTEM_SUITE_C,
             PresetRefs.SYSTEM_SUITE_D,
-            -> inventory.builtInPresets.firstOrNull { it.ref == presetRef }
-                ?: inventory.builtInPresets.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT && !it.isKnockout }
-                ?: inventory.builtInPresets.firstOrNull()
-            else -> inventory.builtInPresets.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT && !it.isKnockout }
-                ?: inventory.builtInPresets.firstOrNull()
+            -> builtIns.firstOrNull { it.ref == presetRef }
+                ?: builtIns.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT && !it.isKnockout }
+                ?: builtIns.firstOrNull()
+            else -> builtIns.firstOrNull { it.ref == PresetRefs.SYSTEM_DEFAULT && !it.isKnockout }
+                ?: builtIns.firstOrNull()
         } ?: return null
 
         val medley = targetBuiltIn.medley
         val digests = linkedMapOf<String, String>()
+        var sampleRate = 48_000
+        var capturedRate = false
         for (stem in medley.uniqueStems) {
             if (stem.equals("BGM_Seq_FinalLapFF", ignoreCase = true)) {
                 digests[stem] = FinalLapFanfareCompiler.SHA256
                 continue
             }
             val header = resolver.findByFileName("$stem.bwav") ?: return null
+            if (!capturedRate && header.sampleRate > 0) {
+                sampleRate = header.sampleRate
+                capturedRate = true
+            }
             digests[stem] = header.digest
         }
         return CourseMedleyCompiler.ResolvedMedley(
             medley = medley,
-            sampleRate = targetBuiltIn.let { inventory.sampleRate },
+            sampleRate = sampleRate,
             stemDigests = digests,
             outroHandoverFrame = targetBuiltIn.outroToNextPreFrame,
             incomingPrePhase = targetBuiltIn.incomingPrePhase,
@@ -823,8 +870,7 @@ internal object CourseFlowRecipeBuilder {
         if (steps.isEmpty()) return emptyList()
         val offsets = LongArray(steps.size)
         val endingOutro = outroNumber
-            ?.takeIf { inventory.supportsOutroEnding(steps) }
-            ?.let { num -> inventory.outros.firstOrNull { it.number == num } }
+            ?.let { num -> inventory.availableOutrosForTail(steps).firstOrNull { it.number == num } }
         var prevExitSourcePos = 0L
         steps.forEachIndexed { idx, step ->
             val part = inventory.part(step.roleKey)
@@ -922,18 +968,27 @@ internal object CourseFlowRecipeBuilder {
                 else ->
                     validTriggers.firstOrNull { it >= rawExit } ?: validTriggers.last()
             }.coerceIn(1L, part.frames)
+        } else if (part.isGridConstrained && part.exitCandidates.isNotEmpty() && !part.isBridgeLocked) {
+            part.exitCandidates.minByOrNull { kotlin.math.abs(it.frame - rawExit) }?.frame ?: rawExit
         } else {
             rawExit
         }
 
         val l0 = part.loopStart
         val l1 = part.loopEnd
+        val isPreLoopOnlyOutro = !part.isBridgeLocked && !isHandoverArea2Outro &&
+            stepOutro != null && l0 != null &&
+            rawTarget <= l0 && rawTarget > sourceOffset
         val needsLoopWrap = !part.isBridgeLocked && !isHandoverArea2Outro &&
             part.supportsLoop && l0 != null && l1 != null &&
             step.loopCount == 0 &&
             (stepOutro != null || hasExplicitCustomExit) &&
             rawTarget <= sourceOffset && rawTarget > l0
-        val effectiveLoopCount = if (needsLoopWrap) 1 else step.loopCount
+        val effectiveLoopCount = when {
+            isPreLoopOnlyOutro -> 0
+            needsLoopWrap -> 1
+            else -> step.loopCount
+        }
         val looping = !part.isBridgeLocked && !isHandoverArea2Outro && part.supportsLoop && effectiveLoopCount > 0
         val exitFloor = if (looping) {
             ((l0 ?: 0L) + 1L).coerceAtMost(part.frames)
@@ -968,6 +1023,50 @@ internal object CourseFlowRecipeBuilder {
             isPureOverlayToggle(courseCode, from, to)
     }
 
+    private fun framesForSeconds(seconds: Double, sampleRate: Int): Long =
+        kotlin.math.round(seconds * sampleRate.toDouble()).toLong().coerceAtLeast(0L)
+
+    private fun isRainbowFinalWithFanfareTransition(
+        courseCode: String,
+        prevRole: String?,
+        roleKey: String,
+    ): Boolean = courseCode == "Rainbow" &&
+        roleKey == "Final" &&
+        prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre")
+
+    private fun isStandardFinalLapWithFanfareTransition(
+        courseCode: String,
+        prevRole: String?,
+        roleKey: String,
+        hasFanfareAsset: Boolean,
+    ): Boolean = courseCode != "Rainbow" &&
+        roleKey in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") &&
+        prevRole !in setOf("Bridge", "Fast", "Fast_Pattern2", "Fast_Speaker") &&
+        hasFanfareAsset
+
+    private fun patternCrossfadeFrames(
+        courseCode: String,
+        from: String?,
+        to: String?,
+        sampleRate: Int,
+    ): Long {
+        if (courseCode !in setOf("Cinema", "SnowMountain") || from == null || to == null) return 0L
+        val enteringPattern2 = (from == "Main" && to == "Pattern2") || (from == "Fast" && to == "Fast_Pattern2")
+        val exitingPattern2 = (from == "Pattern2" && to == "Main") || (from == "Fast_Pattern2" && to == "Fast")
+        return when {
+            enteringPattern2 -> framesForSeconds(FullVersionCompiler.CHANGE_PATTERN_FADE_SEC, sampleRate)
+            exitingPattern2 -> framesForSeconds(
+                if (courseCode == "SnowMountain") {
+                    FullVersionCompiler.CHANGE_PATTERN_FADE_SNOW_SEC
+                } else {
+                    FullVersionCompiler.CHANGE_PATTERN_FADE_SEC
+                },
+                sampleRate,
+            )
+            else -> 0L
+        }
+    }
+
     /** Estimates exact timeline duration in frames matching [compileUserPreset] calculations. */
     fun estimateTimelineFrames(
         steps: List<FlowStep>,
@@ -978,8 +1077,7 @@ internal object CourseFlowRecipeBuilder {
         if (steps.isEmpty()) return 0L
         val sampleRate = inventory.sampleRate.coerceAtLeast(1)
         val endingOutro = outroNumber
-            ?.takeIf { inventory.supportsOutroEnding(steps) }
-            ?.let { num -> inventory.outros.firstOrNull { it.number == num } }
+            ?.let { num -> inventory.availableOutrosForTail(steps).firstOrNull { it.number == num } }
         var cursor = 0L
         var maxEnd = 0L
         var prevExitSourcePos = 0L
@@ -1015,24 +1113,32 @@ internal object CourseFlowRecipeBuilder {
                 }
             } else if (!isFirst && step.roleKey in setOf(
                     "Main", "Main_Speaker", "Area1_Inst", "Area1", "Area2", "Area3",
-                    "Final", "Fast", "Fast_Speaker", "Pattern2", "Fast_Pattern2",
+                    "Final_Pre", "Final", "Fast", "Fast_Speaker", "Pattern2", "Fast_Pattern2",
                     "Region2", "Region3", "Region4", "Region5",
                 )
             ) {
-                val isRainbowFinalWithFanfare = inventory.courseCode == "Rainbow" &&
-                    step.roleKey == "Final" &&
-                    prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area3_Pre", "Area3", "Final_Pre")
-                val isStandardFinalLapWithFanfare = inventory.courseCode != "Rainbow" &&
-                    step.roleKey in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") &&
-                    prevRole !in setOf("Bridge", "Fast", "Fast_Pattern2", "Fast_Speaker") &&
-                    inventory.hasFanfareAsset
+                val isRainbowFinalWithFanfare = isRainbowFinalWithFanfareTransition(
+                    inventory.courseCode, prevRole, step.roleKey,
+                )
+                val isStandardFinalLapWithFanfare = isStandardFinalLapWithFanfareTransition(
+                    inventory.courseCode, prevRole, step.roleKey, inventory.hasFanfareAsset,
+                )
                 val isRainbowArea3Crossfade = inventory.courseCode == "Rainbow" &&
                     prevRole == "Area3" && step.roleKey == "Final_Pre"
                 when {
-                    isRainbowFinalWithFanfare && inventory.hasFanfareAsset ->
-                        clipStart = cursor + (218_734L * sampleRate / 48_000L)
-                    isStandardFinalLapWithFanfare ->
-                        clipStart = cursor + (188_880L * sampleRate / 48_000L)
+                    isRainbowFinalWithFanfare && inventory.hasFanfareAsset -> {
+                        val ffDelay = RainbowInteractiveCompiler.RAINBOW_FANFARE_DELAY_FRAMES * sampleRate / 48_000L
+                        val finalDelay = (RainbowInteractiveCompiler.RAINBOW_FANFARE_DELAY_FRAMES +
+                            RainbowInteractiveCompiler.FINAL_FROM_FANFARE_FRAMES) * sampleRate / 48_000L
+                        maxEnd = maxOf(maxEnd, cursor + ffDelay + (338_824L * sampleRate / 48_000L))
+                        clipStart = cursor + finalDelay
+                    }
+                    isStandardFinalLapWithFanfare -> {
+                        val ffDelay = FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES * sampleRate / 48_000L
+                        val fastDelay = FinalLapFanfareCompiler.FAST_DELAY_FRAMES * sampleRate / 48_000L
+                        maxEnd = maxOf(maxEnd, cursor + ffDelay + (268_759L * sampleRate / 48_000L))
+                        clipStart = cursor + fastDelay
+                    }
                     isRainbowArea3Crossfade -> {
                         clipStart = cursor
                         sourceOffset = part.phase.coerceIn(0L, (part.frames - 1L).coerceAtLeast(0L))
@@ -1090,18 +1196,29 @@ internal object CourseFlowRecipeBuilder {
             val isPureOverlaySwitch = nextRole != null && isPureOverlayToggle(inventory.courseCode, step.roleKey, nextRole)
             val isSpeakerOutroFade = stepOutro != null && part.secondaryStem != null &&
                 step.roleKey in setOf("Main_Speaker", "Fast_Speaker")
-            val ruleFadeOut = if (nextRole != null && (
-                    (inventory.courseCode == "Rainbow" && step.roleKey == "Area3" && nextRole == "Final_Pre") ||
-                        (inventory.courseCode in setOf("Cinema", "SnowMountain") && isParallelSameTimePair(inventory.courseCode, step.roleKey, nextRole))
+            val ruleFadeTail = when {
+                nextRole == null -> 0L
+                inventory.courseCode == "Rainbow" && step.roleKey == "Area3" && nextRole == "Final_Pre" ->
+                    framesForSeconds(
+                        RainbowInteractiveCompiler.AREA3_FADEOUT_DELAY_SEC + RainbowInteractiveCompiler.AREA3_FADEOUT_SEC,
+                        sampleRate,
                     )
-            ) sampleRate.toLong() else 0L
-            if (ruleFadeOut > 0L && willSwitchAfterThisStep && !part.isBridgeLocked && !isHandoverArea2Outro && !isPureOverlaySwitch) {
+                inventory.courseCode == "Rainbow" && step.roleKey in setOf("Area1", "Area1_Inst") && nextRole == "Area2" ->
+                    framesForSeconds(RainbowInteractiveCompiler.AREA1_TO_AREA2_FADE_SEC, sampleRate)
+                inventory.courseCode == "Rainbow" && inventory.hasFanfareAsset &&
+                    isRainbowFinalWithFanfareTransition(inventory.courseCode, step.roleKey, nextRole) ->
+                    framesForSeconds(RainbowInteractiveCompiler.RAINBOW_FINAL_PRE_FADEOUT_SEC, sampleRate)
+                isStandardFinalLapWithFanfareTransition(inventory.courseCode, step.roleKey, nextRole, inventory.hasFanfareAsset) ->
+                    framesForSeconds(FinalLapFanfareCompiler.FULL_FADE_OUT_SEC, sampleRate)
+                else -> patternCrossfadeFrames(inventory.courseCode, step.roleKey, nextRole, sampleRate)
+            }
+            if (ruleFadeTail > 0L && willSwitchAfterThisStep && !part.isBridgeLocked && !isHandoverArea2Outro && !isPureOverlaySwitch) {
                 if (part.supportsLoop) {
-                    maxEnd = maxOf(maxEnd, stepEnd + ruleFadeOut)
+                    maxEnd = maxOf(maxEnd, stepEnd + ruleFadeTail)
                 } else {
                     val exitSrc = if (loopingWithFinalExit) targetExit else firstExit
                     val avail = (part.frames - exitSrc).coerceAtLeast(0L)
-                    maxEnd = maxOf(maxEnd, stepEnd + minOf(ruleFadeOut, avail))
+                    maxEnd = maxOf(maxEnd, stepEnd + minOf(ruleFadeTail, avail))
                 }
             }
             if (isSpeakerOutroFade && endingOutro != null) {
@@ -1158,8 +1275,7 @@ internal object CourseFlowRecipeBuilder {
         val seamAnchors = mutableListOf<Long>()
         val sampleRate = inventory.sampleRate
         val endingOutro = preset.outroNumber
-            ?.takeIf { inventory.supportsOutroEnding(preset.steps) }
-            ?.let { num -> inventory.outros.firstOrNull { it.number == num } }
+            ?.let { num -> inventory.availableOutrosForTail(preset.steps).firstOrNull { it.number == num } }
         val switchFadeFrames = (segmentSwitchFadeOutMs.toLong() * sampleRate / 1000L).coerceAtLeast(0L)
         var cursor = 0L
         var prevExitSourcePos = 0L
@@ -1222,52 +1338,56 @@ internal object CourseFlowRecipeBuilder {
                 seamAnchors += handover
             } else if (!isFirst && step.roleKey in setOf(
                     "Main", "Main_Speaker", "Area1_Inst", "Area1", "Area2", "Area3",
-                    "Final", "Fast", "Fast_Speaker", "Pattern2", "Fast_Pattern2",
+                    "Final_Pre", "Final", "Fast", "Fast_Speaker", "Pattern2", "Fast_Pattern2",
                     "Region2", "Region3", "Region4", "Region5",
                 )
             ) {
                 val phase = record?.phase ?: 0L
-                val isRainbowFinalWithFanfare = inventory.courseCode == "Rainbow" &&
-                    step.roleKey == "Final" &&
-                    prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area3_Pre", "Area3", "Final_Pre")
-                val isStandardFinalLapWithFanfare = inventory.courseCode != "Rainbow" &&
-                    step.roleKey in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") &&
-                    prevRole !in setOf("Bridge", "Fast", "Fast_Pattern2", "Fast_Speaker") &&
-                    inventory.hasFanfareAsset
+                val isRainbowFinalWithFanfare = isRainbowFinalWithFanfareTransition(
+                    inventory.courseCode, prevRole, step.roleKey,
+                )
+                val isStandardFinalLapWithFanfare = isStandardFinalLapWithFanfareTransition(
+                    inventory.courseCode, prevRole, step.roleKey, inventory.hasFanfareAsset,
+                )
                 val isRainbowArea3Crossfade = inventory.courseCode == "Rainbow" && prevRole == "Area3" && step.roleKey == "Final_Pre"
                 val isParallelSameTimeSwitch = isParallelSameTimePair(inventory.courseCode, prevRole, step.roleKey)
                 if (isRainbowFinalWithFanfare) {
                     val rainbowFf = resolver.findByFileName("BGM_Rainbow_FinalLapFanfare.bwav")
                     if (rainbowFf != null) {
+                        val ffDelay = RainbowInteractiveCompiler.RAINBOW_FANFARE_DELAY_FRAMES * sampleRate / 48_000L
+                        val finalDelay = (RainbowInteractiveCompiler.RAINBOW_FANFARE_DELAY_FRAMES +
+                            RainbowInteractiveCompiler.FINAL_FROM_FANFARE_FRAMES) * sampleRate / 48_000L
                         digests[rainbowFf.stem] = rainbowFf.digest
                         clips += CourseMedleyCatalog.MedleyClip(
                             stem = rainbowFf.stem,
-                            start = cursor,
+                            start = cursor + ffDelay,
                             sourceOffset = 0L,
                             sourceLength = rainbowFf.frames,
                         )
-                        // Verified Rainbow FinalLapFanfare -> Final entry at 218,734 frames @ 48 kHz (RainbowInteractiveCompiler).
-                        clipStart = cursor + (218_734L * sampleRate / 48_000L)
+                        // Verified v1.8.0: Rainbow_FanfareDelay = 0.20s (9,600 f) + 218,734 f Fanfare->Final.
+                        clipStart = cursor + finalDelay
                     } else {
                         clipStart = (cursor - phase).coerceAtLeast(0L)
                     }
                 } else if (isStandardFinalLapWithFanfare) {
                     val fanfareHeader = resolver.findByFileName(FinalLapFanfareCompiler.ASSET)
                     if (fanfareHeader != null) {
+                        val ffDelay = FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES * sampleRate / 48_000L
+                        val fastDelay = FinalLapFanfareCompiler.FAST_DELAY_FRAMES * sampleRate / 48_000L
                         digests[fanfareHeader.stem] = fanfareHeader.digest
                         clips += CourseMedleyCatalog.MedleyClip(
                             stem = fanfareHeader.stem,
-                            start = cursor,
+                            start = cursor + ffDelay,
                             sourceOffset = 0L,
                             sourceLength = fanfareHeader.frames,
                         )
-                        // Median gameplay FinalLapFF -> Fast entry measured at 188,880 frames @ 48 kHz (FinalLapFanfareCompiler).
-                        clipStart = cursor + (188_880L * sampleRate / 48_000L)
+                        // Verified v1.8.0: FinalLapFanfareDelay = 0.133s (6,384 f), FastDelay = 4.05s (194,400 f).
+                        clipStart = cursor + fastDelay
                     } else {
                         clipStart = (cursor - phase).coerceAtLeast(0L)
                     }
                 } else if (isRainbowArea3Crossfade) {
-                    // Exact overlap window [cursor .. cursor + 1s] with Beat-1 phase alignment at cursor.
+                    // Verified v1.8.0: Final_Pre starts immediately at cursor (2.50s fade-in) while Area3 holds 1.20s + fades 3.00s.
                     clipStart = cursor
                     sourceOffset = phase.coerceIn(0L, part.frames - 1L)
                 } else if (isParallelSameTimeSwitch) {
@@ -1314,15 +1434,14 @@ internal object CourseFlowRecipeBuilder {
             if (part.secondaryStem != null && secHeader == null) return null
 
             val firstLength = (firstExit - sourceOffset).coerceAtLeast(1L)
-            fun isRuleCrossfadePair(from: String?, to: String?): Boolean =
-                (inventory.courseCode == "Rainbow" && from == "Area3" && to == "Final_Pre") ||
-                    (from == "Main" && to == "Pattern2") ||
-                    (from == "Pattern2" && to == "Main") ||
-                    (from == "Fast" && to == "Fast_Pattern2") ||
-                    (from == "Fast_Pattern2" && to == "Fast")
-
-            val incomingFadeIn = if (!isFirst && isRuleCrossfadePair(prevRole, step.roleKey)) {
-                minOf(sampleRate.toLong(), firstLength)
+            val incomingRuleFadeIn = when {
+                isFirst -> 0L
+                inventory.courseCode == "Rainbow" && prevRole == "Area3" && step.roleKey == "Final_Pre" ->
+                    framesForSeconds(RainbowInteractiveCompiler.FINAL_PRE_FADEIN_SEC, sampleRate)
+                else -> patternCrossfadeFrames(inventory.courseCode, prevRole, step.roleKey, sampleRate)
+            }
+            val incomingFadeIn = if (incomingRuleFadeIn > 0L) {
+                minOf(incomingRuleFadeIn, firstLength)
             } else {
                 0L
             }
@@ -1395,10 +1514,44 @@ internal object CourseFlowRecipeBuilder {
             val willSwitchAfterThisStep = idx < preset.steps.lastIndex ||
                 (idx == preset.steps.lastIndex && endingOutro != null)
             val isPureOverlaySwitch = nextRole != null && isPureOverlayToggle(inventory.courseCode, step.roleKey, nextRole)
-            val ruleOutgoingFade = if (nextRole != null && isRuleCrossfadePair(step.roleKey, nextRole)) {
-                sampleRate.toLong()
+            val isRainbowArea3ToFinalPre = inventory.courseCode == "Rainbow" && step.roleKey == "Area3" && nextRole == "Final_Pre"
+            val isRainbowArea1ToArea2 = inventory.courseCode == "Rainbow" &&
+                step.roleKey in setOf("Area1", "Area1_Inst") && nextRole == "Area2"
+            val isRainbowFinalLapExit = nextRole != null && inventory.hasFanfareAsset &&
+                isRainbowFinalWithFanfareTransition(inventory.courseCode, step.roleKey, nextRole)
+            val isStandardFinalLapExit = nextRole != null &&
+                isStandardFinalLapWithFanfareTransition(inventory.courseCode, step.roleKey, nextRole, inventory.hasFanfareAsset)
+            val ruleOutgoingDelay = if (isRainbowArea3ToFinalPre) {
+                framesForSeconds(RainbowInteractiveCompiler.AREA3_FADEOUT_DELAY_SEC, sampleRate)
             } else {
                 0L
+            }
+            val ruleOutgoingFade = when {
+                nextRole == null -> 0L
+                isRainbowArea3ToFinalPre -> framesForSeconds(RainbowInteractiveCompiler.AREA3_FADEOUT_SEC, sampleRate)
+                isRainbowArea1ToArea2 -> framesForSeconds(RainbowInteractiveCompiler.AREA1_TO_AREA2_FADE_SEC, sampleRate)
+                isRainbowFinalLapExit -> framesForSeconds(RainbowInteractiveCompiler.RAINBOW_FINAL_PRE_FADEOUT_SEC, sampleRate)
+                isStandardFinalLapExit -> framesForSeconds(FinalLapFanfareCompiler.FULL_FADE_OUT_SEC, sampleRate)
+                else -> patternCrossfadeFrames(inventory.courseCode, step.roleKey, nextRole, sampleRate)
+            }
+            // Verified v1.8.0 Rainbow Area1 -> Area2 split fade (0x0243d500):
+            // Area1_Melody fades out over 0.30s starting one bar (~72,911 frames @ 158 BPM) before
+            // bar.exit so pure Area1_Inst finishes the bar before fading out 0.30s post-exit into Area2.
+            if (isRainbowArea1ToArea2 && step.roleKey == "Area1" && lastSecondaryIdx != null) {
+                val melodyFade = framesForSeconds(RainbowInteractiveCompiler.AREA1_TO_AREA2_FADE_SEC, sampleRate)
+                val bpm = record?.bpm?.takeIf { it.isFinite() && it > 0.0 } ?: 158.0
+                val barFrames = kotlin.math.round(4.0 * 60.0 / bpm * sampleRate.toDouble()).toLong()
+                    .coerceAtLeast(melodyFade)
+                val secClip = clips[lastSecondaryIdx]
+                val minLen = (secClip.fadeIn + melodyFade).coerceAtMost(secClip.sourceLength)
+                val targetLen = (secClip.sourceLength - barFrames + melodyFade).coerceIn(minLen, secClip.sourceLength)
+                val clamped = melodyFade.coerceIn(0L, (targetLen - secClip.fadeIn).coerceAtLeast(0L))
+                if (clamped > 0L) {
+                    clips[lastSecondaryIdx] = secClip.copy(
+                        sourceLength = targetLen,
+                        fadeOut = clamped,
+                    )
+                }
             }
             val isOverlayFadeOut = (nextRole != null && (
                 (inventory.courseCode == "Rainbow" && step.roleKey == "Area1" && nextRole == "Area1_Inst") ||
@@ -1407,6 +1560,7 @@ internal object CourseFlowRecipeBuilder {
                             (step.roleKey == "Fast_Speaker" && nextRole == "Fast")))
                 )) || (stepOutro != null && secHeader != null && step.roleKey in setOf("Main_Speaker", "Fast_Speaker"))
             val ruleSecondaryOutgoingFade = when {
+                isRainbowArea1ToArea2 && step.roleKey == "Area1" -> 0L
                 isOverlayFadeOut && stepOutro != null && endingOutro != null ->
                     minOf(sampleRate.toLong(), endingOutro.frames)
                 isOverlayFadeOut -> sampleRate.toLong()
@@ -1417,7 +1571,7 @@ internal object CourseFlowRecipeBuilder {
             } else {
                 maxOf(switchFadeFrames, ruleOutgoingFade)
             }
-            val secondaryFadeFrames = if (isPureOverlaySwitch && !isOverlayFadeOut) {
+            val secondaryFadeFrames = if ((isPureOverlaySwitch && !isOverlayFadeOut) || (isRainbowArea1ToArea2 && step.roleKey == "Area1")) {
                 0L
             } else if (stepOutro != null && step.roleKey in setOf("Main_Speaker", "Fast_Speaker") && secHeader != null) {
                 ruleSecondaryOutgoingFade
@@ -1433,9 +1587,10 @@ internal object CourseFlowRecipeBuilder {
                     secHeader = secHeader,
                     fadeStartTimeline = stepEnd,
                     fadeFrames = primaryFadeFrames,
-                    secondaryFadeFrames = secondaryFadeFrames,
+                    delayFrames = if (primaryFadeFrames == ruleOutgoingFade) ruleOutgoingDelay else 0L,
                     sampleRate = sampleRate,
                     allowInClipFallback = ruleOutgoingFade > 0L,
+                    secondaryFadeFrames = secondaryFadeFrames,
                     allowSecondaryInClipFallback = ruleSecondaryOutgoingFade > 0L,
                 )
             }
@@ -1606,7 +1761,7 @@ internal object CourseFlowRecipeBuilder {
     }
 
     internal fun isOutroHostRole(roleKey: String): Boolean =
-        roleKey in setOf("Main", "Main_Speaker", "Area2", "Pattern2", "BrassCut") || roleKey.startsWith("Region")
+        roleKey in setOf("Main", "Main_Speaker", "Area2", "Pattern2", "BrassCut")
 
     private fun buildSyntheticBeats(frames: Long, sampleRate: Int): List<MinfCatalog.Beat> {
         val sr = sampleRate.coerceAtLeast(1)
@@ -1642,19 +1797,50 @@ internal object CourseFlowRecipeBuilder {
         return null
     }
 
+    private fun isGridConstrainedRole(
+        courseCode: String,
+        roleKey: String,
+        record: MinfCatalog.Record?,
+    ): Boolean {
+        if (record == null || record.beats.isEmpty()) return false
+        if (roleKey in setOf("Pre", "Pre_Short", "Area1_Pre", "Area3_Pre")) return true
+        if (courseCode == "DonkeyKong" && roleKey in setOf("Main", "Region2", "Region3", "Region4")) return true
+        return false
+    }
+
     private fun collectExitCandidates(
+        courseCode: String = "",
         roleKey: String,
         record: MinfCatalog.Record?,
         frames: Long,
         sampleRate: Int,
+        gridConstrained: Boolean = isGridConstrainedRole(courseCode, roleKey, record),
     ): List<ExitCandidate> {
         if (roleKey in setOf("Bridge", "Area1_Bridge")) {
             val handover = record?.event("Bridge_ToFull")?.singleOrNull()?.takeIf { it in 0L..frames } ?: frames
             return listOf(ExitCandidate(handover, formatTime(handover, sampleRate)))
         }
+        if (gridConstrained && record != null) {
+            val strictFrames = when {
+                roleKey in setOf("Pre", "Pre_Short", "Area1_Pre", "Area3_Pre") ->
+                    record.gridLoopCandidates(MinfCatalog.preTransitionGridBeats(courseCode, roleKey))
+                courseCode == "DonkeyKong" && roleKey == "Main" ->
+                    DonkeyRegionCompiler.regionExitFrames(record, 1)
+                courseCode == "DonkeyKong" && roleKey in setOf("Region2", "Region3", "Region4") ->
+                    DonkeyRegionCompiler.regionExitFrames(record, roleKey.removePrefix("Region").toInt())
+                else -> record.loopCandidates
+            }.filter { it in 1L..frames }.distinct().sorted()
+            val chosen = strictFrames.ifEmpty { listOf(frames) }
+            return chosen.map { ExitCandidate(it, formatTime(it, sampleRate)) }
+        }
         val priority = buildSet {
             if (record != null) {
-                addAll(record.loopCandidates.filter { it in 1L..frames })
+                val baseCandidates = if (roleKey == "Final_Pre" && courseCode.isNotBlank()) {
+                    record.gridLoopCandidates(MinfCatalog.preTransitionGridBeats(courseCode, roleKey))
+                } else {
+                    record.loopCandidates
+                }
+                addAll(baseCandidates.filter { it in 1L..frames })
             }
             add(frames)
         }
@@ -1694,6 +1880,7 @@ internal object CourseFlowRecipeBuilder {
         fadeFrames: Long,
         sampleRate: Int,
         allowInClipFallback: Boolean,
+        delayFrames: Long = 0L,
         secondaryFadeFrames: Long = fadeFrames,
         allowSecondaryInClipFallback: Boolean = allowInClipFallback,
     ) {
@@ -1708,6 +1895,7 @@ internal object CourseFlowRecipeBuilder {
                 loopEnd = part.loopEnd,
                 fadeStartTimeline = fadeStartTimeline,
                 fadeFrames = fadeFrames,
+                delayFrames = delayFrames,
                 sampleRate = sampleRate,
                 allowInClipFallback = allowInClipFallback,
             )
@@ -1726,6 +1914,7 @@ internal object CourseFlowRecipeBuilder {
                 loopEnd = secLoopEnd,
                 fadeStartTimeline = fadeStartTimeline,
                 fadeFrames = secondaryFadeFrames,
+                delayFrames = 0L,
                 sampleRate = sampleRate,
                 allowInClipFallback = allowSecondaryInClipFallback,
             )
@@ -1744,18 +1933,21 @@ internal object CourseFlowRecipeBuilder {
         fadeFrames: Long,
         sampleRate: Int,
         allowInClipFallback: Boolean,
+        delayFrames: Long = 0L,
     ) {
         if (fadeFrames <= 0L) return
         val baseClip = clips[clipIdx]
         val exitSrcPos = baseClip.sourceOffset + baseClip.sourceLength
         val availAfterExit = (maxFrames - exitSrcPos).coerceAtLeast(0L)
+        val totalTail = delayFrames + fadeFrames
 
         if (!supportsLoop || loopStart == null || loopEnd == null || loopEnd <= loopStart) {
             if (availAfterExit > 0L) {
-                val extendFrames = minOf(fadeFrames, availAfterExit)
+                val extendFrames = minOf(totalTail, availAfterExit)
+                val effectiveFade = (extendFrames - delayFrames).coerceAtLeast(0L)
                 clips[clipIdx] = baseClip.copy(
                     sourceLength = baseClip.sourceLength + extendFrames,
-                    fadeOut = extendFrames,
+                    fadeOut = effectiveFade,
                 )
             } else if (allowInClipFallback) {
                 val clampedFade = fadeFrames.coerceIn(0L, (baseClip.sourceLength - baseClip.fadeIn).coerceAtLeast(0L))
@@ -1773,21 +1965,62 @@ internal object CourseFlowRecipeBuilder {
             else -> availAfterExit
         }
 
-        if (fadeFrames <= firstAvail) {
+        if (totalTail <= firstAvail) {
             clips[clipIdx] = baseClip.copy(
-                sourceLength = baseClip.sourceLength + fadeFrames,
+                sourceLength = baseClip.sourceLength + totalTail,
                 fadeOut = fadeFrames,
             )
             return
         }
 
-        if (firstAvail == 0L && fadeFrames <= loopLen) {
+        if (firstAvail == 0L && totalTail <= loopLen) {
             clips += CourseMedleyCatalog.MedleyClip(
                 stem = stem,
                 start = fadeStartTimeline,
                 sourceOffset = l0,
-                sourceLength = fadeFrames,
+                sourceLength = totalTail,
                 fadeOut = fadeFrames,
+            )
+            return
+        }
+
+        if (delayFrames > 0L) {
+            // Emit the full-volume hold portion first (wrapping across loopEnd if needed),
+            // then run the standard post-exit fade starting at fadeStartTimeline + delayFrames.
+            var holdRem = delayFrames
+            var curTimeline = fadeStartTimeline
+            var curClipIdx = clipIdx
+            if (firstAvail > 0L) {
+                val holdHere = minOf(holdRem, firstAvail)
+                clips[curClipIdx] = baseClip.copy(sourceLength = baseClip.sourceLength + holdHere)
+                holdRem -= holdHere
+                curTimeline += holdHere
+            }
+            while (holdRem > 0L) {
+                val chunk = minOf(holdRem, loopLen)
+                curClipIdx = clips.size
+                clips += CourseMedleyCatalog.MedleyClip(
+                    stem = stem,
+                    start = curTimeline,
+                    sourceOffset = l0,
+                    sourceLength = chunk,
+                )
+                holdRem -= chunk
+                curTimeline += chunk
+            }
+            applyClipPostExitFade(
+                clips = clips,
+                clipIdx = curClipIdx,
+                stem = stem,
+                maxFrames = maxFrames,
+                supportsLoop = true,
+                loopStart = l0,
+                loopEnd = l1,
+                fadeStartTimeline = curTimeline,
+                fadeFrames = fadeFrames,
+                sampleRate = sampleRate,
+                allowInClipFallback = allowInClipFallback,
+                delayFrames = 0L,
             )
             return
         }

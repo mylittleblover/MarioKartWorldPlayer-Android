@@ -139,16 +139,17 @@ class BridgeCatalogTest {
     }
 
     @Test
-    fun exactlyFourAreLayered() {
-        // The research established this by three independent signals agreeing 4/4 against 0/16.
-        assertEquals(4, BridgeCatalog.layered().size)
-        assertEquals(16, BridgeCatalog.sequenced().size)
+    fun exactlySixAreLayered() {
+        // Verified v1.8.0 AMTA Bridge_ToFull == 0 establishes six layered/simultaneous bridges
+        // against fourteen sequenced bridges.
+        assertEquals(6, BridgeCatalog.layered().size)
+        assertEquals(14, BridgeCatalog.sequenced().size)
     }
 
     @Test
     fun theLayeredStagesAreTheOnesTheResearchNamed() {
         assertEquals(
-            listOf("DesertHills", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit"),
+            listOf("AirshipFortress", "DesertHills", "DinoBones", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit"),
             BridgeCatalog.layered().map { it.stage },
         )
     }
@@ -218,10 +219,10 @@ class BridgeCatalogTest {
 
     @Test
     fun theInferredSwitchPointsAreIdentified() {
-        // Three stages carry a single label anchor and no final node; their switch position is derived
-        // from the musical grid rather than read out, and the UI must be able to say so.
+        // ChocoMountain carries an empty Bridge_ToFull event in AMTA/MINF; its switch position is
+        // derived rather than encoded, and the UI must be able to say so.
         assertEquals(
-            listOf("AirshipFortress", "ChocoMountain", "DinoBones"),
+            listOf("ChocoMountain"),
             BridgeCatalog.inferred().map { it.stage },
         )
         for (bridge in BridgeCatalog.inferred()) {
@@ -272,8 +273,14 @@ class BridgeCatalogTest {
         val westCity = BridgeCatalog.forStage("WestCity")!!.describe()
         assertTrue(westCity.contains("encoded exit record"), westCity)
 
+        val choco = BridgeCatalog.forStage("ChocoMountain")!!.describe()
+        assertTrue(choco.contains("inferred"), choco)
+
         val airship = BridgeCatalog.forStage("AirshipFortress")!!.describe()
-        assertTrue(airship.contains("inferred"), airship)
+        assertTrue(airship.contains("layered", ignoreCase = true), airship)
+
+        val dinoBones = BridgeCatalog.forStage("DinoBones")!!.describe()
+        assertTrue(dinoBones.contains("layered", ignoreCase = true), dinoBones)
     }
 
     @Test

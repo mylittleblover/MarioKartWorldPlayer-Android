@@ -10,10 +10,9 @@ package com.mylittleblover.mkwplayer.library
  * where the game has none, and running a sequenced bridge as a loop would lose the handover entirely.
  *
  * The distinction is not a guess: it is established by three independent signals that agree perfectly
- * across the corpus — an empty exit record, an empty label anchor and an empty final node all at once
- * (4/4 layered, 0/16 sequenced), a duration gap of 1.59x with no overlap, and the end-of-bridge level
- * (~-35.5 dB layered against ~-55.8 dB sequenced, because a sequenced bridge fades to hand over and a
- * layered one does not need to).
+ * across the corpus — an empty/zero-sample exit record (`Bridge_ToFull == 0`), matching the six
+ * layered/simultaneous bridge stages in v1.8.0 (`AirshipFortress`, `DesertHills`, `DinoBones`,
+ * `FirstCircuit`, `MooMooFarm`, `SFCMarioCircuit`) against fourteen sequenced bridges.
  */
 internal data class BridgeTransition(
     /** Stage code, e.g. `WestCity`. */
@@ -159,8 +158,8 @@ internal object BridgeCatalog {
     private val entries: List<BridgeTransition> = listOf(
         // mode, bpm, beat, bridge, switch M, full enters, source offset, overlap, provenance
         BridgeTransition(
-            "AirshipFortress", BridgeTransition.Mode.SEQUENCED, 150.0, 19_200.0, 102_700,
-            76_800, 76_800, 0, 0, BridgeTransition.SwitchSource.LABEL_ANCHOR_INFERRED,
+            "AirshipFortress", BridgeTransition.Mode.LAYERED, 150.0, 19_200.0, 102_700,
+            null, null, 0, 0, BridgeTransition.SwitchSource.NONE,
         ),
         BridgeTransition(
             "Cave", BridgeTransition.Mode.SEQUENCED, 143.9999, 20_000.0, 153_243,
@@ -191,8 +190,8 @@ internal object BridgeCatalog {
             null, null, 0, 0, BridgeTransition.SwitchSource.NONE,
         ),
         BridgeTransition(
-            "DinoBones", BridgeTransition.Mode.SEQUENCED, 130.0001, 22_153.8, 70_224,
-            66_461, 60_923, 0, 5_538, BridgeTransition.SwitchSource.LABEL_ANCHOR_INFERRED,
+            "DinoBones", BridgeTransition.Mode.LAYERED, 130.0001, 22_153.8, 70_224,
+            null, null, 0, 0, BridgeTransition.SwitchSource.NONE,
         ),
         BridgeTransition(
             "DinoDinoJungle", BridgeTransition.Mode.SEQUENCED, 137.0001, 21_021.9, 168_175,

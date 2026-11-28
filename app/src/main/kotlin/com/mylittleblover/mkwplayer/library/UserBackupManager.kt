@@ -45,6 +45,7 @@ internal data class UserBackupPayload(
     val recentCourses: List<String> = emptyList(),
     val playStats: List<TrackPlayStat> = emptyList(),
     val preferences: BackupPreferencesSnapshot = BackupPreferencesSnapshot(),
+    val markers: List<TrackMarker> = emptyList(),
 ) {
     companion object {
         const val SCHEMA_VERSION = 1
@@ -58,6 +59,7 @@ internal data class BackupRestoreSummary(
     val routesCount: Int,
     val recentCount: Int,
     val statsCount: Int,
+    val markersCount: Int = 0,
 )
 
 internal object UserBackupManager {
@@ -72,6 +74,7 @@ internal object UserBackupManager {
         preferences: BackupPreferencesSnapshot,
         appVersion: String = "",
         exportedAtEpochMs: Long = System.currentTimeMillis(),
+        markers: List<TrackMarker> = emptyList(),
     ): String {
         val playlistsArr = JSONArray()
         playlists.forEach { playlist ->
@@ -180,6 +183,11 @@ internal object UserBackupManager {
             .put("playbackPitch", preferences.rateConfig.pitchSemitones.toDouble())
             .put("preservePitch", preferences.rateConfig.preservePitch)
 
+        val markersArr = JSONArray()
+        markers
+            .sortedWith(compareBy<TrackMarker>({ it.trackId }, { it.positionMs }, { it.createdAtEpochMs }, { it.id }))
+            .forEach { marker -> markersArr.put(TrackMarkerStore.encodeMarkerJson(marker)) }
+
         return JSONObject()
             .put("schemaVersion", UserBackupPayload.SCHEMA_VERSION)
             .put("kind", "mkw-player-user-backup")
@@ -192,6 +200,7 @@ internal object UserBackupManager {
             .put("recentCourses", JSONArray(recentCourses))
             .put("playStats", statsArr)
             .put("preferences", prefsObj)
+            .put("markers", markersArr)
             .toString(2)
     }
 
@@ -374,6 +383,15 @@ internal object UserBackupManager {
             BackupPreferencesSnapshot()
         }
 
+        val markers = mutableListOf<TrackMarker>()
+        val markersArr = root.optJSONArray("markers")
+        if (markersArr != null) {
+            for (i in 0 until markersArr.length()) {
+                val obj = markersArr.optJSONObject(i) ?: continue
+                TrackMarkerStore.decodeMarkerJson(obj)?.let { markers += it }
+            }
+        }
+
         UserBackupPayload(
             schemaVersion = version,
             exportedAtEpochMs = root.optLong("exportedAtEpochMs", 0L),
@@ -385,6 +403,7 @@ internal object UserBackupManager {
             recentCourses = recent,
             playStats = playStats,
             preferences = prefs,
+            markers = markers,
         )
     }
 
@@ -396,6 +415,7 @@ internal object UserBackupManager {
         val routes = CustomRouteStore(File(dir, "routes/custom_routes.json")).read().getOrDefault(emptyList())
         val recent = RecentCourseStore(File(dir, "recent-courses.json")).read().getOrDefault(emptyList())
         val playStats = PlayStatsRepository.readSnapshot(context)
+        val markers = TrackMarkerStore.inFilesDir(dir).allMarkers()
         val trim = OutputTrimSettings.current(context)
         val behavior: PlaybackBehaviorConfig = PlaybackBehaviorSettings.current(context)
         val dsp = AudioEffectSettings.currentDsp(context)
@@ -417,6 +437,7 @@ internal object UserBackupManager {
                 rateConfig = rate,
             ),
             appVersion = appVersion,
+            markers = markers,
         )
     }
 
@@ -431,6 +452,7 @@ internal object UserBackupManager {
         val presetStore = CoursePresetStore(File(dir, "course-presets.json"))
         val routeStore = CustomRouteStore(File(dir, "routes/custom_routes.json"))
         val recentStore = RecentCourseStore(File(dir, "recent-courses.json"))
+        val markerStore = TrackMarkerStore.inFilesDir(dir)
 
         val playlists = when (mode) {
             BackupRestoreMode.REPLACE -> playlistStore.replaceAll(payload.playlists)
@@ -457,6 +479,10 @@ internal object UserBackupManager {
             BackupRestoreMode.REPLACE -> PlayStatsRepository.replaceAll(context, statMap)
             BackupRestoreMode.MERGE -> PlayStatsRepository.merge(context, statMap)
         }.getOrThrow()
+        val markers = when (mode) {
+            BackupRestoreMode.REPLACE -> markerStore.replaceAll(payload.markers)
+            BackupRestoreMode.MERGE -> markerStore.mergeAll(payload.markers)
+        }
 
         if (mode == BackupRestoreMode.REPLACE) {
             OutputTrimSettings.select(
@@ -477,6 +503,7 @@ internal object UserBackupManager {
             routesCount = routes.size,
             recentCount = recent.size,
             statsCount = stats.size,
+            markersCount = markers.size,
         )
     }
 

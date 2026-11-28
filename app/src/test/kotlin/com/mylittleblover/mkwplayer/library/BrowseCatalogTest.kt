@@ -55,7 +55,7 @@ class BrowseCatalogTest {
         val catalog = assertNotNull(catalog())
         assertEquals(7, catalog.routes(OfficialRouteKind.GRAND_PRIX, false).size)
         assertEquals(8, catalog.routes(OfficialRouteKind.GRAND_PRIX, true).size)
-        assertEquals(12, catalog.routes(OfficialRouteKind.RALLY, false).size)
+        assertEquals(14, catalog.routes(OfficialRouteKind.RALLY, false).size)
         assertEquals(listOf("mushroom_cup"), catalog.routes(OfficialRouteKind.GRAND_PRIX, false, "キノコ").map { it.id })
         assertEquals(emptyList(), catalog.routes(OfficialRouteKind.GRAND_PRIX, false, "Special Cup"))
     }

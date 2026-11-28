@@ -1,6 +1,7 @@
 package com.mylittleblover.mkwplayer.ui.kit
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -312,6 +313,7 @@ internal fun MkwUtilityDock(
 }
 
 /** Icon-above-label utility dock item with optional tabular badge count and press scale. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun MkwUtilityTile(
     icon: ImageVector,
@@ -321,6 +323,7 @@ internal fun MkwUtilityTile(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     badgeCount: Int = 0,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val tint = when {
         !enabled -> MkwKitTokens.Palette.inkSecondary.copy(alpha = 0.38f)
@@ -329,11 +332,9 @@ internal fun MkwUtilityTile(
     }
     val semanticsLabel = if (badgeCount > 0) "$label ($badgeCount)" else label
     val (pressScale, interactionSource) = rememberPressScale(pressedScale = 0.96f)
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     Surface(
-        onClick = onClick,
-        enabled = enabled,
-        interactionSource = interactionSource,
         shape = MkwKitTokens.Shape.control,
         color = if (active && enabled) MkwKitTokens.Palette.rose else Color.Transparent,
         border = if (active && enabled) {
@@ -344,6 +345,19 @@ internal fun MkwUtilityTile(
         modifier = modifier
             .heightIn(min = 54.dp)
             .then(if (enabled) pressScale else Modifier)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = onLongClick?.let { longAction ->
+                    {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        longAction()
+                    }
+                },
+            )
             .semantics {
                 role = Role.Button
                 contentDescription = semanticsLabel

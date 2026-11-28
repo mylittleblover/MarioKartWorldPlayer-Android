@@ -86,6 +86,122 @@ class CustomRouteStoreTest {
         // Reload from disk verifies atomic persistence.
         val reloaded = CustomRouteStore(file).read().getOrThrow().single()
         assertEquals(afterClear, reloaded)
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, reloaded.roadRuleMode)
         assertNotNull(store.find(created.id).getOrThrow())
     }
+
+    @Test
+    fun pureFreeRoamConfigEdgeOverridesLegacyJsonAndOfficialPrefsPersistAtomically() {
+        val connections = connectionsCatalog()
+        val tempDir = Files.createTempDirectory("mkw-freeroam-store").toFile()
+        try {
+            val routeFile = File(tempDir, "routes/custom_routes.json")
+            val store = CustomRouteStore(routeFile)
+            val created = store.create(
+                name = "Scenic Cruise",
+                stops = listOf(CustomRouteStop("FirstCircuit"), CustomRouteStop("WestCity"), CustomRouteStop("Central")),
+                edges = listOf(
+                    CustomRouteEdgeConfig("FirstCircuit", "WestCity", freeRoamTrackCountOverride = 5, freeRoamDurationMinutesOverride = 12),
+                    CustomRouteEdgeConfig("WestCity", "Central"),
+                ),
+                connections = connections,
+                pureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(
+                    enabled = true,
+                    controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION,
+                    defaultTracksPerLeg = 3,
+                    defaultMinutesPerLeg = 8,
+                ),
+            ).getOrThrow()
+
+            assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, created.roadRuleMode)
+            assertTrue(created.pureFreeRoamConfig.enabled)
+            assertEquals(RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION, created.pureFreeRoamConfig.controlMode)
+            assertEquals(5, created.edges[0].freeRoamTrackCountOverride)
+            assertEquals(12, created.edges[0].freeRoamDurationMinutesOverride)
+            assertNull(created.edges[1].freeRoamTrackCountOverride)
+
+            // setEdgeMusic preserves existing free roam overrides on that edge.
+            store.setEdgeMusic(created.id, 0, musicEnabled = true, selectedJukeboxKey = "jb_pinned").getOrThrow()
+            val afterMusic = store.find(created.id).getOrThrow()!!
+            assertEquals(5, afterMusic.edges[0].freeRoamTrackCountOverride)
+            assertEquals(12, afterMusic.edges[0].freeRoamDurationMinutesOverride)
+            assertEquals("jb_pinned", afterMusic.edges[0].selectedJukeboxKey)
+
+            // setEdgeFreeRoamOverride clamps out-of-range values and updates cleanly.
+            store.setEdgeFreeRoamOverride(created.id, 1, trackCountOverride = 99, durationMinutesOverride = 0).getOrThrow()
+            store.setPureFreeRoamConfig(
+                created.id,
+                RoadJukeboxCatalog.PureFreeRoamConfig(
+                    enabled = true,
+                    controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT,
+                    defaultTracksPerLeg = 4,
+                    defaultMinutesPerLeg = 10,
+                ),
+            ).getOrThrow()
+
+            val reloaded = CustomRouteStore(routeFile).read().getOrThrow().single()
+            assertEquals(RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT, reloaded.pureFreeRoamConfig.controlMode)
+            assertEquals(4, reloaded.pureFreeRoamConfig.defaultTracksPerLeg)
+            assertEquals(10, reloaded.edges[1].freeRoamTrackCountOverride)
+            assertEquals(1, reloaded.edges[1].freeRoamDurationMinutesOverride)
+
+            // Legacy JSON without pureFreeRoamConfig or roadRuleMode decodes cleanly with VS_AUTO + disabled config.
+            val legacyFile = File(tempDir, "routes/legacy_routes.json").apply {
+                parentFile?.mkdirs()
+                writeText(
+                    """
+                    {
+                      "schemaVersion": 1,
+                      "routes": [
+                        {
+                          "id": "legacy-1",
+                          "name": "Legacy Route",
+                          "stops": [{"stageCode":"FirstCircuit"},{"stageCode":"WestCity"}],
+                          "edges": [{"from":"FirstCircuit","to":"WestCity","musicEnabled":true}]
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
+            val legacy = CustomRouteStore(legacyFile).read().getOrThrow().single()
+            assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, legacy.roadRuleMode)
+            assertFalse(legacy.pureFreeRoamConfig.enabled)
+            assertNull(legacy.edges.single().freeRoamTrackCountOverride)
+            assertNull(legacy.edges.single().freeRoamDurationMinutesOverride)
+
+            // OfficialRouteFreeRoamPrefs persistence & clearing.
+            val prefsFile = File(tempDir, "routes/official_free_roam_prefs.json")
+            val prefs = OfficialRouteFreeRoamPrefs(prefsFile)
+            assertFalse(prefs.get("mushroom_cup").config.enabled)
+
+            prefs.setConfig(
+                "mushroom_cup",
+                RoadJukeboxCatalog.PureFreeRoamConfig(
+                    enabled = true,
+                    controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION,
+                    defaultMinutesPerLeg = 9,
+                ),
+            ).getOrThrow()
+            prefs.setEdgeOverride(
+                "mushroom_cup",
+                1,
+                RoadJukeboxCatalog.EdgeFreeRoamOverride(durationMinutesOverride = 15),
+            ).getOrThrow()
+
+            val reloadedOfficial = OfficialRouteFreeRoamPrefs(prefsFile).get("mushroom_cup")
+            assertTrue(reloadedOfficial.config.enabled)
+            assertEquals(9, reloadedOfficial.config.defaultMinutesPerLeg)
+            assertEquals(15, reloadedOfficial.edgeOverrides[1]?.durationMinutesOverride)
+
+            prefs.setEdgeOverride("mushroom_cup", 1, null).getOrThrow()
+            assertTrue(OfficialRouteFreeRoamPrefs(prefsFile).get("mushroom_cup").edgeOverrides.isEmpty())
+
+            prefs.clear("mushroom_cup").getOrThrow()
+            assertFalse(OfficialRouteFreeRoamPrefs(prefsFile).get("mushroom_cup").config.enabled)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }
+

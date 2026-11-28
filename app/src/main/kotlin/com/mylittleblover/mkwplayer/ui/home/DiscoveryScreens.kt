@@ -118,14 +118,17 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwIconButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwIconButtonTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwInsetBox
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
+import com.mylittleblover.mkwplayer.ui.kit.MkwMotion
 import com.mylittleblover.mkwplayer.ui.kit.MkwOptionRow
 import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwRadioMark
 import com.mylittleblover.mkwplayer.ui.kit.MkwRoseButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSecondaryButton
+import com.mylittleblover.mkwplayer.ui.kit.MkwSegmentedBar
 import com.mylittleblover.mkwplayer.ui.kit.MkwSurfaceTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwSwitch
 import com.mylittleblover.mkwplayer.ui.kit.MkwTextField
+import com.mylittleblover.mkwplayer.ui.rememberReducedMotion
 import kotlinx.coroutines.launch
 import com.mylittleblover.mkwplayer.R
 import com.mylittleblover.mkwplayer.library.BrowseCatalog
@@ -133,6 +136,7 @@ import com.mylittleblover.mkwplayer.library.PlaylistItemRef
 import com.mylittleblover.mkwplayer.library.PresetRefs
 import com.mylittleblover.mkwplayer.library.TrackPlayStat
 import com.mylittleblover.mkwplayer.library.TrackSortOrder
+import com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog
 import com.mylittleblover.mkwplayer.routes.CustomRoute
 import com.mylittleblover.mkwplayer.routes.OfficialRoute
 import com.mylittleblover.mkwplayer.routes.OfficialRouteKind
@@ -141,8 +145,54 @@ import com.mylittleblover.mkwplayer.ui.art.StageArt
 import com.mylittleblover.mkwplayer.ui.routes.RoadMusicRuleModeSelector
 import com.mylittleblover.mkwplayer.ui.routes.RouteEdgeMusicPickerSheet
 import com.mylittleblover.mkwplayer.ui.routes.edgeResolutionSummary
+import com.mylittleblover.mkwplayer.ui.routes.freeRoamModeChipLabel
+import com.mylittleblover.mkwplayer.ui.routes.freeRoamModeDisplayLabel
 import com.mylittleblover.mkwplayer.ui.routes.hasKnownPool
 import com.mylittleblover.mkwplayer.ui.routes.isMissingOrIncomplete
+import com.mylittleblover.mkwplayer.ui.routes.pureFreeRoamGamePoolLegSummary
+
+/** Process-local bridge providing saved track markers & seek-on-play to track long-press menus (#16). */
+internal data class TrackMarkerMenuBridge(
+    val markersByTrackId: Map<String, List<com.mylittleblover.mkwplayer.library.TrackMarker>> = emptyMap(),
+    val onPlayFromMarker: (trackId: String, positionMs: Long, playTrack: () -> Unit) -> Unit = { _, _, _ -> },
+    val onDeleteMarker: (String) -> Unit = {},
+)
+
+internal val LocalTrackMarkerBridge = compositionLocalOf { TrackMarkerMenuBridge() }
+internal val LocalStaffCreditsUnlocked = compositionLocalOf { false }
+internal val LocalNonInteractiveLoopConfig = compositionLocalOf {
+    com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.Default
+}
+
+internal fun effectiveExtraDurationMs(
+    item: ExtraMusicCatalog.OtherMusicItem,
+    loopConfig: com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig,
+): Long = when (item) {
+    is ExtraMusicCatalog.OtherMusicItem.LinearAsset ->
+        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopPolicy.computeEffectiveDurationMs(
+            baseDurationMs = item.durationMs,
+            baseFrames = item.asset.frames,
+            loopStart = item.asset.loopStart,
+            loopEnd = item.asset.loopEnd,
+            hasLoop = item.asset.loop,
+            sampleRate = item.asset.sampleRate,
+            config = loopConfig,
+        )
+    else -> item.durationMs
+}
+
+internal fun effectiveSimpleDurationMs(
+    item: ExtraMusicCatalog.SimpleTrackItem,
+    loopConfig: com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig,
+): Long = com.mylittleblover.mkwplayer.audio.NonInteractiveLoopPolicy.computeEffectiveDurationMs(
+    baseDurationMs = item.durationMs,
+    baseFrames = item.asset.frames,
+    loopStart = item.asset.loopStart,
+    loopEnd = item.asset.loopEnd,
+    hasLoop = item.asset.loop,
+    sampleRate = item.asset.sampleRate,
+    config = loopConfig,
+)
 
 @Composable
 private fun RecentTrackTile(
@@ -252,7 +302,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                            onDismissSaved: () -> Unit = {},
                            playStats: Map<String, TrackPlayStat> = emptyMap(),
                            onPlaySelectedRefs: (List<String>) -> Boolean = { false }) {
-    val dailyHintFallback = stringResource(R.string.discovery_home_daily_hint)
+    val courseMusicSubtitle = stringResource(R.string.discovery_course_music)
     val coursesSubtitle = stringResource(R.string.discovery_courses)
     val sfcSubtitle = stringResource(R.string.discovery_vs_sfc)
     val battleSubtitle = stringResource(R.string.discovery_battle)
@@ -267,17 +317,19 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
         val artworkName: String?,
         val fallbackCourseCode: String?,
     )
+    val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
     val visibleCourseSet = catalog?.courses(unlocked).orEmpty().toSet()
     val gamesById = remember(jukebox) { jukebox.games.associateBy { it.id } }
     val visibleDaily = remember(
         state.dailyIds,
         catalog,
         unlocked,
+        staffCreditsUnlocked,
         language,
         jukebox,
         extraCatalog,
         courseArtwork,
-        dailyHintFallback,
+        courseMusicSubtitle,
         sfcSubtitle,
         battleSubtitle,
         freeSubtitle,
@@ -291,14 +343,14 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                     else DailyCardInfo(
                         rawId = rawId,
                         title = catalog?.displayName(logical, language) ?: logical,
-                        subtitle = dailyHintFallback,
+                        subtitle = courseMusicSubtitle,
                         artworkName = courseArtwork[rawId] ?: courseArtwork[logical],
                         fallbackCourseCode = logical,
                     )
                 }
                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> {
                     val track = extraCatalog.sfcCourses.firstOrNull { it.id == ref.trackId }
-                    if (track == null || !ExtraMusicCatalog.isVisible(track.id, unlocked)) null
+                    if (track == null || !ExtraMusicCatalog.isVisible(track.id, unlocked, staffCreditsUnlocked)) null
                     else DailyCardInfo(
                         rawId = rawId,
                         title = track.localizedName(language),
@@ -309,7 +361,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                 }
                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack -> {
                     val track = extraCatalog.battleTracks.firstOrNull { it.id == ref.trackId }
-                    if (track == null || !ExtraMusicCatalog.isVisible(track.id, unlocked)) null
+                    if (track == null || !ExtraMusicCatalog.isVisible(track.id, unlocked, staffCreditsUnlocked)) null
                     else DailyCardInfo(
                         rawId = rawId,
                         title = track.localizedName(language),
@@ -325,7 +377,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                         val game = gamesById[item.gameId]
                         DailyCardInfo(
                             rawId = rawId,
-                            title = item.localizedDisplayName(language),
+                            title = item.displayTitle(language),
                             subtitle = game?.localizedName(language) ?: freeSubtitle,
                             artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) }
                                 ?: extraCatalog.jukeboxGameArtwork[item.gameId],
@@ -335,7 +387,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                 }
                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.ExtraTrack -> {
                     val other = extraCatalog.otherMusic.firstOrNull { it.id == ref.extraId }
-                    if (other == null || !ExtraMusicCatalog.isVisible(other.id, unlocked)) null
+                    if (other == null || !ExtraMusicCatalog.isVisible(other.id, unlocked, staffCreditsUnlocked)) null
                     else DailyCardInfo(
                         rawId = rawId,
                         title = other.localizedName(language),
@@ -347,7 +399,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
             }
         }
     }
-    val mostPlayedHome = remember(playStats, catalog, unlocked, language, extraCatalog, jukebox) {
+    val mostPlayedHome = remember(playStats, catalog, unlocked, staffCreditsUnlocked, language, extraCatalog, jukebox) {
         playStats.values
             .asSequence()
             .filter { it.playCount > 0 }
@@ -357,6 +409,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                     rawId = stat.trackId,
                     catalog = catalog,
                     unlocked = unlocked,
+                    staffCreditsUnlocked = staffCreditsUnlocked,
                     language = language,
                     extraCatalog = extraCatalog,
                     jukeboxItemsByKey = jukebox.itemsByKey,
@@ -376,7 +429,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
             .take(30)
             .toList()
     }
-    val favoritesMixHome = remember(state.favorites, playStats, catalog, unlocked, language, extraCatalog, jukebox) {
+    val favoritesMixHome = remember(state.favorites, playStats, catalog, unlocked, staffCreditsUnlocked, language, extraCatalog, jukebox) {
         state.favorites
             .mapNotNull { fav ->
                 val plays = playStats[canonicalStatIdForRef(fav)]?.playCount ?: 0
@@ -384,6 +437,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                     rawId = fav,
                     catalog = catalog,
                     unlocked = unlocked,
+                    staffCreditsUnlocked = staffCreditsUnlocked,
                     language = language,
                     extraCatalog = extraCatalog,
                     jukeboxItemsByKey = jukebox.itemsByKey,
@@ -406,6 +460,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
         visibleCourseSet,
         catalog,
         unlocked,
+        staffCreditsUnlocked,
         language,
         extraCatalog,
         jukebox,
@@ -423,6 +478,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                     rawId = rawId,
                     catalog = catalog,
                     unlocked = unlocked,
+                    staffCreditsUnlocked = staffCreditsUnlocked,
                     language = language,
                     extraCatalog = extraCatalog,
                     jukeboxItemsByKey = jukebox.itemsByKey,
@@ -484,7 +540,12 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                 ) { index ->
                     val card = visibleDaily[index]
                     val id = card.rawId
-                    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp))) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(24.dp))
+                            .clickable { onQuickPlay(id) },
+                    ) {
                         if (card.fallbackCourseCode != null) {
                             CourseCover(
                                 code = card.fallbackCourseCode,
@@ -518,52 +579,28 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                                 tone = MkwBadgeTone.Scrim,
                                 tabular = true,
                             )
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(card.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(card.subtitle, color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 240.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    MkwRoseButton(
-                                        text = stringResource(R.string.discovery_home_open),
-                                        onClick = { onOpen(id) },
-                                        size = MkwButtonSize.Compact,
-                                    )
-                                    MkwIconButton(
-                                        icon = Icons.Filled.PlayArrow,
-                                        contentDescription = stringResource(R.string.discovery_start),
-                                        onClick = { onQuickPlay(id) },
-                                        tone = MkwIconButtonTone.Scrim,
-                                        visualSize = 40.dp,
-                                        iconSize = 20.dp,
-                                        modifier = Modifier.size(40.dp),
-                                    )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Bottom,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(card.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text(card.subtitle, color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
+                                MkwIconButton(
+                                    icon = Icons.Filled.PlayArrow,
+                                    contentDescription = stringResource(R.string.discovery_start),
+                                    onClick = { onQuickPlay(id) },
+                                    tone = MkwIconButtonTone.Scrim,
+                                    visualSize = 44.dp,
+                                    iconSize = 22.dp,
+                                    modifier = Modifier.size(44.dp),
+                                )
                             }
-                        }
-                        Row(
-                            Modifier.align(Alignment.BottomEnd).padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            val previousLabel = stringResource(R.string.discovery_previous_recommendation)
-                            val nextLabel = stringResource(R.string.discovery_next_recommendation)
-                            MkwIconButton(
-                                icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = previousLabel,
-                                onClick = { scope.launch { pager.animateScrollToPage((index - 1 + visibleDaily.size) % visibleDaily.size) } },
-                                tone = MkwIconButtonTone.Scrim,
-                                visualSize = 36.dp,
-                                iconSize = 20.dp,
-                                modifier = Modifier.size(36.dp),
-                            )
-                            MkwIconButton(
-                                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = nextLabel,
-                                onClick = { scope.launch { pager.animateScrollToPage((index + 1) % visibleDaily.size) } },
-                                tone = MkwIconButtonTone.Scrim,
-                                visualSize = 36.dp,
-                                iconSize = 20.dp,
-                                modifier = Modifier.size(36.dp),
-                            )
                         }
                     }
                 }
@@ -661,7 +698,7 @@ internal fun DiscoveryHome(catalog: BrowseCatalog?, state: DiscoveryViewModel.St
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(currentCode?.let { catalog?.displayName(it, language) } ?: session.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MkwKitTokens.Palette.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val flow = session.flow
-                            val subtitle = flow?.let { com.mylittleblover.mkwplayer.ui.interactive.performanceStageText(it) }
+                            val subtitle = flow?.let { com.mylittleblover.mkwplayer.ui.interactive.performanceStageText(it, currentCode) }
                                 ?: session.linearTrack?.subtitle?.takeIf { it.isNotBlank() }?.let { sub ->
                                     "$sub · ${stringResource(if (session.canResume) R.string.discovery_paused else R.string.discovery_playing)}"
                                 }
@@ -754,7 +791,13 @@ internal fun DiscoveryMedia(catalog: BrowseCatalog?, unlocked: Boolean, language
     unlockTotal: Int = 0,
     onJukeboxGame: (String) -> Unit = {},
     onPlayJukeboxTrack: (JukeboxCatalog.Game, Int) -> Unit = { _, _ -> },
+    onPlayJukeboxGenre: (JukeboxCatalog.GenreInfo, Int, Boolean) -> Unit = { _, _, _ -> },
     onPlayAllJukebox: (Boolean) -> Unit = {},
+    freeRoamMode: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode =
+        com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+    freeRoamCatalog: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.Data? = null,
+    onSelectFreeRoamMode: (com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode, String) -> Unit = { _, _ -> },
+    onPlayFreeRoamRadio: (com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode, String) -> Unit = { _, _ -> },
     onPlayJukeboxNext: (JukeboxCatalog.TrackItem, JukeboxCatalog.Game) -> Unit = { _, _ -> },
     onJukeboxTrack: (String) -> Unit = {},
     onSfcCourse: (ExtraMusicCatalog.TwoStateTrack) -> Unit = {},
@@ -774,6 +817,7 @@ internal fun DiscoveryMedia(catalog: BrowseCatalog?, unlocked: Boolean, language
     onAddToQueueRefs: (List<String>) -> Boolean = { false },
     onPlaySelectedRefs: (List<String>) -> Boolean = { false },
     onOpenCourseFlowEditor: (String) -> Unit = {},
+    onLockedMysteryCourseClick: (() -> Unit)? = null,
     playStats: Map<String, TrackPlayStat> = emptyMap()) {
     val categoryStateHolder = rememberSaveableStateHolder()
     androidx.compose.animation.AnimatedContent(category, transitionSpec = {
@@ -792,7 +836,12 @@ internal fun DiscoveryMedia(catalog: BrowseCatalog?, unlocked: Boolean, language
                     unlockTotal = unlockTotal,
                     onJukeboxGame = onJukeboxGame,
                     onPlayJukeboxTrack = onPlayJukeboxTrack,
+                    onPlayJukeboxGenre = onPlayJukeboxGenre,
                     onPlayAllJukebox = onPlayAllJukebox,
+                    freeRoamMode = freeRoamMode,
+                    freeRoamCatalog = freeRoamCatalog,
+                    onSelectFreeRoamMode = onSelectFreeRoamMode,
+                    onPlayFreeRoamRadio = onPlayFreeRoamRadio,
                     onPlayJukeboxNext = onPlayJukeboxNext,
                     onJukeboxTrack = onJukeboxTrack,
                     onSfcCourse = onSfcCourse,
@@ -812,6 +861,7 @@ internal fun DiscoveryMedia(catalog: BrowseCatalog?, unlocked: Boolean, language
                     onAddToQueueRefs = onAddToQueueRefs,
                     onPlaySelectedRefs = onPlaySelectedRefs,
                     onOpenCourseFlowEditor = onOpenCourseFlowEditor,
+                    onLockedMysteryCourseClick = onLockedMysteryCourseClick,
                     playStats = playStats)
             }
         }
@@ -832,7 +882,13 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             unlockTotal: Int = 0,
                             onJukeboxGame: (String) -> Unit = {},
                             onPlayJukeboxTrack: (JukeboxCatalog.Game, Int) -> Unit = { _, _ -> },
+                            onPlayJukeboxGenre: (JukeboxCatalog.GenreInfo, Int, Boolean) -> Unit = { _, _, _ -> },
                             onPlayAllJukebox: (Boolean) -> Unit = {},
+                            freeRoamMode: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode =
+                                com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+                            freeRoamCatalog: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.Data? = null,
+                            onSelectFreeRoamMode: (com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode, String) -> Unit = { _, _ -> },
+                            onPlayFreeRoamRadio: (com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode, String) -> Unit = { _, _ -> },
                             onPlayJukeboxNext: (JukeboxCatalog.TrackItem, JukeboxCatalog.Game) -> Unit = { _, _ -> },
                             onJukeboxTrack: (String) -> Unit = {},
                             onSfcCourse: (ExtraMusicCatalog.TwoStateTrack) -> Unit = {},
@@ -852,7 +908,10 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             onAddToQueueRefs: (List<String>) -> Boolean = { false },
                             onPlaySelectedRefs: (List<String>) -> Boolean = { false },
                             onOpenCourseFlowEditor: (String) -> Unit = {},
+                            onLockedMysteryCourseClick: (() -> Unit)? = null,
                             playStats: Map<String, TrackPlayStat> = emptyMap()) {
+    val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
+    val loopConfig = LocalNonInteractiveLoopConfig.current
     androidx.activity.compose.BackHandler(enabled = category >= 0) { onCategory(-1) }
     var sortOrder by rememberSaveable(category) { mutableStateOf(TrackSortOrder.DEFAULT) }
     val categories = listOf(
@@ -900,41 +959,41 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
             else -> base
         }
     }
-    val otherItems = remember(extraCatalog, query, category, unlocked, sortOrder, playStats, language) {
+    val otherItems = remember(extraCatalog, query, category, unlocked, staffCreditsUnlocked, loopConfig, sortOrder, playStats, language) {
         val base = if (category == 3 || (category < 0 && query.isNotBlank())) {
             extraCatalog.otherMusic.filter {
-                ExtraMusicCatalog.isVisible(it.id, unlocked) && it.matches(query)
+                ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked) && it.matches(query)
             }
         } else emptyList()
         when (sortOrder) {
             TrackSortOrder.NAME_ASC -> base.sortedBy { it.localizedName(language).lowercase() }
-            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { it.durationMs }
+            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { effectiveExtraDurationMs(it, loopConfig) }
             TrackSortOrder.MOST_PLAYED -> base.sortedByDescending { playStats[PlaylistItemRef.ExtraTrack(it.id).raw]?.playCount ?: 0 }
             else -> base
         }
     }
-    val shortItems = remember(extraCatalog, query, category, unlocked, sortOrder, playStats, language) {
+    val shortItems = remember(extraCatalog, query, category, unlocked, staffCreditsUnlocked, loopConfig, sortOrder, playStats, language) {
         val base = if (category == 4 || (category < 0 && query.isNotBlank())) {
             extraCatalog.shortSounds.filter {
-                ExtraMusicCatalog.isVisible(it.id, unlocked) && it.matches(query)
+                ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked) && it.matches(query)
             }
         } else emptyList()
         when (sortOrder) {
             TrackSortOrder.NAME_ASC -> base.sortedBy { it.localizedName(language).lowercase() }
-            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { it.durationMs }
+            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { effectiveSimpleDurationMs(it, loopConfig) }
             TrackSortOrder.MOST_PLAYED -> base.sortedByDescending { playStats[PlaylistItemRef.ExtraTrack(it.id).raw]?.playCount ?: 0 }
             else -> base
         }
     }
-    val nmItems = remember(extraCatalog, query, category, unlocked, sortOrder, playStats, language) {
+    val nmItems = remember(extraCatalog, query, category, unlocked, staffCreditsUnlocked, loopConfig, sortOrder, playStats, language) {
         val base = if (category == 5 || (category < 0 && query.isNotBlank())) {
             extraCatalog.nintendoMusicSpecial.filter {
-                ExtraMusicCatalog.isVisible(it.id, unlocked) && it.matches(query)
+                ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked) && it.matches(query)
             }
         } else emptyList()
         when (sortOrder) {
             TrackSortOrder.NAME_ASC -> base.sortedBy { it.localizedName(language).lowercase() }
-            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { it.durationMs }
+            TrackSortOrder.DURATION_DESC -> base.sortedByDescending { effectiveSimpleDurationMs(it, loopConfig) }
             TrackSortOrder.MOST_PLAYED -> base.sortedByDescending { playStats[PlaylistItemRef.ExtraTrack(it.id).raw]?.playCount ?: 0 }
             else -> base
         }
@@ -969,6 +1028,8 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
     val extraSuiteLabel = stringResource(R.string.discovery_suite)
     val listState = rememberSaveable(category, saver = LazyListState.Saver) { LazyListState() }
     var selectedJukeboxDecade by rememberSaveable { mutableStateOf<Int?>(null) }
+    var jukeboxBrowseByGenre by rememberSaveable { mutableStateOf(false) }
+    var selectedGenreId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var menuTarget by remember { mutableStateOf<TrackMenuSpec?>(null) }
     var infoTarget by remember { mutableStateOf<TrackMenuSpec?>(null) }
@@ -977,6 +1038,9 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
     var selectedKeys by rememberSaveable(category) { mutableStateOf(listOf<String>()) }
     val selectedSet = remember(selectedKeys) { selectedKeys.toSet() }
 
+    androidx.activity.compose.BackHandler(enabled = category == 2 && jukeboxBrowseByGenre && selectedGenreId != null && !multiSelectMode) {
+        selectedGenreId = null
+    }
     androidx.activity.compose.BackHandler(enabled = multiSelectMode) {
         multiSelectMode = false
         selectedKeys = emptyList()
@@ -1270,7 +1334,11 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         }
                         MkwCard(
                             onClick = {
-                                android.widget.Toast.makeText(toastContext, lockedHint, android.widget.Toast.LENGTH_SHORT).show()
+                                if (onLockedMysteryCourseClick != null) {
+                                    onLockedMysteryCourseClick()
+                                } else {
+                                    android.widget.Toast.makeText(toastContext, lockedHint, android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             },
                             tone = MkwSurfaceTone.Porcelain,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
@@ -1344,7 +1412,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                     }
                 }
                 items(sfcCourses, key = { "sfc:${it.id}" }) { track ->
-                    val medley = extraMedleyCatalog.forTarget(track.id).firstOrNull()
                     val trackTitle = track.localizedName(language)
                     val selKey = "sfc:${track.id}"
                     val refRaw = PlaylistItemRef.SfcTrack(track.id).raw
@@ -1362,6 +1429,7 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         subtitle = subWithPlays,
                         artworkName = track.artwork,
                         favoriteId = refRaw,
+                        courseCodeForDetail = "extra:${track.id}",
                         editorTargetCode = "extra:${track.id}",
                         infoPairs = listOf(
                             R.string.track_info_category to sfcCatLabel,
@@ -1387,14 +1455,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             subtitle = subWithPlays,
                             packDirectory = packDirectory,
                             artworkName = track.artwork,
-                            onSecondaryAction = { onOpenExtraFlowEditor(track.id) },
-                            secondaryActionDescription = stringResource(R.string.discovery_open_flow_editor),
-                            onAction = medley?.let { entry ->
-                                {
-                                    onPlayExtraMedley(entry.medley.id, entry.localizedLabel(language, trackTitle), extraSuiteLabel, entry.artwork ?: track.artwork)
-                                }
-                            },
-                            actionContentDescription = extraSuiteLabel,
                             selectionMode = multiSelectMode,
                             selected = selKey in selectedSet,
                             onLongClick = {
@@ -1407,7 +1467,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                     }
                 }
                 items(battleTracks, key = { "battle:${it.id}" }) { track ->
-                    val medley = extraMedleyCatalog.forTarget(track.id).firstOrNull()
                     val trackTitle = track.localizedName(language)
                     val selKey = "battle:${track.id}"
                     val refRaw = PlaylistItemRef.BattleTrack(track.id).raw
@@ -1425,6 +1484,7 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         subtitle = subWithPlays,
                         artworkName = track.artwork,
                         favoriteId = refRaw,
+                        courseCodeForDetail = "extra:${track.id}",
                         editorTargetCode = "extra:${track.id}",
                         infoPairs = listOf(
                             R.string.track_info_category to battleCatLabel,
@@ -1450,14 +1510,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             subtitle = subWithPlays,
                             packDirectory = packDirectory,
                             artworkName = track.artwork,
-                            onSecondaryAction = { onOpenExtraFlowEditor(track.id) },
-                            secondaryActionDescription = stringResource(R.string.discovery_open_flow_editor),
-                            onAction = medley?.let { entry ->
-                                {
-                                    onPlayExtraMedley(entry.medley.id, entry.localizedLabel(language, trackTitle), extraSuiteLabel, entry.artwork ?: track.artwork)
-                                }
-                            },
-                            actionContentDescription = extraSuiteLabel,
                             selectionMode = multiSelectMode,
                             selected = selKey in selectedSet,
                             onLongClick = {
@@ -1486,12 +1538,13 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         val selKey = "other:${item.id}"
                         val refRaw = PlaylistItemRef.ExtraTrack(item.id).raw
                         val plays = playStats[refRaw]?.playCount ?: 0
+                        val effDurMs = effectiveExtraDurationMs(item, loopConfig)
                         val baseSub = if (item is ExtraMusicCatalog.OtherMusicItem.InteractiveTitle) {
                             interactiveSubtitle
                         } else {
                             buildList {
                                 add(stringResource(R.string.discovery_normal_playback))
-                                if (item.durationMs > 0L) add(formatExtraDuration(item.durationMs))
+                                if (effDurMs > 0L) add(formatExtraDuration(effDurMs))
                             }.joinToString(" · ")
                         }
                         val sub = if (plays > 0) {
@@ -1500,18 +1553,12 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             baseSub
                         }
                         val isFav = refRaw in favorites
-                        val medley = extraMedleyCatalog.forTarget(item.id).firstOrNull()
                         val playAction: () -> Unit = {
                             if (item is ExtraMusicCatalog.OtherMusicItem.InteractiveTitle) {
                                 onOpenTitle()
                             } else {
                                 val idx = linearOther.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
-                                val repeat = if (item is ExtraMusicCatalog.OtherMusicItem.LinearAsset && item.asset.loop) {
-                                    com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.SINGLE
-                                } else {
-                                    com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.LIST
-                                }
-                                onPlayExtraQueue(linearEntries, idx, repeat, false)
+                                onPlayExtraQueue(linearEntries, idx, com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.LIST, false)
                             }
                         }
                         val spec = TrackMenuSpec(
@@ -1521,10 +1568,11 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             subtitle = sub,
                             artworkName = item.artwork,
                             favoriteId = refRaw,
+                            courseCodeForDetail = if (item is ExtraMusicCatalog.OtherMusicItem.InteractiveTitle) "extra:${item.id}" else null,
                             editorTargetCode = if (item is ExtraMusicCatalog.OtherMusicItem.InteractiveTitle) "extra:${item.id}" else null,
                             infoPairs = buildList {
                                 add(R.string.track_info_category to otherCategoryLabel)
-                                if (item.durationMs > 0L) add(R.string.track_info_duration to formatExtraDuration(item.durationMs))
+                                if (effDurMs > 0L) add(R.string.track_info_duration to formatExtraDuration(effDurMs))
                                 add(R.string.track_info_ref to item.id)
                             },
                             onPlayNow = playAction,
@@ -1547,16 +1595,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                                 subtitle = sub,
                                 packDirectory = packDirectory,
                                 artworkName = item.artwork,
-                                onSecondaryAction = if (item is ExtraMusicCatalog.OtherMusicItem.InteractiveTitle) {
-                                    { onOpenExtraFlowEditor(item.id) }
-                                } else null,
-                                secondaryActionDescription = stringResource(R.string.discovery_open_flow_editor),
-                                onAction = medley?.let { entry ->
-                                    {
-                                        onPlayExtraMedley(entry.medley.id, entry.localizedLabel(language, itemTitle), extraSuiteLabel, entry.artwork ?: item.artwork)
-                                    }
-                                },
-                                actionContentDescription = extraSuiteLabel,
                                 selectionMode = multiSelectMode,
                                 selected = selKey in selectedSet,
                                 onLongClick = {
@@ -1567,35 +1605,6 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                                 },
                             )
                         }
-                    }
-                }
-                val otherExtraMedleys = if (category == 3) {
-                    extraMedleyCatalog.entries.filter {
-                        it.targetType == com.mylittleblover.mkwplayer.interactive.ExtraMedleyCatalog.TargetType.OTHER &&
-                            ExtraMusicCatalog.isVisible(it.targetId, unlocked)
-                    }
-                } else emptyList()
-                if (otherExtraMedleys.isNotEmpty()) {
-                    item(key = "extra-medleys-header") {
-                        Text(
-                            stringResource(R.string.extra_medley_section_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-                    items(otherExtraMedleys, key = { "extra_medley:${it.medley.id}" }) { entry ->
-                        val title = entry.localizedLabel(language, entry.medley.courseCode)
-                        ExtraSquareRow(
-                            title = title,
-                            subtitle = listOf(extraSuiteLabel, formatExtraDuration(entry.medley.durationMs)).joinToString(" · "),
-                            packDirectory = packDirectory,
-                            artworkName = entry.artwork,
-                            onAction = { onPlayExtraMedley(entry.medley.id, title, extraSuiteLabel, entry.artwork) },
-                            actionContentDescription = extraSuiteLabel,
-                            onClick = { onPlayExtraMedley(entry.medley.id, title, extraSuiteLabel, entry.artwork) },
-                        )
                     }
                 }
                 if (shortItems.isNotEmpty()) {
@@ -1610,7 +1619,8 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         }
                     }
                     itemsIndexed(shortItems, key = { _, item -> "short:${item.id}" }) { idx, item ->
-                        val baseSub = if (item.durationMs > 0L) formatExtraDuration(item.durationMs) else ""
+                        val effDurMs = effectiveSimpleDurationMs(item, loopConfig)
+                        val baseSub = if (effDurMs > 0L) formatExtraDuration(effDurMs) else ""
                         val itemTitle = item.localizedName(language)
                         val selKey = "short:${item.id}"
                         val refRaw = PlaylistItemRef.ExtraTrack(item.id).raw
@@ -1622,12 +1632,7 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         }
                         val isFav = refRaw in favorites
                         val playAction: () -> Unit = {
-                            val repeat = if (item.asset.loop) {
-                                com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.SINGLE
-                            } else {
-                                com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.LIST
-                            }
-                            onPlayExtraQueue(shortEntries, idx, repeat, false)
+                            onPlayExtraQueue(shortEntries, idx, com.mylittleblover.mkwplayer.player.LinearQueue.RepeatMode.LIST, false)
                         }
                         val spec = TrackMenuSpec(
                             selectionKey = selKey,
@@ -1638,7 +1643,7 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             favoriteId = refRaw,
                             infoPairs = buildList {
                                 add(R.string.track_info_category to shortLabel)
-                                if (item.durationMs > 0L) add(R.string.track_info_duration to formatExtraDuration(item.durationMs))
+                                if (effDurMs > 0L) add(R.string.track_info_duration to formatExtraDuration(effDurMs))
                                 add(R.string.track_info_ref to item.id)
                             },
                             onPlayNow = playAction,
@@ -1687,7 +1692,8 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                     }
                 }
                 items(nmItems, key = { "nm:${it.id}" }) { item ->
-                    val baseSub = if (item.durationMs > 0L) formatExtraDuration(item.durationMs) else ""
+                    val effDurMs = effectiveSimpleDurationMs(item, loopConfig)
+                    val baseSub = if (effDurMs > 0L) formatExtraDuration(effDurMs) else ""
                     val itemTitle = item.localizedName(language)
                     val selKey = "nm:${item.id}"
                     val refRaw = PlaylistItemRef.ExtraTrack(item.id).raw
@@ -1711,7 +1717,7 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                         favoriteId = refRaw,
                         infoPairs = buildList {
                             add(R.string.track_info_category to nmLabel)
-                            if (item.durationMs > 0L) add(R.string.track_info_duration to formatExtraDuration(item.durationMs))
+                            if (effDurMs > 0L) add(R.string.track_info_duration to formatExtraDuration(effDurMs))
                             add(R.string.track_info_ref to item.id)
                         },
                         onPlayNow = playAction,
@@ -1749,6 +1755,65 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
             if (category == 2) {
                 if (!jukebox.isEmpty) {
                     item(key = "jukebox-head") {
+                        val freeRoamModeLabels = LinkedHashMap<FreeRoamJukeboxCatalog.FreeRoamMode, String>(
+                            FreeRoamJukeboxCatalog.FreeRoamMode.entries.size,
+                        )
+                        val freeRoamContextTitles = LinkedHashMap<FreeRoamJukeboxCatalog.FreeRoamMode, String>(
+                            FreeRoamJukeboxCatalog.FreeRoamMode.entries.size,
+                        )
+                        for (mode in FreeRoamJukeboxCatalog.FreeRoamMode.entries) {
+                            val label = freeRoamModeDisplayLabel(mode)
+                            freeRoamModeLabels[mode] = label
+                            freeRoamContextTitles[mode] = stringResource(R.string.jukebox_freeroam_context_fmt, label)
+                        }
+                        val activeModeLabel = freeRoamModeLabels[freeRoamMode]
+                            ?: stringResource(R.string.jukebox_freeroam_mode_auto)
+                        val activeContextTitle = freeRoamContextTitles[freeRoamMode]
+                            ?: stringResource(R.string.jukebox_freeroam_context_fmt, activeModeLabel)
+                        val isInGameGroup = FreeRoamJukeboxCatalog.isInGameFreeRoamLibrary(freeRoamMode)
+                        var lastInGameModeName by rememberSaveable {
+                            mutableStateOf(
+                                if (isInGameGroup) freeRoamMode.name else FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK.name,
+                            )
+                        }
+                        var lastOnlineModeName by rememberSaveable {
+                            mutableStateOf(
+                                if (!isInGameGroup) freeRoamMode.name else FreeRoamJukeboxCatalog.FreeRoamMode.ONLINE_DAY.name,
+                            )
+                        }
+                        LaunchedEffect(freeRoamMode) {
+                            if (FreeRoamJukeboxCatalog.isInGameFreeRoamLibrary(freeRoamMode)) {
+                                lastInGameModeName = freeRoamMode.name
+                            } else {
+                                lastOnlineModeName = freeRoamMode.name
+                            }
+                        }
+                        val activeHour = remember(freeRoamMode) { java.time.LocalTime.now().hour }
+                        val activePlaylist = remember(freeRoamCatalog, freeRoamMode, activeHour) {
+                            freeRoamCatalog?.resolvedPlaylistForFreeRoam(freeRoamMode, activeHour)
+                        }
+                        val resolvedPlaylistLabel = when (activePlaylist?.id) {
+                            FreeRoamJukeboxCatalog.PLAYLIST_DEFAULT ->
+                                stringResource(R.string.jukebox_freeroam_mode_solo_day)
+                            FreeRoamJukeboxCatalog.PLAYLIST_NIGHT ->
+                                stringResource(R.string.jukebox_freeroam_mode_solo_night)
+                            FreeRoamJukeboxCatalog.PLAYLIST_SOLO_ALL ->
+                                stringResource(R.string.jukebox_freeroam_mode_solo_all)
+                            FreeRoamJukeboxCatalog.PLAYLIST_FREEROAM_ONLY ->
+                                stringResource(R.string.jukebox_freeroam_mode_freeroam_only)
+                            FreeRoamJukeboxCatalog.PLAYLIST_RACE ->
+                                stringResource(R.string.jukebox_freeroam_mode_online_day)
+                            FreeRoamJukeboxCatalog.PLAYLIST_RACE_NIGHT ->
+                                stringResource(R.string.jukebox_freeroam_mode_online_night)
+                            else -> activeModeLabel
+                        }
+                        val inGameGroupLabel = stringResource(R.string.jukebox_freeroam_group_ingame)
+                        val onlineRaceGroupLabel = stringResource(R.string.jukebox_freeroam_group_online_race)
+                        val visibleModes = if (isInGameGroup) {
+                            FreeRoamJukeboxCatalog.FreeRoamMode.IN_GAME_FREE_ROAM_MODES
+                        } else {
+                            FreeRoamJukeboxCatalog.FreeRoamMode.ONLINE_RACE_MODES
+                        }
                         Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 stringResource(R.string.jukebox_games_summary, jukebox.games.size, jukebox.trackCount),
@@ -1770,55 +1835,382 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                                     modifier = Modifier.weight(1f),
                                 )
                                 MkwSecondaryButton(
-                                    text = stringResource(R.string.jukebox_shuffle),
-                                    onClick = { onPlayAllJukebox(true) },
+                                    text = stringResource(
+                                        if (freeRoamCatalog != null) R.string.jukebox_freeroam_play else R.string.jukebox_shuffle,
+                                    ),
+                                    onClick = {
+                                        if (freeRoamCatalog != null) {
+                                            onPlayFreeRoamRadio(freeRoamMode, activeContextTitle)
+                                        } else {
+                                            onPlayAllJukebox(true)
+                                        }
+                                    },
                                     leadingIcon = Icons.Filled.Shuffle,
                                     size = MkwButtonSize.Compact,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
-                        }
-                    }
-                }
-                if (query.isBlank()) {
-                    val decades = jukebox.games.mapNotNull { g -> g.year.takeIf { it > 0 }?.let { (it / 10) * 10 } }.distinct().sorted()
-                    val activeDecade = selectedJukeboxDecade?.takeIf { it in decades }
-                    if (decades.size > 1) {
-                        item(key = "jukebox-chronology-index") {
-                            LazyRow(
-                                modifier = Modifier.unpadHorizontal(16.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                item(key = "era-all") {
-                                    MkwFilterPill(
-                                        label = stringResource(R.string.jukebox_all_eras),
-                                        selected = activeDecade == null,
-                                        onClick = { selectedJukeboxDecade = null },
-                                    )
-                                }
-                                items(decades, key = { "era:$it" }) { decade ->
-                                    MkwFilterPill(
-                                        label = stringResource(R.string.jukebox_decade_label, decade),
-                                        selected = activeDecade == decade,
-                                        onClick = {
-                                            selectedJukeboxDecade = if (activeDecade == decade) null else decade
-                                        },
-                                    )
+                            if (freeRoamCatalog != null) {
+                                MkwCard(
+                                    tone = MkwSurfaceTone.Recessed,
+                                    shape = MkwKitTokens.Shape.control,
+                                    contentPadding = PaddingValues(12.dp),
+                                ) {
+                                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            stringResource(R.string.jukebox_freeroam_title),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MkwKitTokens.Palette.ink,
+                                        )
+                                        MkwSegmentedBar(
+                                            items = listOf(true, false),
+                                            selected = isInGameGroup,
+                                            labelOf = { inGame ->
+                                                if (inGame) inGameGroupLabel else onlineRaceGroupLabel
+                                            },
+                                            onSelect = { wantInGame ->
+                                                if (wantInGame != isInGameGroup) {
+                                                    val targetMode = if (wantInGame) {
+                                                        FreeRoamJukeboxCatalog.coerceInGameFreeRoamMode(
+                                                            FreeRoamJukeboxCatalog.FreeRoamMode.fromStored(lastInGameModeName),
+                                                        )
+                                                    } else {
+                                                        FreeRoamJukeboxCatalog.FreeRoamMode.fromStored(lastOnlineModeName)
+                                                            .takeUnless { FreeRoamJukeboxCatalog.isInGameFreeRoamLibrary(it) }
+                                                            ?: FreeRoamJukeboxCatalog.FreeRoamMode.ONLINE_DAY
+                                                    }
+                                                    val ctxTitle = freeRoamContextTitles[targetMode] ?: activeContextTitle
+                                                    onSelectFreeRoamMode(targetMode, ctxTitle)
+                                                }
+                                            },
+                                        )
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            items(
+                                                visibleModes,
+                                                key = { "fr-mode:${it.name}" },
+                                            ) { mode ->
+                                                val ctxTitle = freeRoamContextTitles[mode] ?: activeContextTitle
+                                                MkwFilterPill(
+                                                    label = freeRoamModeChipLabel(mode),
+                                                    selected = freeRoamMode == mode,
+                                                    onClick = { onSelectFreeRoamMode(mode, ctxTitle) },
+                                                    role = Role.RadioButton,
+                                                )
+                                            }
+                                        }
+                                        if (activePlaylist != null) {
+                                            Text(
+                                                stringResource(
+                                                    R.string.jukebox_freeroam_rule_hint,
+                                                    resolvedPlaylistLabel,
+                                                    activePlaylist.uniqueCodes.size,
+                                                    activePlaylist.slots.size,
+                                                ),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MkwKitTokens.Palette.ink,
+                                            )
+                                        }
+                                        Text(
+                                            stringResource(
+                                                if (isInGameGroup) {
+                                                    R.string.jukebox_freeroam_group_ingame_hint
+                                                } else {
+                                                    R.string.jukebox_freeroam_group_online_hint
+                                                },
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MkwKitTokens.Palette.inkSecondary,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                    val shownGames = if (activeDecade == null) jukebox.games else {
-                        jukebox.games.filter { g -> g.year > 0 && (g.year / 10) * 10 == activeDecade }
+                }
+                if (query.isBlank()) {
+                    val allGenres = jukebox.allGenres
+                    if (allGenres.isNotEmpty()) {
+                        item(key = "jukebox-group-toggle") {
+                            val byGameLabel = stringResource(R.string.jukebox_browse_by_game)
+                            val byGenreLabel = stringResource(R.string.jukebox_browse_by_genre)
+                            MkwSegmentedBar(
+                                items = listOf(false, true),
+                                selected = jukeboxBrowseByGenre,
+                                labelOf = { isGenreTab -> if (isGenreTab) byGenreLabel else byGameLabel },
+                                onSelect = { isGenreTab ->
+                                    jukeboxBrowseByGenre = isGenreTab
+                                    if (!isGenreTab) selectedGenreId = null
+                                },
+                            )
+                        }
                     }
-                    items(shownGames, key = { "game:${it.id}" }) { game ->
-                        JukeboxGameRow(
-                            game = game,
-                            language = language,
-                            packDirectory = packDirectory,
-                            artworkName = extraCatalog.jukeboxGameArtwork[game.id],
-                        ) { onJukeboxGame(game.id) }
+
+                    if (!jukeboxBrowseByGenre || allGenres.isEmpty()) {
+                        val decades = jukebox.games.mapNotNull { g -> g.year.takeIf { it > 0 }?.let { (it / 10) * 10 } }.distinct().sorted()
+                        val activeDecade = selectedJukeboxDecade?.takeIf { it in decades }
+                        if (decades.size > 1) {
+                            item(key = "jukebox-chronology-index") {
+                                LazyRow(
+                                    modifier = Modifier.unpadHorizontal(16.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    item(key = "era-all") {
+                                        MkwFilterPill(
+                                            label = stringResource(R.string.jukebox_all_eras),
+                                            selected = activeDecade == null,
+                                            onClick = { selectedJukeboxDecade = null },
+                                        )
+                                    }
+                                    items(decades, key = { "era:$it" }) { decade ->
+                                        MkwFilterPill(
+                                            label = stringResource(R.string.jukebox_decade_label, decade),
+                                            selected = activeDecade == decade,
+                                            onClick = {
+                                                selectedJukeboxDecade = if (activeDecade == decade) null else decade
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        val shownGames = if (activeDecade == null) jukebox.games else {
+                            jukebox.games.filter { g -> g.year > 0 && (g.year / 10) * 10 == activeDecade }
+                        }
+                        items(shownGames, key = { "game:${it.id}" }) { game ->
+                            JukeboxGameRow(
+                                game = game,
+                                language = language,
+                                packDirectory = packDirectory,
+                                artworkName = extraCatalog.jukeboxGameArtwork[game.id],
+                            ) { onJukeboxGame(game.id) }
+                        }
+                    } else {
+                        val activeGenre = selectedGenreId?.let { jukebox.genre(it) }
+                        if (activeGenre == null) {
+                            val genrePairs = allGenres.chunked(2)
+                            items(genrePairs, key = { pair -> "genre-row:${pair.joinToString("-") { it.id }}" }) { rowGenres ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    rowGenres.forEach { genre ->
+                                        val count = remember(jukebox, genre.id) { jukebox.trackCountByGenre(genre.id) }
+                                        MkwCard(
+                                            onClick = { selectedGenreId = genre.id },
+                                            tone = MkwSurfaceTone.Porcelain,
+                                            contentPadding = PaddingValues(14.dp),
+                                            modifier = Modifier.weight(1f),
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(CircleShape)
+                                                    .background(genre.tint),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    imageVector = genre.icon.imageVector,
+                                                    contentDescription = null,
+                                                    tint = genre.color,
+                                                    modifier = Modifier.size(21.dp),
+                                                )
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Text(
+                                                    text = genre.displayName(language),
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MkwKitTokens.Palette.ink,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                                Text(
+                                                    text = pluralStringResource(R.plurals.jukebox_tracks_count, count, count),
+                                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelSmall),
+                                                    color = genre.color,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1,
+                                                )
+                                            }
+                                        }
+                                    }
+                                    if (rowGenres.size == 1) {
+                                        Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        } else {
+                            // Horizontal quick-switch genre strip
+                            item(key = "jukebox-genre-filter-strip") {
+                                LazyRow(
+                                    modifier = Modifier.unpadHorizontal(16.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    item(key = "genre-pill-all") {
+                                        MkwFilterPill(
+                                            label = stringResource(R.string.jukebox_all_genres),
+                                            selected = false,
+                                            onClick = { selectedGenreId = null },
+                                            role = Role.RadioButton,
+                                        )
+                                    }
+                                    items(allGenres, key = { "genre-pill:${it.id}" }) { genre ->
+                                        MkwFilterPill(
+                                            label = genre.displayName(language),
+                                            selected = genre.id == activeGenre.id,
+                                            onClick = { selectedGenreId = genre.id },
+                                            leadingIcon = genre.icon.imageVector,
+                                            role = Role.RadioButton,
+                                        )
+                                    }
+                                }
+                            }
+
+                            val baseGenreTracks = jukebox.itemsWithGamesByGenre(activeGenre.id)
+                            val genreTracks = when (sortOrder) {
+                                TrackSortOrder.NAME_ASC -> baseGenreTracks.sortedBy { it.first.displayTitle(language).lowercase() }
+                                TrackSortOrder.DURATION_DESC -> baseGenreTracks.sortedByDescending { it.first.durationMs }
+                                TrackSortOrder.MOST_PLAYED -> baseGenreTracks.sortedByDescending {
+                                    playStats[PlaylistItemRef.Jukebox(it.first.key).raw]?.playCount ?: 0
+                                }
+                                else -> baseGenreTracks
+                            }
+
+                            // Genre Hero Header Card
+                            item(key = "genre-hero:${activeGenre.id}") {
+                                MkwCard(
+                                    tone = MkwSurfaceTone.Porcelain,
+                                    contentPadding = PaddingValues(16.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(44.dp)
+                                                    .clip(CircleShape)
+                                                    .background(activeGenre.color),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    imageVector = activeGenre.icon.imageVector,
+                                                    contentDescription = null,
+                                                    tint = MkwKitTokens.Palette.ground,
+                                                    modifier = Modifier.size(22.dp),
+                                                )
+                                            }
+                                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Text(
+                                                    text = activeGenre.displayName(language),
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MkwKitTokens.Palette.ink,
+                                                )
+                                                Text(
+                                                    text = pluralStringResource(R.plurals.jukebox_tracks_count, genreTracks.size, genreTracks.size),
+                                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelMedium),
+                                                    color = activeGenre.color,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                            }
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        ) {
+                                            MkwRoseButton(
+                                                text = stringResource(R.string.jukebox_play_all),
+                                                onClick = { onPlayJukeboxGenre(activeGenre, 0, false) },
+                                                leadingIcon = Icons.Filled.PlayArrow,
+                                                size = MkwButtonSize.Compact,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            MkwSecondaryButton(
+                                                text = stringResource(R.string.jukebox_shuffle),
+                                                onClick = { onPlayJukeboxGenre(activeGenre, 0, true) },
+                                                leadingIcon = Icons.Filled.Shuffle,
+                                                size = MkwButtonSize.Compact,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            itemsIndexed(genreTracks, key = { _, pair -> "genre-track:${activeGenre.id}:${pair.first.key}" }) { idx, (item, game) ->
+                                val selKey = "jb:${item.key}"
+                                val refRaw = PlaylistItemRef.Jukebox(item.key).raw
+                                val plays = playStats[refRaw]?.playCount ?: 0
+                                val isFav = refRaw in favorites
+                                val art = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) }
+                                val gameTitle = game.localizedName(language)
+                                val playAction: () -> Unit = { onPlayJukeboxGenre(activeGenre, idx, false) }
+                                val spec = TrackMenuSpec(
+                                    selectionKey = selKey,
+                                    playlistRef = refRaw,
+                                    title = item.displayTitle(language),
+                                    subtitle = listOfNotNull(item.displayArrangement(language), gameTitle).joinToString(" · "),
+                                    artworkName = art,
+                                    favoriteId = refRaw,
+                                    infoPairs = buildList {
+                                        add(R.string.track_info_game to gameTitle)
+                                        if (item.durationMs > 0L) add(R.string.track_info_duration to item.durationFormatted)
+                                        item.ostIndex?.let { add(R.string.track_info_ost to "#$it") }
+                                        add(R.string.track_info_ref to item.key)
+                                    },
+                                    onPlayNow = playAction,
+                                    onPlayNextDirect = { onPlayJukeboxNext(item, game) },
+                                )
+                                com.mylittleblover.mkwplayer.ui.components.SwipeToTrackActionBox(
+                                    enabled = !multiSelectMode,
+                                    onSwipeStartToEnd = if (allowPlayNext) {
+                                        {
+                                            onPlayJukeboxNext(item, game)
+                                            scope.launch { snackbarHostState.showSnackbar(addedNextText) }
+                                        }
+                                    } else null,
+                                    onSwipeEndToStart = { onToggleFavorite(refRaw) },
+                                    endToStartIcon = if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                    endToStartLabel = stringResource(if (isFav) R.string.swipe_action_unfavorite else R.string.swipe_action_favorite),
+                                ) {
+                                    JukeboxTrackRow(
+                                        item = item,
+                                        language = language,
+                                        subtitleExtra = gameTitle,
+                                        playCount = plays,
+                                        packDirectory = packDirectory,
+                                        playing = activeTrackKey == item.key,
+                                        allowPlayNext = allowPlayNext,
+                                        selectionMode = multiSelectMode,
+                                        selected = selKey in selectedSet,
+                                        onLongClick = {
+                                            if (multiSelectMode) toggleSelected(selKey) else menuTarget = spec
+                                        },
+                                        onOpenMenu = { menuTarget = spec },
+                                        onPlay = {
+                                            if (multiSelectMode) toggleSelected(selKey) else playAction()
+                                        },
+                                        onPlayNext = {
+                                            onPlayJukeboxNext(item, game)
+                                            scope.launch { snackbarHostState.showSnackbar(addedNextText) }
+                                        },
+                                        onPlayFromHere = playAction,
+                                    )
+                                }
+                            }
+                        }
                     }
                 } else {
                     if (jukeboxSearch.games.isNotEmpty()) {
@@ -1850,8 +2242,8 @@ private fun DiscoveryMediaContent(catalog: BrowseCatalog?, unlocked: Boolean, la
                             val spec = TrackMenuSpec(
                                 selectionKey = selKey,
                                 playlistRef = refRaw,
-                                title = item.localizedTitle(language),
-                                subtitle = listOfNotNull(item.localizedArrangement(language), gameTitle).joinToString(" · "),
+                                title = item.displayTitle(language),
+                                subtitle = listOfNotNull(item.displayArrangement(language), gameTitle).joinToString(" · "),
                                 artworkName = art,
                                 favoriteId = refRaw,
                                 infoPairs = buildList {
@@ -2199,7 +2591,12 @@ internal fun DiscoveryCup(
         val kind = route?.kind ?: com.mylittleblover.mkwplayer.routes.OfficialRouteKind.GRAND_PRIX
         PresetRefs.forSuiteVariant(RoadJukeboxCatalog.resolveSuiteVariantForStop(kind, mode, idx, count, code))
     },
+    pureFreeRoamEntry: com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry =
+        com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry(),
+    onPureFreeRoamConfigChange: (RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit = {},
+    onPureFreeRoamEdgeOverrideChange: (Int, RoadJukeboxCatalog.EdgeFreeRoamOverride?) -> Unit = { _, _ -> },
     onPlayRoute: (OfficialRoute, Boolean, Map<Int, String>, RoadJukeboxCatalog.RoadMusicRuleMode, RoadJukeboxCatalog.RouteSuiteMode) -> Unit = { _, _, _, _, _ -> },
+    onPlayRouteWithFreeRoam: ((OfficialRoute, Boolean, Map<Int, String>, RoadJukeboxCatalog.RoadMusicRuleMode, RoadJukeboxCatalog.RouteSuiteMode, RoadJukeboxCatalog.PureFreeRoamConfig, Map<Int, RoadJukeboxCatalog.EdgeFreeRoamOverride>) -> Unit)? = null,
     onMap: (String) -> Unit,
     onCourse: (String) -> Unit,
 ) {
@@ -2208,7 +2605,19 @@ internal fun DiscoveryCup(
     var suiteMode by rememberSaveable(route?.id) { mutableStateOf(RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE) }
     val sessionOverrides = remember(route?.id) { mutableStateMapOf<Int, String>() }
     var pickingLegIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    val report = remember(route, sessionOverrides.toMap(), ruleMode, packDirectory, installedJukebox) {
+    var expandedFreeRoamLeg by rememberSaveable(route?.id) { mutableStateOf<Int?>(null) }
+    val pfrConfig = pureFreeRoamEntry.config
+    val useGameFreeRoamPool = pfrConfig.enabled &&
+        pfrConfig.trackPool == RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM
+    val report = remember(
+        route,
+        sessionOverrides.toMap(),
+        ruleMode,
+        pfrConfig.enabled,
+        pfrConfig.trackPool,
+        packDirectory,
+        installedJukebox,
+    ) {
         route?.let { inspectOfficialRoute(it, sessionOverrides.toMap(), ruleMode) }
     }
     val openingItem = remember(route, extraCatalog) {
@@ -2244,9 +2653,12 @@ internal fun DiscoveryCup(
                                 Text(stringResource(R.string.map_route_stops, route.stops.size), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        if (report?.canPlay == false) {
+                        if (!pfrConfig.enabled && report?.canPlay == false) {
                             Text(
-                                report.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                                com.mylittleblover.mkwplayer.ui.routes.localizedRouteBlockingReason(
+                                    report,
+                                    R.string.route_blocked_incomplete_pool,
+                                ) { code -> catalog?.displayName(code, language) ?: code },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -2255,8 +2667,22 @@ internal fun DiscoveryCup(
                             MkwPrimaryButton(
                                 text = stringResource(R.string.route_play),
                                 leadingIcon = Icons.Filled.PlayArrow,
-                                onClick = { onPlayRoute(route, loopRoute, sessionOverrides.toMap(), ruleMode, suiteMode) },
-                                enabled = report?.canPlay != false,
+                                onClick = {
+                                    if (onPlayRouteWithFreeRoam != null) {
+                                        onPlayRouteWithFreeRoam(
+                                            route,
+                                            loopRoute,
+                                            sessionOverrides.toMap(),
+                                            ruleMode,
+                                            suiteMode,
+                                            pfrConfig,
+                                            pureFreeRoamEntry.edgeOverrides,
+                                        )
+                                    } else {
+                                        onPlayRoute(route, loopRoute, sessionOverrides.toMap(), ruleMode, suiteMode)
+                                    }
+                                },
+                                enabled = pfrConfig.enabled || report?.canPlay != false,
                                 modifier = Modifier.weight(1f),
                             )
                             MkwSecondaryButton(
@@ -2277,23 +2703,41 @@ internal fun DiscoveryCup(
                             )
                             MkwSwitch(checked = loopRoute, onCheckedChange = { loopRoute = it })
                         }
-                        RoadMusicRuleModeSelector(
-                            selectedMode = ruleMode,
-                            officialKind = route.kind,
-                            onSelectMode = {
-                                ruleMode = it
-                                sessionOverrides.clear()
-                            },
+                        com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamConfigCard(
+                            config = pfrConfig,
+                            onConfigChange = onPureFreeRoamConfigChange,
+                            compact = true,
                         )
-                        com.mylittleblover.mkwplayer.ui.routes.RouteSuiteModeSelector(
-                            selectedMode = suiteMode,
-                            onSelectMode = { suiteMode = it },
-                        )
+                        val cupReducedMotion = rememberReducedMotion()
+                        AnimatedVisibility(
+                            visible = !useGameFreeRoamPool,
+                            enter = MkwMotion.panelEnter(cupReducedMotion),
+                            exit = MkwMotion.panelExit(cupReducedMotion),
+                        ) {
+                            RoadMusicRuleModeSelector(
+                                selectedMode = ruleMode,
+                                officialKind = route.kind,
+                                onSelectMode = {
+                                    ruleMode = it
+                                    sessionOverrides.clear()
+                                },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = !pfrConfig.enabled,
+                            enter = MkwMotion.panelEnter(cupReducedMotion),
+                            exit = MkwMotion.panelExit(cupReducedMotion),
+                        ) {
+                            com.mylittleblover.mkwplayer.ui.routes.RouteSuiteModeSelector(
+                                selectedMode = suiteMode,
+                                onSelectMode = { suiteMode = it },
+                            )
+                        }
                     }
                 }
             }
             item { Text(stringResource(R.string.discovery_course_order), style = MaterialTheme.typography.titleLarge) }
-            if (openingItem != null) {
+            if (openingItem != null && !pfrConfig.enabled) {
                 item(key = "opening:${openingItem.id}") {
                     MkwCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -2348,14 +2792,16 @@ internal fun DiscoveryCup(
                             StageArt.resolve(stop.stageCode)?.let { ResourceArtwork(it, Modifier.size(52.dp)) }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(catalog?.displayName(stop.stageCode, language) ?: stop.stageCode, style = MaterialTheme.typography.titleMedium)
-                                val stopPresetRef = resolveStopPresetRef(stop.stageCode, idx, route.stops.size, suiteMode)
-                                Text(
-                                    stringResource(com.mylittleblover.mkwplayer.ui.routes.builtInSuiteLabelRes(stopPresetRef)),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MkwKitTokens.Palette.crimson,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                if (!pfrConfig.enabled) {
+                                    val stopPresetRef = resolveStopPresetRef(stop.stageCode, idx, route.stops.size, suiteMode)
+                                    Text(
+                                        stringResource(com.mylittleblover.mkwplayer.ui.routes.builtInSuiteLabelRes(stopPresetRef)),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MkwKitTokens.Palette.crimson,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                             }
                         }
                     }
@@ -2363,9 +2809,20 @@ internal fun DiscoveryCup(
                     if (leg != null) {
                         val fromTitle = catalog?.displayName(leg.from, language) ?: leg.from
                         val toTitle = catalog?.displayName(leg.to, language) ?: leg.to
-                        val summary = edgeResolutionSummary(leg.resolution, language)
+                        val summary = if (useGameFreeRoamPool) {
+                            pureFreeRoamGamePoolLegSummary(pfrConfig.freeRoamMode)
+                        } else {
+                            edgeResolutionSummary(leg.resolution, language)
+                        }
+                        val showLegError = !useGameFreeRoamPool && leg.resolution.isMissingOrIncomplete()
                         MkwCard(
-                            onClick = { pickingLegIndex = idx },
+                            onClick = {
+                                if (useGameFreeRoamPool) {
+                                    expandedFreeRoamLeg = if (expandedFreeRoamLeg == idx) null else idx
+                                } else {
+                                    pickingLegIndex = idx
+                                }
+                            },
                             tone = MkwSurfaceTone.Recessed,
                             shape = MkwKitTokens.Shape.control,
                             modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
@@ -2387,7 +2844,7 @@ internal fun DiscoveryCup(
                                     Text(
                                         summary,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (leg.resolution.isMissingOrIncomplete()) {
+                                        color = if (showLegError) {
                                             MaterialTheme.colorScheme.error
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -2396,9 +2853,26 @@ internal fun DiscoveryCup(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                if (leg.resolution.hasKnownPool()) {
+                                if (pfrConfig.enabled) {
+                                    com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamLegOverrideChip(
+                                        config = pfrConfig,
+                                        override = pureFreeRoamEntry.edgeOverrides[idx],
+                                        expanded = expandedFreeRoamLeg == idx,
+                                        onClick = {
+                                            expandedFreeRoamLeg = if (expandedFreeRoamLeg == idx) null else idx
+                                        },
+                                    )
+                                } else if (leg.resolution.hasKnownPool()) {
                                     Icon(Icons.Filled.Tune, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                            }
+                            if (pfrConfig.enabled) {
+                                com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamLegInlineEditor(
+                                    visible = expandedFreeRoamLeg == idx,
+                                    config = pfrConfig,
+                                    override = pureFreeRoamEntry.edgeOverrides[idx],
+                                    onOverrideChange = { ov -> onPureFreeRoamEdgeOverrideChange(idx, ov) },
+                                )
                             }
                         }
                     }
@@ -2461,6 +2935,7 @@ private fun resolveSmartPlaylistEntry(
     soundsLabel: String,
     nmLabel: String,
     playCount: Int,
+    staffCreditsUnlocked: Boolean = false,
 ): SmartPlaylistEntry? {
     return when (val ref = PlaylistItemRef.parse(rawId)) {
         is PlaylistItemRef.Course -> {
@@ -2480,7 +2955,7 @@ private fun resolveSmartPlaylistEntry(
             val gameName = gamesById[item.gameId]?.localizedName(language) ?: freeLabel
             SmartPlaylistEntry(
                 rawRef = ref.raw,
-                title = item.localizedDisplayName(language),
+                title = item.displayTitle(language),
                 subtitle = gameName,
                 artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) }
                     ?: extraCatalog.jukeboxGameArtwork[item.gameId],
@@ -2489,7 +2964,7 @@ private fun resolveSmartPlaylistEntry(
             )
         }
         is PlaylistItemRef.SfcTrack -> {
-            if (!ExtraMusicCatalog.isVisible(ref.trackId, unlocked)) null
+            if (!ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)) null
             else {
                 val track = extraCatalog.sfcCourses.firstOrNull { it.id == ref.trackId } ?: return null
                 SmartPlaylistEntry(
@@ -2503,7 +2978,7 @@ private fun resolveSmartPlaylistEntry(
             }
         }
         is PlaylistItemRef.BattleTrack -> {
-            if (!ExtraMusicCatalog.isVisible(ref.trackId, unlocked)) null
+            if (!ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)) null
             else {
                 val track = extraCatalog.battleTracks.firstOrNull { it.id == ref.trackId } ?: return null
                 SmartPlaylistEntry(
@@ -2517,7 +2992,7 @@ private fun resolveSmartPlaylistEntry(
             }
         }
         is PlaylistItemRef.ExtraTrack -> {
-            if (!ExtraMusicCatalog.isVisible(ref.extraId, unlocked)) null
+            if (!ExtraMusicCatalog.isVisible(ref.extraId, unlocked, staffCreditsUnlocked)) null
             else {
                 val other = extraCatalog.otherMusic.firstOrNull { it.id == ref.extraId }
                 val simple = extraCatalog.shortSounds.firstOrNull { it.id == ref.extraId }
@@ -2708,7 +3183,8 @@ internal fun DiscoveryPlaylists(
     val otherCatLabel = stringResource(R.string.discovery_other)
     val soundsCatLabel = stringResource(R.string.discovery_sounds)
     val nmCatLabel = stringResource(R.string.discovery_nintendo_music)
-    val mostPlayedEntries = remember(playStats, catalog, unlocked, language, extraCatalog, jukeboxGames) {
+    val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
+    val mostPlayedEntries = remember(playStats, catalog, unlocked, staffCreditsUnlocked, language, extraCatalog, jukeboxGames) {
         playStats.values
             .asSequence()
             .filter { it.playCount > 0 }
@@ -2718,6 +3194,7 @@ internal fun DiscoveryPlaylists(
                     rawId = stat.trackId,
                     catalog = catalog,
                     unlocked = unlocked,
+                    staffCreditsUnlocked = staffCreditsUnlocked,
                     language = language,
                     extraCatalog = extraCatalog,
                     jukeboxItemsByKey = jukeboxItemsByKey,
@@ -2737,7 +3214,7 @@ internal fun DiscoveryPlaylists(
             .take(30)
             .toList()
     }
-    val favoritesMixEntries = remember(state.favorites, playStats, catalog, unlocked, language, extraCatalog, jukeboxGames) {
+    val favoritesMixEntries = remember(state.favorites, playStats, catalog, unlocked, staffCreditsUnlocked, language, extraCatalog, jukeboxGames) {
         state.favorites
             .mapNotNull { fav ->
                 val plays = playStats[canonicalStatIdForRef(fav)]?.playCount ?: 0
@@ -2745,6 +3222,7 @@ internal fun DiscoveryPlaylists(
                     rawId = fav,
                     catalog = catalog,
                     unlocked = unlocked,
+                    staffCreditsUnlocked = staffCreditsUnlocked,
                     language = language,
                     extraCatalog = extraCatalog,
                     jukeboxItemsByKey = jukeboxItemsByKey,
@@ -3024,7 +3502,10 @@ internal fun DiscoveryPlaylists(
                             Text(customRoute.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MkwKitTokens.Palette.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 if (isInvalid) {
-                                    report?.blockingReason ?: stringResource(R.string.route_invalid_topology)
+                                    com.mylittleblover.mkwplayer.ui.routes.localizedRouteBlockingReason(
+                                        report,
+                                        R.string.route_invalid_topology,
+                                    ) { code -> catalog?.displayName(code, language) ?: code }
                                 } else {
                                     pluralStringResource(R.plurals.route_stops_plurals, customRoute.stops.size, customRoute.stops.size)
                                 },
@@ -3231,16 +3712,17 @@ internal fun DiscoveryAllPlaylists(
         )
         val pinnedTitle = stringResource(R.string.pinned_favorites_title)
         val pinnedSubtitle = stringResource(R.string.pinned_favorites_badge)
+        val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
         val visibleCourses = catalog?.courses(unlocked).orEmpty().toSet()
-        val visibleFavCount = remember(state.favorites, visibleCourses, unlocked, jukeboxGames, extraCatalog) {
+        val visibleFavCount = remember(state.favorites, visibleCourses, unlocked, staffCreditsUnlocked, jukeboxGames, extraCatalog) {
             val jbByKey = jukeboxGames.flatMap { it.items }.associateBy { it.key }
             state.favorites.count { raw ->
                 when (val ref = com.mylittleblover.mkwplayer.library.PlaylistItemRef.parse(raw)) {
                     is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Course -> ref.logicalCode in visibleCourses || raw in visibleCourses
                     is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Jukebox -> ref.trackKey in jbByKey
-                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> ExtraMusicCatalog.isVisible(ref.trackId, unlocked)
-                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack -> ExtraMusicCatalog.isVisible(ref.trackId, unlocked)
-                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.ExtraTrack -> ExtraMusicCatalog.isVisible(ref.extraId, unlocked)
+                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)
+                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack -> ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)
+                    is com.mylittleblover.mkwplayer.library.PlaylistItemRef.ExtraTrack -> ExtraMusicCatalog.isVisible(ref.extraId, unlocked, staffCreditsUnlocked)
                 }
             }
         }
@@ -3334,7 +3816,11 @@ internal fun DiscoveryAllPlaylists(
                         val legsSummary = pluralStringResource(R.plurals.route_legs_plurals, legCount, legCount)
                         val stopsSummary = pluralStringResource(R.plurals.route_stops_plurals, customRoute.stops.size, customRoute.stops.size)
                         val sub = if (report?.canPlay == false) {
-                            "$stopsSummary · $legsSummary · ${report.blockingReason ?: stringResource(R.string.route_invalid_topology)}"
+                            val blockMsg = com.mylittleblover.mkwplayer.ui.routes.localizedRouteBlockingReason(
+                                report,
+                                R.string.route_invalid_topology,
+                            ) { code -> catalog?.displayName(code, language) ?: code }
+                            "$stopsSummary · $legsSummary · $blockMsg"
                         } else if (customRoute.loopWholeRoute) {
                             "$stopsSummary · $legsSummary · ${stringResource(R.string.route_loop_whole)}"
                         } else {
@@ -3351,11 +3837,37 @@ internal fun DiscoveryAllPlaylists(
                     }
                 }
                 2 -> {
-                    val rallies = (catalog?.routes(OfficialRouteKind.GRAND_PRIX, unlocked).orEmpty() +
-                        catalog?.routes(OfficialRouteKind.RALLY, unlocked).orEmpty())
+                    val gpList = catalog?.routes(OfficialRouteKind.GRAND_PRIX, unlocked).orEmpty()
                         .filter { trimmed.isEmpty() || it.displayName(language).contains(trimmed, ignoreCase = true) }
-                    items(rallies, key = { "all-rally:${it.id}" }) { route ->
-                        RouteRow(route, catalog, language, packDirectory, extraCatalog.courseArtwork) { onCup(route.id) }
+                    val rallyList = catalog?.routes(OfficialRouteKind.RALLY, unlocked).orEmpty()
+                        .filter { trimmed.isEmpty() || it.displayName(language).contains(trimmed, ignoreCase = true) }
+                    if (gpList.isNotEmpty()) {
+                        item(key = "all-official-gp-hdr") {
+                            Text(
+                                text = stringResource(R.string.discovery_gp),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                            )
+                        }
+                        items(gpList, key = { "all-gp:${it.id}" }) { route ->
+                            RouteRow(route, catalog, language, packDirectory, extraCatalog.courseArtwork) { onCup(route.id) }
+                        }
+                    }
+                    if (rallyList.isNotEmpty()) {
+                        item(key = "all-official-rally-hdr") {
+                            Text(
+                                text = stringResource(R.string.discovery_rally),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.padding(top = if (gpList.isNotEmpty()) 12.dp else 4.dp, bottom = 2.dp),
+                            )
+                        }
+                        items(rallyList, key = { "all-rally:${it.id}" }) { route ->
+                            RouteRow(route, catalog, language, packDirectory, extraCatalog.courseArtwork) { onCup(route.id) }
+                        }
                     }
                 }
                 3 -> {
@@ -3430,6 +3942,7 @@ private fun resolvePlaylistRowDisplay(
     otherCatLabel: String,
     soundsCatLabel: String,
     nmCatLabel: String,
+    staffCreditsUnlocked: Boolean = false,
 ): ResolvedPlaylistRowDisplay {
     return when (val ref = com.mylittleblover.mkwplayer.library.PlaylistItemRef.parse(rawId)) {
         is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Course -> {
@@ -3452,13 +3965,13 @@ private fun resolvePlaylistRowDisplay(
             ResolvedPlaylistRowDisplay(
                 ref = ref,
                 available = item != null,
-                title = item?.localizedDisplayName(language).orEmpty(),
+                title = item?.displayTitle(language).orEmpty(),
                 categorySubtitle = gameName,
                 artworkName = item?.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) },
             )
         }
         is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> {
-            val ok = ExtraMusicCatalog.isVisible(ref.trackId, unlocked)
+            val ok = ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)
             val track = extraCatalog.sfcCourses.firstOrNull { it.id == ref.trackId }
             ResolvedPlaylistRowDisplay(
                 ref = ref,
@@ -3470,7 +3983,7 @@ private fun resolvePlaylistRowDisplay(
             )
         }
         is com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack -> {
-            val ok = ExtraMusicCatalog.isVisible(ref.trackId, unlocked)
+            val ok = ExtraMusicCatalog.isVisible(ref.trackId, unlocked, staffCreditsUnlocked)
             val track = extraCatalog.battleTracks.firstOrNull { it.id == ref.trackId }
             ResolvedPlaylistRowDisplay(
                 ref = ref,
@@ -3482,7 +3995,7 @@ private fun resolvePlaylistRowDisplay(
             )
         }
         is com.mylittleblover.mkwplayer.library.PlaylistItemRef.ExtraTrack -> {
-            val ok = ExtraMusicCatalog.isVisible(ref.extraId, unlocked)
+            val ok = ExtraMusicCatalog.isVisible(ref.extraId, unlocked, staffCreditsUnlocked)
             val other = extraCatalog.otherMusic.firstOrNull { it.id == ref.extraId }
             val simple = extraCatalog.shortSounds.firstOrNull { it.id == ref.extraId }
                 ?: extraCatalog.nintendoMusicSpecial.firstOrNull { it.id == ref.extraId }
@@ -3578,6 +4091,7 @@ internal fun DiscoveryPlaylist(
         selectedIndices = emptyList()
     }
 
+    val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
     fun resolveEntry(rawId: String): ResolvedPlaylistRowDisplay = resolvePlaylistRowDisplay(
         rawId = rawId,
         catalog = catalog,
@@ -3595,6 +4109,7 @@ internal fun DiscoveryPlaylist(
         otherCatLabel = otherCatLabel,
         soundsCatLabel = soundsCatLabel,
         nmCatLabel = nmCatLabel,
+        staffCreditsUnlocked = staffCreditsUnlocked,
     )
 
     val entryIdx = editingEntryIndex
@@ -4199,10 +4714,12 @@ internal fun DiscoveryFavoritesPlaylist(
     var selectedRefs by rememberSaveable("favorites-pl-sel") { mutableStateOf(listOf<String>()) }
     val selectedRefSet = remember(selectedRefs) { selectedRefs.toSet() }
 
+    val staffCreditsUnlocked = LocalStaffCreditsUnlocked.current
     val favoriteRows = remember(
         favorites,
         catalog,
         unlocked,
+        staffCreditsUnlocked,
         language,
         extraCatalog,
         jukebox,
@@ -4227,6 +4744,7 @@ internal fun DiscoveryFavoritesPlaylist(
                 otherCatLabel = otherCatLabel,
                 soundsCatLabel = soundsCatLabel,
                 nmCatLabel = nmCatLabel,
+                staffCreditsUnlocked = staffCreditsUnlocked,
             )
             if (!info.available) null else (rawId to info)
         }
@@ -4648,6 +5166,46 @@ private fun JukeboxGameRow(
     }
 }
 
+/** Compact color-coded MD3 genre pill shared across Free Roam rows, PlayScreen, and Queue (#9). */
+@Composable
+internal fun JukeboxGenrePill(
+    genre: JukeboxCatalog.GenreInfo,
+    language: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = true,
+) {
+    Surface(
+        color = genre.tint,
+        shape = MkwKitTokens.Shape.pill,
+        border = BorderStroke(MkwKitTokens.Stroke.hairline, genre.color.copy(alpha = 0.25f)),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = if (compact) 7.dp else 10.dp,
+                vertical = if (compact) 2.dp else 4.dp,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                imageVector = genre.icon.imageVector,
+                contentDescription = null,
+                tint = genre.color,
+                modifier = Modifier.size(if (compact) 12.dp else 14.dp),
+            )
+            Text(
+                text = genre.displayName(language),
+                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = genre.color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun JukeboxTrackRow(
@@ -4669,12 +5227,8 @@ private fun JukeboxTrackRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    val (pressModifier, interactionSource) = com.mylittleblover.mkwplayer.ui.rememberPressScale(0.98f)
     val artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) }
-    val containerColor = when {
-        selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-        playing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-        else -> MaterialTheme.colorScheme.surface
-    }
     val highlighted = playing || selected
     val shape = MkwKitTokens.Shape.control
     val borderCol = if (highlighted) MkwKitTokens.Palette.crimson.copy(alpha = 0.55f) else MkwKitTokens.Palette.hairline
@@ -4686,8 +5240,11 @@ private fun JukeboxTrackRow(
         border = BorderStroke(MkwKitTokens.Stroke.border, borderCol),
         modifier = Modifier
             .fillMaxWidth()
+            .then(pressModifier)
             .clip(shape)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
                 onClick = onPlay,
                 onLongClick = {
                     val action = onLongClick ?: onOpenMenu
@@ -4715,9 +5272,9 @@ private fun JukeboxTrackRow(
                     Icon(Icons.Outlined.MusicNote, null, tint = MkwKitTokens.Palette.inkSecondary)
                 }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    item.localizedTitle(language),
+                    item.displayTitle(language),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (playing) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (playing) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.ink,
@@ -4725,19 +5282,32 @@ private fun JukeboxTrackRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 val metaParts = buildList {
-                    item.localizedArrangement(language)?.let { add(it) }
+                    if (item.genre == null) {
+                        item.localizedArrangement(language)?.let { add(it) }
+                    }
                     subtitleExtra?.let { add(it) }
                     if (item.durationMs > 0L) add(item.durationFormatted)
                     if (playCount > 0) add(pluralStringResource(R.plurals.play_count_plurals, playCount, playCount))
                 }
-                if (metaParts.isNotEmpty()) {
-                    Text(
-                        metaParts.joinToString(" · "),
-                        style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
-                        color = MkwKitTokens.Palette.inkSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                if (item.genre != null || metaParts.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        item.genre?.let { genre ->
+                            JukeboxGenrePill(genre = genre, language = language, compact = true)
+                        }
+                        if (metaParts.isNotEmpty()) {
+                            Text(
+                                metaParts.joinToString(" · "),
+                                style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
+                                color = MkwKitTokens.Palette.inkSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                    }
                 }
             }
             if (!selectionMode) {
@@ -4976,7 +5546,7 @@ internal fun DiscoveryJukeboxGame(
                     item(key = "arr-sort-bar") {
                         com.mylittleblover.mkwplayer.ui.components.TrackSortBar(
                             selected = sortOrder,
-                            includeOstOrder = true,
+                            includeOstOrder = false,
                             onSelect = { sortOrder = it },
                             modifier = Modifier.unpadHorizontal(16.dp),
                         )
@@ -5377,9 +5947,31 @@ private fun TrackActionOverlayHosts(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val markerBridge = LocalTrackMarkerBridge.current
+    var markerSheetTarget by remember { mutableStateOf<TrackMenuSpec?>(null) }
+
+    markerSheetTarget?.let { target ->
+        val trackId = target.playlistRef
+        val markers = if (trackId != null) markerBridge.markersByTrackId[trackId].orEmpty() else emptyList()
+        com.mylittleblover.mkwplayer.ui.markers.PlayFromMarkerSheet(
+            trackTitle = target.title,
+            markers = markers,
+            onSelectMarker = { marker ->
+                markerSheetTarget = null
+                if (trackId != null) {
+                    markerBridge.onPlayFromMarker(trackId, marker.positionMs, target.onPlayNow)
+                }
+            },
+            onDeleteMarker = { marker ->
+                markerBridge.onDeleteMarker(marker.id)
+            },
+            onDismiss = { markerSheetTarget = null },
+        )
+    }
 
     if (menuTarget != null) {
         val isFav = menuTarget.favoriteId != null && menuTarget.favoriteId in favorites
+        val trackMarkersForTarget = menuTarget.playlistRef?.let { markerBridge.markersByTrackId[it] }.orEmpty()
         MkwBottomSheet(onDismissRequest = onDismissMenu) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -5442,6 +6034,23 @@ private fun TrackActionOverlayHosts(
                         action()
                     },
                 )
+                if (trackMarkersForTarget.isNotEmpty()) {
+                    MkwOptionRow(
+                        headline = stringResource(R.string.marker_play_from_menu),
+                        leading = { Icon(Icons.Filled.Loop, null, tint = MkwKitTokens.Palette.crimson) },
+                        trailing = {
+                            MkwBadge(
+                                text = trackMarkersForTarget.size.toString(),
+                                tone = MkwBadgeTone.Rose,
+                            )
+                        },
+                        onClick = {
+                            val target = menuTarget
+                            onDismissMenu()
+                            markerSheetTarget = target
+                        },
+                    )
+                }
                 if (menuTarget.onPlayNextDirect != null || menuTarget.playlistRef != null) {
                     MkwOptionRow(
                         headline = if (allowPlayNext) stringResource(R.string.jukebox_play_next)
@@ -5920,8 +6529,12 @@ internal fun DiscoveryCustomRouteDetail(
     isPresetSelectable: (String, String?) -> Boolean = { _, ref -> ref != PresetRefs.SYSTEM_KNOCKOUT },
     onUpdateRuleMode: (RoadJukeboxCatalog.RoadMusicRuleMode) -> Unit = {},
     onUpdateSuiteMode: (RoadJukeboxCatalog.RouteSuiteMode) -> Unit = {},
+    onUpdatePureFreeRoamConfig: (RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit = {},
+    onUpdateEdgeFreeRoamOverride: (Int, RoadJukeboxCatalog.EdgeFreeRoamOverride?) -> Unit = { _, _ -> },
     resolveAutoStopPresetRef: (stageCode: String, stopIndex: Int, stopCount: Int, suiteMode: RoadJukeboxCatalog.RouteSuiteMode) -> String = { code, idx, count, mode ->
-        PresetRefs.forSuiteVariant(RoadJukeboxCatalog.resolveSuiteVariantForStop(null, mode, idx, count, code))
+        PresetRefs.forSuiteVariant(
+            RoadJukeboxCatalog.resolveSuiteVariantForStop(null, mode, idx, count, code, route?.roadRuleMode),
+        )
     },
 ) {
     if (route == null) {
@@ -5936,6 +6549,10 @@ internal fun DiscoveryCustomRouteDetail(
     var newName by rememberSaveable(route.id) { mutableStateOf(route.name) }
     var editingStopIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var pickingEdgeIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var expandedFreeRoamLeg by rememberSaveable(route.id) { mutableStateOf<Int?>(null) }
+    val pfrConfig = route.pureFreeRoamConfig
+    val useGameFreeRoamPool = pfrConfig.enabled &&
+        pfrConfig.trackPool == RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM
     val presetSheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     if (renaming) {
@@ -6118,7 +6735,10 @@ internal fun DiscoveryCustomRouteDetail(
                         ) {
                             Icon(Icons.Filled.WarningAmber, null, tint = MkwKitTokens.Palette.danger)
                             Text(
-                                report.blockingReason ?: stringResource(R.string.route_invalid_topology),
+                                com.mylittleblover.mkwplayer.ui.routes.localizedRouteBlockingReason(
+                                    report,
+                                    R.string.route_invalid_topology,
+                                ) { code -> catalog?.displayName(code, language) ?: code },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MkwKitTokens.Palette.danger,
                             )
@@ -6157,16 +6777,35 @@ internal fun DiscoveryCustomRouteDetail(
                     MkwSwitch(checked = route.loopWholeRoute, onCheckedChange = onToggleLoop)
                 }
 
-                RoadMusicRuleModeSelector(
-                    selectedMode = route.roadRuleMode,
-                    officialKind = null,
-                    onSelectMode = onUpdateRuleMode,
+                com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamConfigCard(
+                    config = pfrConfig,
+                    onConfigChange = onUpdatePureFreeRoamConfig,
+                    compact = true,
                 )
 
-                com.mylittleblover.mkwplayer.ui.routes.RouteSuiteModeSelector(
-                    selectedMode = route.routeSuiteMode,
-                    onSelectMode = onUpdateSuiteMode,
-                )
+                val routeReducedMotion = rememberReducedMotion()
+                AnimatedVisibility(
+                    visible = !useGameFreeRoamPool,
+                    enter = MkwMotion.panelEnter(routeReducedMotion),
+                    exit = MkwMotion.panelExit(routeReducedMotion),
+                ) {
+                    RoadMusicRuleModeSelector(
+                        selectedMode = route.roadRuleMode,
+                        officialKind = null,
+                        onSelectMode = onUpdateRuleMode,
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = !pfrConfig.enabled,
+                    enter = MkwMotion.panelEnter(routeReducedMotion),
+                    exit = MkwMotion.panelExit(routeReducedMotion),
+                ) {
+                    com.mylittleblover.mkwplayer.ui.routes.RouteSuiteModeSelector(
+                        selectedMode = route.routeSuiteMode,
+                        onSelectMode = onUpdateSuiteMode,
+                    )
+                }
 
                 Text(
                     stringResource(R.string.route_tail_only_note),
@@ -6218,15 +6857,19 @@ internal fun DiscoveryCustomRouteDetail(
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(stopTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MkwKitTokens.Palette.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(presetLabel, style = MaterialTheme.typography.bodySmall, color = MkwKitTokens.Palette.crimson, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (!pfrConfig.enabled) {
+                                Text(presetLabel, style = MaterialTheme.typography.bodySmall, color = MkwKitTokens.Palette.crimson, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
-                        MkwIconButton(
-                            icon = Icons.Filled.Tune,
-                            contentDescription = stringResource(R.string.discovery_playlist_entry_preset),
-                            onClick = { editingStopIndex = idx },
-                            visualSize = 36.dp,
-                            iconSize = 20.dp,
-                        )
+                        if (!pfrConfig.enabled) {
+                            MkwIconButton(
+                                icon = Icons.Filled.Tune,
+                                contentDescription = stringResource(R.string.discovery_playlist_entry_preset),
+                                onClick = { editingStopIndex = idx },
+                                visualSize = 36.dp,
+                                iconSize = 20.dp,
+                            )
+                        }
                         if (isLastRemovableTail) {
                             MkwIconButton(
                                 icon = Icons.Filled.RemoveCircleOutline,
@@ -6246,11 +6889,17 @@ internal fun DiscoveryCustomRouteDetail(
                     val nextLogical = route.stops[idx + 1].stageCode.removeSuffix("_00")
                     val fromName = catalog?.displayName(logical, language) ?: logical
                     val toName = catalog?.displayName(nextLogical, language) ?: nextLogical
-                    val summary = if (leg != null) {
-                        edgeResolutionSummary(leg.resolution, language)
-                    } else {
-                        stringResource(R.string.route_edge_music_auto)
+                    val summary = when {
+                        useGameFreeRoamPool && edgeCfg?.musicEnabled == false ->
+                            stringResource(R.string.route_edge_music_muted)
+                        useGameFreeRoamPool ->
+                            pureFreeRoamGamePoolLegSummary(pfrConfig.freeRoamMode)
+                        leg != null ->
+                            edgeResolutionSummary(leg.resolution, language)
+                        else ->
+                            stringResource(R.string.route_edge_music_auto)
                     }
+                    val showLegError = !useGameFreeRoamPool && leg?.resolution?.isMissingOrIncomplete() == true
                     MkwCard(
                         onClick = { pickingEdgeIndex = idx },
                         tone = MkwSurfaceTone.White,
@@ -6267,7 +6916,7 @@ internal fun DiscoveryCustomRouteDetail(
                                 if (edgeCfg?.musicEnabled != false) Icons.Outlined.MusicNote else Icons.Filled.MusicOff,
                                 null,
                                 Modifier.size(18.dp),
-                                tint = if (leg?.resolution?.isMissingOrIncomplete() == true || leg?.connectionValid == false) {
+                                tint = if (showLegError || leg?.connectionValid == false) {
                                     MkwKitTokens.Palette.danger
                                 } else {
                                     MkwKitTokens.Palette.crimson
@@ -6284,7 +6933,7 @@ internal fun DiscoveryCustomRouteDetail(
                                 Text(
                                     summary,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (leg?.resolution?.isMissingOrIncomplete() == true) {
+                                    color = if (showLegError) {
                                         MkwKitTokens.Palette.danger
                                     } else {
                                         MkwKitTokens.Palette.inkSecondary
@@ -6293,7 +6942,26 @@ internal fun DiscoveryCustomRouteDetail(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            Icon(Icons.Filled.Tune, null, Modifier.size(18.dp), tint = MkwKitTokens.Palette.inkSecondary)
+                            if (pfrConfig.enabled) {
+                                com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamLegOverrideChip(
+                                    config = pfrConfig,
+                                    override = edgeCfg?.toFreeRoamOverride(),
+                                    expanded = expandedFreeRoamLeg == idx,
+                                    onClick = {
+                                        expandedFreeRoamLeg = if (expandedFreeRoamLeg == idx) null else idx
+                                    },
+                                )
+                            } else {
+                                Icon(Icons.Filled.Tune, null, Modifier.size(18.dp), tint = MkwKitTokens.Palette.inkSecondary)
+                            }
+                        }
+                        if (pfrConfig.enabled) {
+                            com.mylittleblover.mkwplayer.ui.routes.PureFreeRoamLegInlineEditor(
+                                visible = expandedFreeRoamLeg == idx,
+                                config = pfrConfig,
+                                override = edgeCfg?.toFreeRoamOverride(),
+                                onOverrideChange = { ov -> onUpdateEdgeFreeRoamOverride(idx, ov) },
+                            )
                         }
                     }
                 }

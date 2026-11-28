@@ -17,12 +17,12 @@ class OfficialRouteAssetsTest {
         val rows = asset("official_routes.json").getJSONArray("routes")
         return (0 until rows.length()).map(rows::getJSONObject)
     }
-    @Test fun onlyTheEightPublishedCupsAndTwelvePublishedRalliesAreBundled() {
+    @Test fun onlyTheEightPublishedCupsAndFourteenPublishedRalliesAreBundled() {
         val rows = routes()
-        assertEquals(20, rows.size)
-        assertEquals(20, rows.map { it.getString("id") }.toSet().size)
+        assertEquals(22, rows.size)
+        assertEquals(22, rows.map { it.getString("id") }.toSet().size)
         assertEquals(8, rows.count { it.getString("kind") == "grand_prix" })
-        assertEquals(12, rows.count { it.getString("kind") == "rally" })
+        assertEquals(14, rows.count { it.getString("kind") == "rally" })
         for (row in rows) assertEquals(if (row.getString("kind") == "grand_prix") 4 else 6, row.getJSONArray("stops").length())
     }
     @Test fun everyPublishedStopHasAnActualMapAnchorAndItsOwnOccurrence() {
@@ -46,6 +46,8 @@ class OfficialRouteAssetsTest {
         assertEquals(listOf("FirstCircuit", "WestCity", "Coaster", "DonkeyKong"), stops("mushroom_cup"))
         assertEquals(listOf("BigTree", "SFCMarioCircuit", "Central", "Rainbow"), stops("special_cup"))
         assertEquals(listOf("DesertHills", "FirstCircuit", "ChocoMountain", "MooMooFarm", "SFCMarioCircuit", "BigTree"), stops("golden_rally"))
+        assertEquals(listOf("FirstCircuit", "WarioStadium", "ToadFactory", "SFCMarioCircuit", "BigTree", "Cinema"), stops("feather_rally"))
+        assertEquals(listOf("StormClouds", "LagoonCity", "RaftingRiver", "Cave", "SnowMountain", "IceBuildings"), stops("lucky_cat_rally"))
     }
     @Test fun onlySpecialCupRequiresItsEntitlement() {
         assertEquals(listOf("special_cup"), routes().filter { it.getBoolean("requiresSpecialUnlock") }.map { it.getString("id") })

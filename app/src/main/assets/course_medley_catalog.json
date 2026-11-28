@@ -110,24 +110,25 @@
         {
           "start": 2851984,
           "sourceOffset": 233805,
-          "sourceLength": 2543374,
-          "stem": "BGM_Stage_FirstCircuit"
+          "sourceLength": 2548174,
+          "stem": "BGM_Stage_FirstCircuit",
+          "fadeOut": 4800
         },
         {
-          "start": 5395358,
+          "start": 5401742,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5584238,
+          "start": 5589758,
           "sourceOffset": 0,
           "sourceLength": 2374311,
           "stem": "BGM_Stage_FirstCircuit_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7958549,
+          "start": 7964069,
           "sourceOffset": 194854,
           "sourceLength": 480000,
           "stem": "BGM_Stage_FirstCircuit_Fast"
@@ -142,38 +143,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_FirstCircuit_Fast"
       ],
-      "durationMs": 175803,
-      "totalFrames": 8438549
+      "durationMs": 175918,
+      "totalFrames": 8444069
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2468568,
-          "stem": "BGM_Stage_FirstCircuit_Pre"
+          "sourceLength": 2473368,
+          "stem": "BGM_Stage_FirstCircuit_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2468568,
+          "start": 2474952,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2657448,
+          "start": 2662968,
           "sourceOffset": 0,
           "sourceLength": 2374311,
           "stem": "BGM_Stage_FirstCircuit_Fast"
         },
         {
-          "start": 5031759,
+          "start": 5037279,
           "sourceOffset": 194854,
           "sourceLength": 2179457,
           "stem": "BGM_Stage_FirstCircuit_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7211216,
+          "start": 7216736,
           "sourceOffset": 194854,
           "sourceLength": 480000,
           "stem": "BGM_Stage_FirstCircuit_Fast"
@@ -188,8 +190,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_FirstCircuit_Fast"
       ],
-      "durationMs": 160233,
-      "totalFrames": 7691216
+      "durationMs": 160348,
+      "totalFrames": 7696736
     },
     {
       "gFullOffline": 5.760392,
@@ -307,17 +309,18 @@
         {
           "start": 3245625,
           "sourceOffset": 725625,
-          "sourceLength": 2160000,
-          "stem": "BGM_Stage_WestCity"
+          "sourceLength": 2164800,
+          "stem": "BGM_Stage_WestCity",
+          "fadeOut": 4800
         },
         {
-          "start": 5405625,
+          "start": 5412009,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5594505,
+          "start": 5600025,
           "sourceOffset": 0,
           "volumePoints": [
             {
@@ -332,7 +335,7 @@
             },
             {
               "shape": "Linear",
-              "value": -0.000018095622261884945,
+              "value": -1.8095622261884945e-05,
               "frame": 2680253
             }
           ],
@@ -341,12 +344,12 @@
         },
         {
           "fadeOut": 1200,
-          "start": 8274758,
+          "start": 8280278,
           "sourceOffset": 599225,
           "volumePoints": [
             {
               "shape": "Linear",
-              "value": -0.000018095622261884945,
+              "value": -1.8095622261884945e-05,
               "frame": 0
             },
             {
@@ -523,38 +526,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WestCity_Fast"
       ],
-      "durationMs": 182390,
-      "totalFrames": 8754757
+      "durationMs": 182505,
+      "totalFrames": 8760277
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2936953,
-          "stem": "BGM_Stage_WestCity_Pre"
+          "sourceLength": 2941753,
+          "stem": "BGM_Stage_WestCity_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2936953,
+          "start": 2943337,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3125833,
+          "start": 3131353,
           "sourceOffset": 0,
           "sourceLength": 2680253,
           "stem": "BGM_Stage_WestCity_Fast"
         },
         {
-          "start": 5806086,
+          "start": 5811606,
           "sourceOffset": 599225,
           "sourceLength": 2081028,
           "stem": "BGM_Stage_WestCity_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7887114,
+          "start": 7892634,
           "sourceOffset": 599225,
           "sourceLength": 480000,
           "stem": "BGM_Stage_WestCity_Fast"
@@ -569,8 +573,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WestCity_Fast"
       ],
-      "durationMs": 174314,
-      "totalFrames": 8367114
+      "durationMs": 174429,
+      "totalFrames": 8372634
     },
     {
       "gFullOffline": 5.095866,
@@ -688,24 +692,25 @@
         {
           "start": 3373711,
           "sourceOffset": 493714,
-          "sourceLength": 2715425,
-          "stem": "BGM_Stage_Coaster"
+          "sourceLength": 2720225,
+          "stem": "BGM_Stage_Coaster",
+          "fadeOut": 4800
         },
         {
-          "start": 6089136,
+          "start": 6095520,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6278016,
+          "start": 6283536,
           "sourceOffset": 0,
           "sourceLength": 2880800,
           "stem": "BGM_Stage_Coaster_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 9158816,
+          "start": 9164336,
           "sourceOffset": 422268,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Coaster_Fast"
@@ -720,38 +725,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Coaster_Fast"
       ],
-      "durationMs": 200808,
-      "totalFrames": 9638816
+      "durationMs": 200923,
+      "totalFrames": 9644336
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2345140,
-          "stem": "BGM_Stage_Coaster_Pre"
+          "sourceLength": 2349940,
+          "stem": "BGM_Stage_Coaster_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2345140,
+          "start": 2351524,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2534020,
+          "start": 2539540,
           "sourceOffset": 0,
           "sourceLength": 2880800,
           "stem": "BGM_Stage_Coaster_Fast"
         },
         {
-          "start": 5414820,
+          "start": 5420340,
           "sourceOffset": 422268,
           "sourceLength": 2458532,
           "stem": "BGM_Stage_Coaster_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7873352,
+          "start": 7878872,
           "sourceOffset": 422268,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Coaster_Fast"
@@ -766,47 +772,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Coaster_Fast"
       ],
-      "durationMs": 174028,
-      "totalFrames": 8353352
-    },
-    {
-      "clips": [
-        {
-          "start": 0,
-          "sourceOffset": 0,
-          "sourceLength": 2193099,
-          "stem": "BGM_Stage_DonkeyKong_Pre"
-        },
-        {
-          "start": 2193099,
-          "sourceOffset": 0,
-          "sourceLength": 2979305,
-          "stem": "BGM_Stage_DonkeyKong"
-        },
-        {
-          "start": 5172404,
-          "sourceOffset": 331034,
-          "sourceLength": 2366892,
-          "stem": "BGM_Stage_DonkeyKong"
-        },
-        {
-          "start": 7539296,
-          "sourceOffset": 0,
-          "sourceLength": 612414,
-          "stem": "BGM_Stage_DonkeyKong_Outro00"
-        }
-      ],
-      "courseCode": "DonkeyKong",
-      "variant": "a",
-      "index": 13,
-      "id": "13_DonkeyKong_a",
-      "uniqueStems": [
-        "BGM_Stage_DonkeyKong_Pre",
-        "BGM_Stage_DonkeyKong",
-        "BGM_Stage_DonkeyKong_Outro00"
-      ],
-      "durationMs": 169827,
-      "totalFrames": 8151710
+      "durationMs": 174143,
+      "totalFrames": 8358872
     },
     {
       "clips": [
@@ -843,17 +810,18 @@
         {
           "start": 8019294,
           "sourceOffset": 0,
-          "sourceLength": 1059308,
-          "stem": "BGM_Stage_DonkeyKong_Pattern5"
+          "sourceLength": 1064108,
+          "stem": "BGM_Stage_DonkeyKong_Pattern5",
+          "fadeOut": 4800
         },
         {
-          "start": 9078602,
+          "start": 9084986,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 9267482,
+          "start": 9273002,
           "sourceOffset": 0,
           "volumePoints": [
             {
@@ -868,7 +836,7 @@
             },
             {
               "shape": "Linear",
-              "value": -0.000018095622261884945,
+              "value": -1.8095622261884945e-05,
               "frame": 482513
             }
           ],
@@ -876,12 +844,12 @@
           "stem": "BGM_Stage_DonkeyKong_Fast"
         },
         {
-          "start": 9749995,
+          "start": 9755515,
           "sourceOffset": 120628,
           "volumePoints": [
             {
               "shape": "Linear",
-              "value": -0.000018095622261884945,
+              "value": -1.8095622261884945e-05,
               "frame": 0
             },
             {
@@ -1050,7 +1018,7 @@
         },
         {
           "fadeOut": 1200,
-          "start": 10111880,
+          "start": 10117400,
           "sourceOffset": 120628,
           "volumePoints": [
             {
@@ -1224,9 +1192,9 @@
         }
       ],
       "courseCode": "DonkeyKong",
-      "variant": "a_alt",
-      "index": 14,
-      "id": "14_DonkeyKong_a_alt",
+      "variant": "a",
+      "index": 13,
+      "id": "13_DonkeyKong_a",
       "uniqueStems": [
         "BGM_Stage_DonkeyKong_Pre",
         "BGM_Stage_DonkeyKong",
@@ -1237,8 +1205,47 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DonkeyKong_Fast"
       ],
-      "durationMs": 213124,
-      "totalFrames": 10229994
+      "durationMs": 213239,
+      "totalFrames": 10235514
+    },
+    {
+      "clips": [
+        {
+          "start": 0,
+          "sourceOffset": 0,
+          "sourceLength": 2193099,
+          "stem": "BGM_Stage_DonkeyKong_Pre"
+        },
+        {
+          "start": 2193099,
+          "sourceOffset": 0,
+          "sourceLength": 2979305,
+          "stem": "BGM_Stage_DonkeyKong"
+        },
+        {
+          "start": 5172404,
+          "sourceOffset": 331034,
+          "sourceLength": 2366892,
+          "stem": "BGM_Stage_DonkeyKong"
+        },
+        {
+          "start": 7539296,
+          "sourceOffset": 0,
+          "sourceLength": 612414,
+          "stem": "BGM_Stage_DonkeyKong_Outro00"
+        }
+      ],
+      "courseCode": "DonkeyKong",
+      "variant": "a_alt",
+      "index": 14,
+      "id": "14_DonkeyKong_a_alt",
+      "uniqueStems": [
+        "BGM_Stage_DonkeyKong_Pre",
+        "BGM_Stage_DonkeyKong",
+        "BGM_Stage_DonkeyKong_Outro00"
+      ],
+      "durationMs": 169827,
+      "totalFrames": 8151710
     },
     {
       "clips": [
@@ -1320,17 +1327,18 @@
         {
           "start": 7017917,
           "sourceOffset": 132414,
-          "sourceLength": 926894,
-          "stem": "BGM_Stage_DonkeyKong_Pattern5"
+          "sourceLength": 931694,
+          "stem": "BGM_Stage_DonkeyKong_Pattern5",
+          "fadeOut": 4800
         },
         {
-          "start": 7944811,
+          "start": 7951195,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 8133691,
+          "start": 8139211,
           "sourceOffset": 0,
           "volumePoints": [
             {
@@ -1508,7 +1516,7 @@
           "stem": "BGM_Stage_DonkeyKong_Fast"
         },
         {
-          "start": 8616204,
+          "start": 8621724,
           "sourceOffset": 120628,
           "volumePoints": [
             {
@@ -1682,7 +1690,7 @@
         },
         {
           "fadeOut": 1200,
-          "start": 8978089,
+          "start": 8983609,
           "sourceOffset": 120628,
           "volumePoints": [
             {
@@ -1868,37 +1876,38 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DonkeyKong_Fast"
       ],
-      "durationMs": 188247,
-      "totalFrames": 9035889
+      "durationMs": 188362,
+      "totalFrames": 9041409
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2193099,
-          "stem": "BGM_Stage_DonkeyKong_Pre"
+          "sourceLength": 2197899,
+          "stem": "BGM_Stage_DonkeyKong_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2193099,
+          "start": 2199483,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2381979,
+          "start": 2387499,
           "sourceOffset": 0,
           "sourceLength": 482513,
           "stem": "BGM_Stage_DonkeyKong_Fast"
         },
         {
-          "start": 2864492,
+          "start": 2870012,
           "sourceOffset": 120628,
           "sourceLength": 361885,
           "stem": "BGM_Stage_DonkeyKong_Fast"
         },
         {
-          "start": 3226377,
+          "start": 3231897,
           "sourceOffset": 120628,
           "volumePoints": [
             {
@@ -2072,7 +2081,7 @@
         },
         {
           "fadeOut": 1200,
-          "start": 3588262,
+          "start": 3593782,
           "sourceOffset": 120628,
           "volumePoints": [
             {
@@ -2254,8 +2263,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DonkeyKong_Fast"
       ],
-      "durationMs": 77216,
-      "totalFrames": 3706377
+      "durationMs": 77331,
+      "totalFrames": 3711897
     },
     {
       "gFullOffline": 5.72137,
@@ -2373,24 +2382,25 @@
         {
           "start": 3190151,
           "sourceOffset": 265846,
-          "sourceLength": 2747074,
-          "stem": "BGM_Stage_DesertHills"
+          "sourceLength": 2751874,
+          "stem": "BGM_Stage_DesertHills",
+          "fadeOut": 4800
         },
         {
-          "start": 5937225,
+          "start": 5943609,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6126105,
+          "start": 6131625,
           "sourceOffset": 0,
           "sourceLength": 2592000,
           "stem": "BGM_Stage_DesertHills_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8718105,
+          "start": 8723625,
           "sourceOffset": 216000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DesertHills_Fast"
@@ -2405,38 +2415,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DesertHills_Fast"
       ],
-      "durationMs": 191627,
-      "totalFrames": 9198105
+      "durationMs": 191742,
+      "totalFrames": 9203625
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1506460,
-          "stem": "BGM_Stage_DesertHills_Pre"
+          "sourceLength": 1511260,
+          "stem": "BGM_Stage_DesertHills_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1506460,
+          "start": 1512844,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1695340,
+          "start": 1700860,
           "sourceOffset": 0,
           "sourceLength": 2592000,
           "stem": "BGM_Stage_DesertHills_Fast"
         },
         {
-          "start": 4287340,
+          "start": 4292860,
           "sourceOffset": 216000,
           "sourceLength": 2376000,
           "stem": "BGM_Stage_DesertHills_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6663340,
+          "start": 6668860,
           "sourceOffset": 216000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DesertHills_Fast"
@@ -2451,8 +2462,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DesertHills_Fast"
       ],
-      "durationMs": 148819,
-      "totalFrames": 7143340
+      "durationMs": 148934,
+      "totalFrames": 7148860
     },
     {
       "gFullOffline": 5.620479,
@@ -2496,7 +2507,7 @@
       "id": "22_ShyGuyBazaar_a",
       "durationMs": 169286,
       "totalFrames": 8125711,
-      "measuredResidualRms": 0.000094,
+      "measuredResidualRms": 9.4e-05,
       "gPreShortOffline": 5.027179
     },
     {
@@ -2555,24 +2566,25 @@
         {
           "start": 3272338,
           "sourceOffset": 289481,
-          "sourceLength": 2899088,
-          "stem": "BGM_Stage_ShyGuyBazaar"
+          "sourceLength": 2903888,
+          "stem": "BGM_Stage_ShyGuyBazaar",
+          "fadeOut": 4800
         },
         {
-          "start": 6171426,
+          "start": 6177810,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6360306,
+          "start": 6365826,
           "sourceOffset": 0,
           "sourceLength": 2559996,
           "stem": "BGM_Stage_ShyGuyBazaar_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8920302,
+          "start": 8925822,
           "sourceOffset": 240000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ShyGuyBazaar_Fast"
@@ -2587,38 +2599,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ShyGuyBazaar_Fast"
       ],
-      "durationMs": 195839,
-      "totalFrames": 9400302
+      "durationMs": 195954,
+      "totalFrames": 9405822
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1748570,
-          "stem": "BGM_Stage_ShyGuyBazaar_Pre"
+          "sourceLength": 1753370,
+          "stem": "BGM_Stage_ShyGuyBazaar_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1748570,
+          "start": 1754954,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1937450,
+          "start": 1942970,
           "sourceOffset": 0,
           "sourceLength": 2559996,
           "stem": "BGM_Stage_ShyGuyBazaar_Fast"
         },
         {
-          "start": 4497446,
+          "start": 4502966,
           "sourceOffset": 240000,
           "sourceLength": 2319996,
           "stem": "BGM_Stage_ShyGuyBazaar_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6817442,
+          "start": 6822962,
           "sourceOffset": 240000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ShyGuyBazaar_Fast"
@@ -2633,8 +2646,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ShyGuyBazaar_Fast"
       ],
-      "durationMs": 152030,
-      "totalFrames": 7297442
+      "durationMs": 152145,
+      "totalFrames": 7302962
     },
     {
       "gFullOffline": 6.286778,
@@ -2737,24 +2750,25 @@
         {
           "start": 3887996,
           "sourceOffset": 432000,
-          "sourceLength": 3209139,
-          "stem": "BGM_Stage_WarioStadium"
+          "sourceLength": 3213939,
+          "stem": "BGM_Stage_WarioStadium",
+          "fadeOut": 4800
         },
         {
-          "start": 7097135,
+          "start": 7103519,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 7286015,
+          "start": 7291535,
           "sourceOffset": 0,
           "sourceLength": 3319494,
           "stem": "BGM_Stage_WarioStadium_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 10605509,
+          "start": 10611029,
           "sourceOffset": 369255,
           "sourceLength": 480000,
           "stem": "BGM_Stage_WarioStadium_Fast"
@@ -2769,38 +2783,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WarioStadium_Fast"
       ],
-      "durationMs": 230948,
-      "totalFrames": 11085509
+      "durationMs": 231063,
+      "totalFrames": 11091029
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2721854,
-          "stem": "BGM_Stage_WarioStadium_Pre"
+          "sourceLength": 2726654,
+          "stem": "BGM_Stage_WarioStadium_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2721854,
+          "start": 2728238,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2910734,
+          "start": 2916254,
           "sourceOffset": 0,
           "sourceLength": 3319494,
           "stem": "BGM_Stage_WarioStadium_Fast"
         },
         {
-          "start": 6230228,
+          "start": 6235748,
           "sourceOffset": 369255,
           "sourceLength": 2950239,
           "stem": "BGM_Stage_WarioStadium_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 9180467,
+          "start": 9185987,
           "sourceOffset": 369255,
           "sourceLength": 480000,
           "stem": "BGM_Stage_WarioStadium_Fast"
@@ -2815,8 +2830,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WarioStadium_Fast"
       ],
-      "durationMs": 201259,
-      "totalFrames": 9660467
+      "durationMs": 201374,
+      "totalFrames": 9665987
     },
     {
       "clips": [
@@ -2927,30 +2942,31 @@
         {
           "start": 3916800,
           "sourceOffset": 307200,
-          "sourceLength": 3532800,
-          "stem": "BGM_Stage_AirshipFortress"
+          "sourceLength": 3537600,
+          "stem": "BGM_Stage_AirshipFortress",
+          "fadeOut": 4800
         },
         {
-          "start": 7449600,
+          "start": 7455984,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 7638480,
+          "start": 7644000,
           "sourceOffset": 0,
           "sourceLength": 3263997,
           "stem": "BGM_Stage_AirshipFortress_Fast"
         },
         {
-          "start": 10902477,
+          "start": 10907997,
           "sourceOffset": 256000,
           "sourceLength": 3007997,
           "stem": "BGM_Stage_AirshipFortress_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 13910474,
+          "start": 13915994,
           "sourceOffset": 256000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_AirshipFortress_Fast"
@@ -2965,32 +2981,33 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_AirshipFortress_Fast"
       ],
-      "durationMs": 299801,
-      "totalFrames": 14390474
+      "durationMs": 299916,
+      "totalFrames": 14395994
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2467200,
-          "stem": "BGM_Stage_AirshipFortress_Pre"
+          "sourceLength": 2472000,
+          "stem": "BGM_Stage_AirshipFortress_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2467200,
+          "start": 2473584,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2656080,
+          "start": 2661600,
           "sourceOffset": 0,
           "sourceLength": 3263997,
           "stem": "BGM_Stage_AirshipFortress_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5920077,
+          "start": 5925597,
           "sourceOffset": 256000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_AirshipFortress_Fast"
@@ -3005,8 +3022,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_AirshipFortress_Fast"
       ],
-      "durationMs": 133334,
-      "totalFrames": 6400077
+      "durationMs": 133449,
+      "totalFrames": 6405597
     },
     {
       "clips": [
@@ -3117,24 +3134,25 @@
         {
           "start": 3002928,
           "sourceOffset": 380488,
-          "sourceLength": 2435122,
-          "stem": "BGM_Stage_DKPass"
+          "sourceLength": 2439922,
+          "stem": "BGM_Stage_DKPass",
+          "fadeOut": 4800
         },
         {
-          "start": 5438050,
+          "start": 5444434,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5626930,
+          "start": 5632450,
           "sourceOffset": 0,
           "sourceLength": 2502375,
           "stem": "BGM_Stage_DKPass_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8129305,
+          "start": 8134825,
           "sourceOffset": 246713,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DKPass_Fast"
@@ -3149,32 +3167,33 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DKPass_Fast"
       ],
-      "durationMs": 179360,
-      "totalFrames": 8609305
+      "durationMs": 179475,
+      "totalFrames": 8614825
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1545366,
-          "stem": "BGM_Stage_DKPass_Pre"
+          "sourceLength": 1550166,
+          "stem": "BGM_Stage_DKPass_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1545366,
+          "start": 1551750,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1734246,
+          "start": 1739766,
           "sourceOffset": 0,
           "sourceLength": 2502375,
           "stem": "BGM_Stage_DKPass_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 4236621,
+          "start": 4242141,
           "sourceOffset": 246713,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DKPass_Fast"
@@ -3189,8 +3208,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DKPass_Fast"
       ],
-      "durationMs": 98262,
-      "totalFrames": 4716621
+      "durationMs": 98377,
+      "totalFrames": 4722141
     },
     {
       "clips": [
@@ -3201,14 +3220,14 @@
           "stem": "BGM_Stage_SnowMountain_Pre"
         },
         {
-          "fadeOut": 48000,
+          "fadeOut": 24000,
           "start": 2236234,
           "sourceOffset": 0,
-          "sourceLength": 2623057,
+          "sourceLength": 2599057,
           "stem": "BGM_Stage_SnowMountain"
         },
         {
-          "fadeIn": 48000,
+          "fadeIn": 24000,
           "start": 4811291,
           "sourceOffset": 2575057,
           "sourceLength": 271059,
@@ -3327,14 +3346,14 @@
     {
       "clips": [
         {
-          "fadeOut": 48000,
+          "fadeOut": 24000,
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2623057,
+          "sourceLength": 2599057,
           "stem": "BGM_Stage_SnowMountain"
         },
         {
-          "fadeIn": 48000,
+          "fadeIn": 24000,
           "start": 2575057,
           "sourceOffset": 2575057,
           "sourceLength": 271059,
@@ -3343,32 +3362,33 @@
         {
           "start": 2846116,
           "sourceOffset": 406588,
-          "sourceLength": 2168469,
-          "stem": "BGM_Stage_SnowMountain_Pattern2"
+          "sourceLength": 2173269,
+          "stem": "BGM_Stage_SnowMountain_Pattern2",
+          "fadeOut": 4800
         },
         {
-          "start": 5014585,
+          "start": 5020969,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "fadeOut": 48000,
-          "start": 5203465,
+          "fadeOut": 24000,
+          "start": 5208985,
           "sourceOffset": 0,
-          "sourceLength": 2281466,
+          "sourceLength": 2257466,
           "stem": "BGM_Stage_SnowMountain_Fast"
         },
         {
-          "fadeIn": 48000,
-          "start": 7436931,
+          "fadeIn": 24000,
+          "start": 7442451,
           "sourceOffset": 2233466,
           "sourceLength": 235102,
           "stem": "BGM_Stage_SnowMountain_Fast_Pattern2"
         },
         {
           "fadeOut": 480000,
-          "start": 7672033,
+          "start": 7677553,
           "sourceOffset": 352653,
           "sourceLength": 480000,
           "stem": "BGM_Stage_SnowMountain_Fast_Pattern2"
@@ -3385,38 +3405,39 @@
         "BGM_Stage_SnowMountain_Fast",
         "BGM_Stage_SnowMountain_Fast_Pattern2"
       ],
-      "durationMs": 169834,
-      "totalFrames": 8152033
+      "durationMs": 169949,
+      "totalFrames": 8157553
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2236234,
-          "stem": "BGM_Stage_SnowMountain_Pre"
+          "sourceLength": 2241034,
+          "stem": "BGM_Stage_SnowMountain_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2236234,
+          "start": 2242618,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2425114,
+          "start": 2430634,
           "sourceOffset": 0,
           "sourceLength": 2468568,
           "stem": "BGM_Stage_SnowMountain_Fast"
         },
         {
-          "start": 4893682,
+          "start": 4899202,
           "sourceOffset": 352653,
           "sourceLength": 2115915,
           "stem": "BGM_Stage_SnowMountain_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7009597,
+          "start": 7015117,
           "sourceOffset": 352653,
           "sourceLength": 480000,
           "stem": "BGM_Stage_SnowMountain_Fast"
@@ -3431,8 +3452,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_SnowMountain_Fast"
       ],
-      "durationMs": 156033,
-      "totalFrames": 7489597
+      "durationMs": 156148,
+      "totalFrames": 7495117
     },
     {
       "gFullOffline": 4.24764,
@@ -3555,19 +3576,26 @@
         },
         {
           "start": 5931414,
+          "sourceOffset": 582856,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_IceBuildings"
+        },
+        {
+          "start": 5937798,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6120294,
+          "start": 6125814,
           "sourceOffset": 0,
           "sourceLength": 2557002,
           "stem": "BGM_Stage_IceBuildings_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8677296,
+          "start": 8682816,
           "sourceOffset": 457569,
           "sourceLength": 480000,
           "stem": "BGM_Stage_IceBuildings_Fast"
@@ -3582,38 +3610,39 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_IceBuildings_Fast"
       ],
-      "durationMs": 190777,
-      "totalFrames": 9157296
+      "durationMs": 190892,
+      "totalFrames": 9162816
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2228566,
-          "stem": "BGM_Stage_IceBuildings_Pre"
+          "sourceLength": 2233366,
+          "stem": "BGM_Stage_IceBuildings_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2228566,
+          "start": 2234950,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2417446,
+          "start": 2422966,
           "sourceOffset": 0,
           "sourceLength": 2557002,
           "stem": "BGM_Stage_IceBuildings_Fast"
         },
         {
-          "start": 4974448,
+          "start": 4979968,
           "sourceOffset": 457569,
           "sourceLength": 2099433,
           "stem": "BGM_Stage_IceBuildings_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7073881,
+          "start": 7079401,
           "sourceOffset": 457569,
           "sourceLength": 480000,
           "stem": "BGM_Stage_IceBuildings_Fast"
@@ -3628,8 +3657,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_IceBuildings_Fast"
       ],
-      "durationMs": 157372,
-      "totalFrames": 7553881
+      "durationMs": 157487,
+      "totalFrames": 7559401
     },
     {
       "gFullOffline": 6.511719,
@@ -3747,24 +3776,25 @@
         {
           "start": 3258940,
           "sourceOffset": 530525,
-          "sourceLength": 2652626,
-          "stem": "BGM_Stage_WarioShipyard"
+          "sourceLength": 2657426,
+          "stem": "BGM_Stage_WarioShipyard",
+          "fadeOut": 4800
         },
         {
-          "start": 5911566,
+          "start": 5917950,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6100446,
+          "start": 6105966,
           "sourceOffset": 0,
           "sourceLength": 2782916,
           "stem": "BGM_Stage_WarioShipyard_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8883362,
+          "start": 8888882,
           "sourceOffset": 453033,
           "sourceLength": 480000,
           "stem": "BGM_Stage_WarioShipyard_Fast"
@@ -3779,32 +3809,33 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WarioShipyard_Fast"
       ],
-      "durationMs": 195070,
-      "totalFrames": 9363362
+      "durationMs": 195185,
+      "totalFrames": 9368882
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2501047,
-          "stem": "BGM_Stage_WarioShipyard_Pre"
+          "sourceLength": 2505847,
+          "stem": "BGM_Stage_WarioShipyard_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2501047,
+          "start": 2507431,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2689927,
+          "start": 2695447,
           "sourceOffset": 0,
           "sourceLength": 2782916,
           "stem": "BGM_Stage_WarioShipyard_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5472843,
+          "start": 5478363,
           "sourceOffset": 453033,
           "sourceLength": 480000,
           "stem": "BGM_Stage_WarioShipyard_Fast"
@@ -3819,8 +3850,8 @@
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_WarioShipyard_Fast"
       ],
-      "durationMs": 124017,
-      "totalFrames": 5952843
+      "durationMs": 124132,
+      "totalFrames": 5958363
     },
     {
       "clips": [
@@ -3839,25 +3870,37 @@
         {
           "start": 1556126,
           "sourceOffset": 0,
-          "sourceLength": 998707,
+          "sourceLength": 1834835,
           "stem": "BGM_Stage_KoopaTroopaBeach"
         },
         {
-          "start": 2554833,
-          "sourceOffset": 998707,
-          "sourceLength": 836128,
+          "start": 3390961,
+          "sourceOffset": 1834835,
+          "sourceLength": 371612,
+          "stem": "BGM_Stage_KoopaTroopaBeach"
+        },
+        {
+          "fadeIn": 48000,
+          "start": 3390961,
+          "sourceOffset": 1834835,
+          "sourceLength": 371612,
+          "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Normal"
+        },
+        {
+          "start": 3762573,
+          "sourceOffset": 348386,
+          "sourceLength": 1486449,
           "stem": "BGM_Stage_KoopaTroopaBeach"
         },
         {
           "fadeOut": 48000,
-          "fadeIn": 48000,
-          "start": 2554833,
-          "sourceOffset": 998707,
-          "sourceLength": 884128,
+          "start": 3762573,
+          "sourceOffset": 348386,
+          "sourceLength": 1534449,
           "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Normal"
         },
         {
-          "start": 3390961,
+          "start": 5249022,
           "sourceOffset": 0,
           "sourceLength": 187573,
           "stem": "BGM_Stage_KoopaTroopaBeach_Outro00"
@@ -3874,8 +3917,54 @@
         "SE_Stage_KoopaTroopaBeach_Speaker_Normal",
         "BGM_Stage_KoopaTroopaBeach_Outro00"
       ],
-      "durationMs": 74552,
-      "totalFrames": 3578534
+      "durationMs": 113262,
+      "totalFrames": 5436595
+    },
+    {
+      "clips": [
+        {
+          "start": 0,
+          "sourceOffset": 0,
+          "sourceLength": 1532900,
+          "stem": "BGM_Stage_KoopaTroopaBeach_Pre"
+        },
+        {
+          "start": 1532900,
+          "sourceOffset": 0,
+          "sourceLength": 196600,
+          "stem": "BGM_Stage_KoopaTroopaBeach_Bridge"
+        },
+        {
+          "start": 1556126,
+          "sourceOffset": 0,
+          "sourceLength": 2206447,
+          "stem": "BGM_Stage_KoopaTroopaBeach"
+        },
+        {
+          "start": 3762573,
+          "sourceOffset": 348386,
+          "sourceLength": 1486449,
+          "stem": "BGM_Stage_KoopaTroopaBeach"
+        },
+        {
+          "start": 5249022,
+          "sourceOffset": 0,
+          "sourceLength": 187573,
+          "stem": "BGM_Stage_KoopaTroopaBeach_Outro00"
+        }
+      ],
+      "courseCode": "KoopaTroopaBeach",
+      "variant": "a_alt",
+      "index": 52,
+      "id": "52_KoopaTroopaBeach_a_alt",
+      "uniqueStems": [
+        "BGM_Stage_KoopaTroopaBeach_Pre",
+        "BGM_Stage_KoopaTroopaBeach_Bridge",
+        "BGM_Stage_KoopaTroopaBeach",
+        "BGM_Stage_KoopaTroopaBeach_Outro00"
+      ],
+      "durationMs": 113262,
+      "totalFrames": 5436595
     },
     {
       "clips": [
@@ -3900,25 +3989,17 @@
         {
           "start": 1556125,
           "sourceOffset": 0,
-          "sourceLength": 998707,
+          "sourceLength": 2206447,
           "stem": "BGM_Stage_KoopaTroopaBeach"
         },
         {
-          "start": 2554832,
-          "sourceOffset": 998707,
-          "sourceLength": 836128,
+          "start": 3762572,
+          "sourceOffset": 348386,
+          "sourceLength": 1486449,
           "stem": "BGM_Stage_KoopaTroopaBeach"
         },
         {
-          "fadeOut": 48000,
-          "fadeIn": 48000,
-          "start": 2554832,
-          "sourceOffset": 998707,
-          "sourceLength": 884128,
-          "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Normal"
-        },
-        {
-          "start": 3390960,
+          "start": 5249021,
           "sourceOffset": 0,
           "sourceLength": 187573,
           "stem": "BGM_Stage_KoopaTroopaBeach_Outro00"
@@ -3926,17 +4007,16 @@
       ],
       "courseCode": "KoopaTroopaBeach",
       "variant": "b",
-      "index": 52,
-      "id": "52_KoopaTroopaBeach_b",
+      "index": 53,
+      "id": "53_KoopaTroopaBeach_b",
       "uniqueStems": [
         "BGM_Stage_KoopaTroopaBeach_Pre_Short",
         "BGM_Stage_KoopaTroopaBeach_Bridge",
         "BGM_Stage_KoopaTroopaBeach",
-        "SE_Stage_KoopaTroopaBeach_Speaker_Normal",
         "BGM_Stage_KoopaTroopaBeach_Outro00"
       ],
-      "durationMs": 74552,
-      "totalFrames": 3578533
+      "durationMs": 113262,
+      "totalFrames": 5436594
     },
     {
       "clips": [
@@ -3962,62 +4042,64 @@
         {
           "start": 2206447,
           "sourceOffset": 348386,
-          "sourceLength": 1579352,
-          "stem": "BGM_Stage_KoopaTroopaBeach"
+          "sourceLength": 1584152,
+          "stem": "BGM_Stage_KoopaTroopaBeach",
+          "fadeOut": 4800
         },
         {
           "start": 2206447,
           "sourceOffset": 348386,
-          "sourceLength": 1579352,
-          "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Normal"
+          "sourceLength": 1584152,
+          "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Normal",
+          "fadeOut": 4800
         },
         {
-          "start": 3785799,
+          "start": 3792183,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3974679,
+          "start": 3980199,
           "sourceOffset": 0,
           "sourceLength": 1516800,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
-          "start": 5491479,
+          "start": 5496999,
           "sourceOffset": 1516800,
           "sourceLength": 307200,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
           "fadeIn": 48000,
-          "start": 5491479,
+          "start": 5496999,
           "sourceOffset": 1516800,
           "sourceLength": 307200,
           "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Fast"
         },
         {
-          "start": 5798679,
+          "start": 5804199,
           "sourceOffset": 288000,
           "sourceLength": 1536000,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
-          "start": 5798679,
+          "start": 5804199,
           "sourceOffset": 288000,
           "sourceLength": 1536000,
           "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7334679,
+          "start": 7340199,
           "sourceOffset": 288000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7334679,
+          "start": 7340199,
           "sourceOffset": 288000,
           "sourceLength": 480000,
           "stem": "SE_Stage_KoopaTroopaBeach_Speaker_Fast"
@@ -4025,8 +4107,8 @@
       ],
       "courseCode": "KoopaTroopaBeach",
       "variant": "c",
-      "index": 53,
-      "id": "53_KoopaTroopaBeach_c",
+      "index": 54,
+      "id": "54_KoopaTroopaBeach_c",
       "uniqueStems": [
         "BGM_Stage_KoopaTroopaBeach",
         "SE_Stage_KoopaTroopaBeach_Speaker_Normal",
@@ -4034,38 +4116,39 @@
         "BGM_Stage_KoopaTroopaBeach_Fast",
         "SE_Stage_KoopaTroopaBeach_Speaker_Fast"
       ],
-      "durationMs": 162805,
-      "totalFrames": 7814679
+      "durationMs": 162920,
+      "totalFrames": 7820199
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1532900,
-          "stem": "BGM_Stage_KoopaTroopaBeach_Pre"
+          "sourceLength": 1537700,
+          "stem": "BGM_Stage_KoopaTroopaBeach_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1532900,
+          "start": 1539284,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1721780,
+          "start": 1727300,
           "sourceOffset": 0,
           "sourceLength": 1824000,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
-          "start": 3545780,
+          "start": 3551300,
           "sourceOffset": 288000,
           "sourceLength": 1536000,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5081780,
+          "start": 5087300,
           "sourceOffset": 288000,
           "sourceLength": 480000,
           "stem": "BGM_Stage_KoopaTroopaBeach_Fast"
@@ -4073,15 +4156,15 @@
       ],
       "courseCode": "KoopaTroopaBeach",
       "variant": "d",
-      "index": 54,
-      "id": "54_KoopaTroopaBeach_d",
+      "index": 55,
+      "id": "55_KoopaTroopaBeach_d",
       "uniqueStems": [
         "BGM_Stage_KoopaTroopaBeach_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_KoopaTroopaBeach_Fast"
       ],
-      "durationMs": 115870,
-      "totalFrames": 5561780
+      "durationMs": 115985,
+      "totalFrames": 5567300
     },
     {
       "clips": [
@@ -4124,8 +4207,8 @@
       ],
       "courseCode": "DKJungleParkway",
       "variant": "a",
-      "index": 55,
-      "id": "55_DKJungleParkway_a",
+      "index": 56,
+      "id": "56_DKJungleParkway_a",
       "uniqueStems": [
         "BGM_Stage_DKJungleParkway_Pre",
         "BGM_Stage_DKJungleParkway_Bridge",
@@ -4176,8 +4259,8 @@
       ],
       "courseCode": "DKJungleParkway",
       "variant": "b",
-      "index": 56,
-      "id": "56_DKJungleParkway_b",
+      "index": 57,
+      "id": "57_DKJungleParkway_b",
       "uniqueStems": [
         "BGM_Stage_DKJungleParkway_Pre_Short",
         "BGM_Stage_DKJungleParkway_Bridge",
@@ -4198,24 +4281,25 @@
         {
           "start": 3328343,
           "sourceOffset": 596038,
-          "sourceLength": 2289228,
-          "stem": "BGM_Stage_DKJungleParkway"
+          "sourceLength": 2294028,
+          "stem": "BGM_Stage_DKJungleParkway",
+          "fadeOut": 4800
         },
         {
-          "start": 5617571,
+          "start": 5623955,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5806451,
+          "start": 5811971,
           "sourceOffset": 0,
           "sourceLength": 2950601,
           "stem": "BGM_Stage_DKJungleParkway_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8757052,
+          "start": 8762572,
           "sourceOffset": 528784,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DKJungleParkway_Fast"
@@ -4223,45 +4307,46 @@
       ],
       "courseCode": "DKJungleParkway",
       "variant": "c",
-      "index": 57,
-      "id": "57_DKJungleParkway_c",
+      "index": 58,
+      "id": "58_DKJungleParkway_c",
       "uniqueStems": [
         "BGM_Stage_DKJungleParkway",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DKJungleParkway_Fast"
       ],
-      "durationMs": 192438,
-      "totalFrames": 9237052
+      "durationMs": 192553,
+      "totalFrames": 9242572
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1255383,
-          "stem": "BGM_Stage_DKJungleParkway_Pre"
+          "sourceLength": 1260183,
+          "stem": "BGM_Stage_DKJungleParkway_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1255383,
+          "start": 1261767,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1444263,
+          "start": 1449783,
           "sourceOffset": 0,
           "sourceLength": 2950601,
           "stem": "BGM_Stage_DKJungleParkway_Fast"
         },
         {
-          "start": 4394864,
+          "start": 4400384,
           "sourceOffset": 528784,
           "sourceLength": 2421817,
           "stem": "BGM_Stage_DKJungleParkway_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6816681,
+          "start": 6822201,
           "sourceOffset": 528784,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DKJungleParkway_Fast"
@@ -4269,15 +4354,15 @@
       ],
       "courseCode": "DKJungleParkway",
       "variant": "d",
-      "index": 58,
-      "id": "58_DKJungleParkway_d",
+      "index": 59,
+      "id": "59_DKJungleParkway_d",
       "uniqueStems": [
         "BGM_Stage_DKJungleParkway_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DKJungleParkway_Fast"
       ],
-      "durationMs": 152014,
-      "totalFrames": 7296681
+      "durationMs": 152129,
+      "totalFrames": 7302201
     },
     {
       "gFullOffline": 7.299475,
@@ -4325,11 +4410,11 @@
       ],
       "courseCode": "Central",
       "variant": "a",
-      "index": 59,
-      "id": "59_Central_a",
+      "index": 60,
+      "id": "60_Central_a",
       "durationMs": 162000,
       "totalFrames": 7776000,
-      "measuredResidualRms": 0.000068,
+      "measuredResidualRms": 6.8e-05,
       "gPreShortOffline": 6.526845
     },
     {
@@ -4373,8 +4458,8 @@
       ],
       "courseCode": "Central",
       "variant": "b",
-      "index": 60,
-      "id": "60_Central_b",
+      "index": 61,
+      "id": "61_Central_b",
       "uniqueStems": [
         "BGM_Stage_Central_Pre_Short",
         "BGM_Stage_Central_Bridge",
@@ -4395,24 +4480,25 @@
         {
           "start": 3097125,
           "sourceOffset": 361125,
-          "sourceLength": 2376000,
-          "stem": "BGM_Stage_Central"
+          "sourceLength": 2380800,
+          "stem": "BGM_Stage_Central",
+          "fadeOut": 4800
         },
         {
-          "start": 5473125,
+          "start": 5479509,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5662005,
+          "start": 5667525,
           "sourceOffset": 0,
           "sourceLength": 2693153,
           "stem": "BGM_Stage_Central_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8355158,
+          "start": 8360678,
           "sourceOffset": 314022,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Central_Fast"
@@ -4420,45 +4506,46 @@
       ],
       "courseCode": "Central",
       "variant": "c",
-      "index": 61,
-      "id": "61_Central_c",
+      "index": 62,
+      "id": "62_Central_c",
       "uniqueStems": [
         "BGM_Stage_Central",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Central_Fast"
       ],
-      "durationMs": 184065,
-      "totalFrames": 8835158
+      "durationMs": 184180,
+      "totalFrames": 8840678
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2088000,
-          "stem": "BGM_Stage_Central_Pre"
+          "sourceLength": 2092800,
+          "stem": "BGM_Stage_Central_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2088000,
+          "start": 2094384,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2276880,
+          "start": 2282400,
           "sourceOffset": 0,
           "sourceLength": 2693153,
           "stem": "BGM_Stage_Central_Fast"
         },
         {
-          "start": 4970033,
+          "start": 4975553,
           "sourceOffset": 314022,
           "sourceLength": 2379131,
           "stem": "BGM_Stage_Central_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7349164,
+          "start": 7354684,
           "sourceOffset": 314022,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Central_Fast"
@@ -4466,15 +4553,15 @@
       ],
       "courseCode": "Central",
       "variant": "d",
-      "index": 62,
-      "id": "62_Central_d",
+      "index": 63,
+      "id": "63_Central_d",
       "uniqueStems": [
         "BGM_Stage_Central_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Central_Fast"
       ],
-      "durationMs": 163107,
-      "totalFrames": 7829164
+      "durationMs": 163222,
+      "totalFrames": 7834684
     },
     {
       "clips": [
@@ -4505,8 +4592,8 @@
       ],
       "courseCode": "PeachBeach",
       "variant": "a",
-      "index": 63,
-      "id": "63_PeachBeach_a",
+      "index": 64,
+      "id": "64_PeachBeach_a",
       "uniqueStems": [
         "BGM_Stage_PeachBeach_Pre",
         "BGM_Stage_PeachBeach",
@@ -4550,8 +4637,8 @@
       ],
       "courseCode": "PeachBeach",
       "variant": "b",
-      "index": 64,
-      "id": "64_PeachBeach_b",
+      "index": 65,
+      "id": "65_PeachBeach_b",
       "uniqueStems": [
         "BGM_Stage_PeachBeach_Pre_Short",
         "BGM_Stage_PeachBeach",
@@ -4571,24 +4658,25 @@
         {
           "start": 3571200,
           "sourceOffset": 622080,
-          "sourceLength": 2718719,
-          "stem": "BGM_Stage_PeachBeach"
+          "sourceLength": 2723519,
+          "stem": "BGM_Stage_PeachBeach",
+          "fadeOut": 4800
         },
         {
-          "start": 6289919,
+          "start": 6296303,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6478799,
+          "start": 6484319,
           "sourceOffset": 0,
           "sourceLength": 2760827,
           "stem": "BGM_Stage_PeachBeach_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 9239626,
+          "start": 9245146,
           "sourceOffset": 218483,
           "sourceLength": 480000,
           "stem": "BGM_Stage_PeachBeach_Fast"
@@ -4596,45 +4684,46 @@
       ],
       "courseCode": "PeachBeach",
       "variant": "c",
-      "index": 65,
-      "id": "65_PeachBeach_c",
+      "index": 66,
+      "id": "66_PeachBeach_c",
       "uniqueStems": [
         "BGM_Stage_PeachBeach",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_PeachBeach_Fast"
       ],
-      "durationMs": 202492,
-      "totalFrames": 9719626
+      "durationMs": 202607,
+      "totalFrames": 9725146
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2995200,
-          "stem": "BGM_Stage_PeachBeach_Pre"
+          "sourceLength": 3000000,
+          "stem": "BGM_Stage_PeachBeach_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2995200,
+          "start": 3001584,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3184080,
+          "start": 3189600,
           "sourceOffset": 0,
           "sourceLength": 2760827,
           "stem": "BGM_Stage_PeachBeach_Fast"
         },
         {
-          "start": 5944907,
+          "start": 5950427,
           "sourceOffset": 218483,
           "sourceLength": 2542344,
           "stem": "BGM_Stage_PeachBeach_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8487251,
+          "start": 8492771,
           "sourceOffset": 218483,
           "sourceLength": 480000,
           "stem": "BGM_Stage_PeachBeach_Fast"
@@ -4642,15 +4731,15 @@
       ],
       "courseCode": "PeachBeach",
       "variant": "d",
-      "index": 66,
-      "id": "66_PeachBeach_d",
+      "index": 67,
+      "id": "67_PeachBeach_d",
       "uniqueStems": [
         "BGM_Stage_PeachBeach_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_PeachBeach_Fast"
       ],
-      "durationMs": 186817,
-      "totalFrames": 8967251
+      "durationMs": 186932,
+      "totalFrames": 8972771
     },
     {
       "clips": [
@@ -4681,8 +4770,8 @@
       ],
       "courseCode": "LagoonCity",
       "variant": "a",
-      "index": 67,
-      "id": "67_LagoonCity_a",
+      "index": 68,
+      "id": "68_LagoonCity_a",
       "uniqueStems": [
         "BGM_Stage_LagoonCity_Pre",
         "BGM_Stage_LagoonCity",
@@ -4726,8 +4815,8 @@
       ],
       "courseCode": "LagoonCity",
       "variant": "b",
-      "index": 68,
-      "id": "68_LagoonCity_b",
+      "index": 69,
+      "id": "69_LagoonCity_b",
       "uniqueStems": [
         "BGM_Stage_LagoonCity_Pre_Short",
         "BGM_Stage_LagoonCity",
@@ -4747,24 +4836,25 @@
         {
           "start": 3166020,
           "sourceOffset": 483287,
-          "sourceLength": 2603829,
-          "stem": "BGM_Stage_LagoonCity"
+          "sourceLength": 2608629,
+          "stem": "BGM_Stage_LagoonCity",
+          "fadeOut": 4800
         },
         {
-          "start": 5769849,
+          "start": 5776233,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5958729,
+          "start": 5964249,
           "sourceOffset": 0,
           "sourceLength": 2626056,
           "stem": "BGM_Stage_LagoonCity_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8584785,
+          "start": 8590305,
           "sourceOffset": 400602,
           "sourceLength": 480000,
           "stem": "BGM_Stage_LagoonCity_Fast"
@@ -4772,45 +4862,46 @@
       ],
       "courseCode": "LagoonCity",
       "variant": "c",
-      "index": 69,
-      "id": "69_LagoonCity_c",
+      "index": 70,
+      "id": "70_LagoonCity_c",
       "uniqueStems": [
         "BGM_Stage_LagoonCity",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_LagoonCity_Fast"
       ],
-      "durationMs": 188849,
-      "totalFrames": 9064785
+      "durationMs": 188964,
+      "totalFrames": 9070305
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2603829,
-          "stem": "BGM_Stage_LagoonCity_Pre"
+          "sourceLength": 2608629,
+          "stem": "BGM_Stage_LagoonCity_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2603829,
+          "start": 2610213,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2792709,
+          "start": 2798229,
           "sourceOffset": 0,
           "sourceLength": 2626056,
           "stem": "BGM_Stage_LagoonCity_Fast"
         },
         {
-          "start": 5418765,
+          "start": 5424285,
           "sourceOffset": 400602,
           "sourceLength": 2225454,
           "stem": "BGM_Stage_LagoonCity_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7644219,
+          "start": 7649739,
           "sourceOffset": 400602,
           "sourceLength": 480000,
           "stem": "BGM_Stage_LagoonCity_Fast"
@@ -4818,15 +4909,15 @@
       ],
       "courseCode": "LagoonCity",
       "variant": "d",
-      "index": 70,
-      "id": "70_LagoonCity_d",
+      "index": 71,
+      "id": "71_LagoonCity_d",
       "uniqueStems": [
         "BGM_Stage_LagoonCity_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_LagoonCity_Fast"
       ],
-      "durationMs": 169254,
-      "totalFrames": 8124219
+      "durationMs": 169369,
+      "totalFrames": 8129739
     },
     {
       "gFullOffline": 5.549196,
@@ -4874,8 +4965,8 @@
       ],
       "courseCode": "DinoDinoJungle",
       "variant": "a",
-      "index": 71,
-      "id": "71_DinoDinoJungle_a",
+      "index": 72,
+      "id": "72_DinoDinoJungle_a",
       "durationMs": 180702,
       "totalFrames": 8673683,
       "measuredResidualRms": 0.058878,
@@ -4922,8 +5013,8 @@
       ],
       "courseCode": "DinoDinoJungle",
       "variant": "b",
-      "index": 72,
-      "id": "72_DinoDinoJungle_b",
+      "index": 73,
+      "id": "73_DinoDinoJungle_b",
       "uniqueStems": [
         "BGM_Stage_DinoDinoJungle_Pre_Short",
         "BGM_Stage_DinoDinoJungle_Bridge",
@@ -4944,17 +5035,18 @@
         {
           "start": 3531677,
           "sourceOffset": 840876,
-          "sourceLength": 2522626,
-          "stem": "BGM_Stage_DinoDinoJungle"
+          "sourceLength": 2527426,
+          "stem": "BGM_Stage_DinoDinoJungle",
+          "fadeOut": 4800
         },
         {
-          "start": 6054303,
+          "start": 6060687,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6243183,
+          "start": 6248703,
           "sourceOffset": 0,
           "volumePoints": [
             {
@@ -5133,7 +5225,7 @@
         },
         {
           "fadeOut": 1200,
-          "start": 9384998,
+          "start": 9390518,
           "sourceOffset": 748051,
           "volumePoints": [
             {
@@ -5308,45 +5400,46 @@
       ],
       "courseCode": "DinoDinoJungle",
       "variant": "c",
-      "index": 73,
-      "id": "73_DinoDinoJungle_c",
+      "index": 74,
+      "id": "74_DinoDinoJungle_c",
       "uniqueStems": [
         "BGM_Stage_DinoDinoJungle",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DinoDinoJungle_Fast"
       ],
-      "durationMs": 203962,
-      "totalFrames": 9790192
+      "durationMs": 204077,
+      "totalFrames": 9795712
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2690801,
-          "stem": "BGM_Stage_DinoDinoJungle_Pre"
+          "sourceLength": 2695601,
+          "stem": "BGM_Stage_DinoDinoJungle_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2690801,
+          "start": 2697185,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2879681,
+          "start": 2885201,
           "sourceOffset": 0,
           "sourceLength": 3141815,
           "stem": "BGM_Stage_DinoDinoJungle_Fast"
         },
         {
-          "start": 6021496,
+          "start": 6027016,
           "sourceOffset": 748051,
           "sourceLength": 2393764,
           "stem": "BGM_Stage_DinoDinoJungle_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8415260,
+          "start": 8420780,
           "sourceOffset": 748051,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DinoDinoJungle_Fast"
@@ -5354,15 +5447,15 @@
       ],
       "courseCode": "DinoDinoJungle",
       "variant": "d",
-      "index": 74,
-      "id": "74_DinoDinoJungle_d",
+      "index": 75,
+      "id": "75_DinoDinoJungle_d",
       "uniqueStems": [
         "BGM_Stage_DinoDinoJungle_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DinoDinoJungle_Fast"
       ],
-      "durationMs": 185317,
-      "totalFrames": 8895260
+      "durationMs": 185432,
+      "totalFrames": 8900780
     },
     {
       "gFullOffline": 5.80965,
@@ -5402,8 +5495,8 @@
       ],
       "courseCode": "StormClouds",
       "variant": "a",
-      "index": 75,
-      "id": "75_StormClouds_a",
+      "index": 76,
+      "id": "76_StormClouds_a",
       "durationMs": 165500,
       "totalFrames": 7943993,
       "measuredResidualRms": 0.000305,
@@ -5444,8 +5537,8 @@
       ],
       "courseCode": "StormClouds",
       "variant": "b",
-      "index": 76,
-      "id": "76_StormClouds_b",
+      "index": 77,
+      "id": "77_StormClouds_b",
       "uniqueStems": [
         "BGM_Stage_StormClouds_Pre_Short",
         "BGM_Stage_StormClouds",
@@ -5470,19 +5563,26 @@
         },
         {
           "start": 5207660,
+          "sourceOffset": 157808,
+          "sourceLength": 4800,
+          "fadeOut": 4800,
+          "stem": "BGM_Stage_StormClouds"
+        },
+        {
+          "start": 5214044,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5396540,
+          "start": 5402060,
           "sourceOffset": 0,
           "sourceLength": 2331423,
           "stem": "BGM_Stage_StormClouds_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7727963,
+          "start": 7733483,
           "sourceOffset": 137143,
           "sourceLength": 480000,
           "stem": "BGM_Stage_StormClouds_Fast"
@@ -5490,45 +5590,46 @@
       ],
       "courseCode": "StormClouds",
       "variant": "c",
-      "index": 77,
-      "id": "77_StormClouds_c",
+      "index": 78,
+      "id": "78_StormClouds_c",
       "uniqueStems": [
         "BGM_Stage_StormClouds",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_StormClouds_Fast"
       ],
-      "durationMs": 170999,
-      "totalFrames": 8207963
+      "durationMs": 171114,
+      "totalFrames": 8213483
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2564377,
-          "stem": "BGM_Stage_StormClouds_Pre"
+          "sourceLength": 2569177,
+          "stem": "BGM_Stage_StormClouds_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2564377,
+          "start": 2570761,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2753257,
+          "start": 2758777,
           "sourceOffset": 0,
           "sourceLength": 2331423,
           "stem": "BGM_Stage_StormClouds_Fast"
         },
         {
-          "start": 5084680,
+          "start": 5090200,
           "sourceOffset": 137143,
           "sourceLength": 2194280,
           "stem": "BGM_Stage_StormClouds_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7278960,
+          "start": 7284480,
           "sourceOffset": 137143,
           "sourceLength": 480000,
           "stem": "BGM_Stage_StormClouds_Fast"
@@ -5536,15 +5637,15 @@
       ],
       "courseCode": "StormClouds",
       "variant": "d",
-      "index": 78,
-      "id": "78_StormClouds_d",
+      "index": 79,
+      "id": "79_StormClouds_d",
       "uniqueStems": [
         "BGM_Stage_StormClouds_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_StormClouds_Fast"
       ],
-      "durationMs": 161645,
-      "totalFrames": 7758960
+      "durationMs": 161760,
+      "totalFrames": 7764480
     },
     {
       "gFullOffline": 6.201227,
@@ -5592,8 +5693,8 @@
       ],
       "courseCode": "RaftingRiver",
       "variant": "a",
-      "index": 79,
-      "id": "79_RaftingRiver_a",
+      "index": 80,
+      "id": "80_RaftingRiver_a",
       "durationMs": 167368,
       "totalFrames": 8033668,
       "measuredResidualRms": 0.00817,
@@ -5640,8 +5741,8 @@
       ],
       "courseCode": "RaftingRiver",
       "variant": "b",
-      "index": 80,
-      "id": "80_RaftingRiver_b",
+      "index": 81,
+      "id": "81_RaftingRiver_b",
       "uniqueStems": [
         "BGM_Stage_RaftingRiver_Pre_Short",
         "BGM_Stage_RaftingRiver_Bridge",
@@ -5662,24 +5763,25 @@
         {
           "start": 3031572,
           "sourceOffset": 454736,
-          "sourceLength": 2425257,
-          "stem": "BGM_Stage_RaftingRiver"
+          "sourceLength": 2430057,
+          "stem": "BGM_Stage_RaftingRiver",
+          "fadeOut": 4800
         },
         {
-          "start": 5456829,
+          "start": 5463213,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5645709,
+          "start": 5651229,
           "sourceOffset": 0,
           "sourceLength": 2504340,
           "stem": "BGM_Stage_RaftingRiver_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8150049,
+          "start": 8155569,
           "sourceOffset": 375651,
           "sourceLength": 480000,
           "stem": "BGM_Stage_RaftingRiver_Fast"
@@ -5687,45 +5789,46 @@
       ],
       "courseCode": "RaftingRiver",
       "variant": "c",
-      "index": 81,
-      "id": "81_RaftingRiver_c",
+      "index": 82,
+      "id": "82_RaftingRiver_c",
       "uniqueStems": [
         "BGM_Stage_RaftingRiver",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_RaftingRiver_Fast"
       ],
-      "durationMs": 179792,
-      "totalFrames": 8630049
+      "durationMs": 179907,
+      "totalFrames": 8635569
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2501047,
-          "stem": "BGM_Stage_RaftingRiver_Pre"
+          "sourceLength": 2505847,
+          "stem": "BGM_Stage_RaftingRiver_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2501047,
+          "start": 2507431,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2689927,
+          "start": 2695447,
           "sourceOffset": 0,
           "sourceLength": 2504340,
           "stem": "BGM_Stage_RaftingRiver_Fast"
         },
         {
-          "start": 5194267,
+          "start": 5199787,
           "sourceOffset": 375651,
           "sourceLength": 2128689,
           "stem": "BGM_Stage_RaftingRiver_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7322956,
+          "start": 7328476,
           "sourceOffset": 375651,
           "sourceLength": 480000,
           "stem": "BGM_Stage_RaftingRiver_Fast"
@@ -5733,15 +5836,15 @@
       ],
       "courseCode": "RaftingRiver",
       "variant": "d",
-      "index": 82,
-      "id": "82_RaftingRiver_d",
+      "index": 83,
+      "id": "83_RaftingRiver_d",
       "uniqueStems": [
         "BGM_Stage_RaftingRiver_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_RaftingRiver_Fast"
       ],
-      "durationMs": 162561,
-      "totalFrames": 7802956
+      "durationMs": 162676,
+      "totalFrames": 7808476
     },
     {
       "gFullOffline": 6.004918,
@@ -5789,8 +5892,8 @@
       ],
       "courseCode": "Cave",
       "variant": "a",
-      "index": 83,
-      "id": "83_Cave_a",
+      "index": 84,
+      "id": "84_Cave_a",
       "durationMs": 173412,
       "totalFrames": 8323756,
       "measuredResidualRms": 0.000324,
@@ -5837,8 +5940,8 @@
       ],
       "courseCode": "Cave",
       "variant": "b",
-      "index": 84,
-      "id": "84_Cave_b",
+      "index": 85,
+      "id": "85_Cave_b",
       "uniqueStems": [
         "BGM_Stage_Cave_Pre_Short",
         "BGM_Stage_Cave_Bridge",
@@ -5859,24 +5962,25 @@
         {
           "start": 2922502,
           "sourceOffset": 222500,
-          "sourceLength": 2557502,
-          "stem": "BGM_Stage_Cave"
+          "sourceLength": 2562302,
+          "stem": "BGM_Stage_Cave",
+          "fadeOut": 4800
         },
         {
-          "start": 5480004,
+          "start": 5486388,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5668884,
+          "start": 5674404,
           "sourceOffset": 0,
           "sourceLength": 2611678,
           "stem": "BGM_Stage_Cave_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8280562,
+          "start": 8286082,
           "sourceOffset": 196770,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Cave_Fast"
@@ -5884,45 +5988,46 @@
       ],
       "courseCode": "Cave",
       "variant": "c",
-      "index": 85,
-      "id": "85_Cave_c",
+      "index": 86,
+      "id": "86_Cave_c",
       "uniqueStems": [
         "BGM_Stage_Cave",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Cave_Fast"
       ],
-      "durationMs": 182511,
-      "totalFrames": 8760562
+      "durationMs": 182626,
+      "totalFrames": 8766082
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2601252,
-          "stem": "BGM_Stage_Cave_Pre"
+          "sourceLength": 2606052,
+          "stem": "BGM_Stage_Cave_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2601252,
+          "start": 2607636,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2790132,
+          "start": 2795652,
           "sourceOffset": 0,
           "sourceLength": 2611678,
           "stem": "BGM_Stage_Cave_Fast"
         },
         {
-          "start": 5401810,
+          "start": 5407330,
           "sourceOffset": 196770,
           "sourceLength": 2414908,
           "stem": "BGM_Stage_Cave_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7816718,
+          "start": 7822238,
           "sourceOffset": 196770,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Cave_Fast"
@@ -5930,15 +6035,15 @@
       ],
       "courseCode": "Cave",
       "variant": "d",
-      "index": 86,
-      "id": "86_Cave_d",
+      "index": 87,
+      "id": "87_Cave_d",
       "uniqueStems": [
         "BGM_Stage_Cave_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Cave_Fast"
       ],
-      "durationMs": 172848,
-      "totalFrames": 8296718
+      "durationMs": 172963,
+      "totalFrames": 8302238
     },
     {
       "clips": [
@@ -5955,14 +6060,14 @@
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "fadeOut": 48000,
+          "fadeOut": 24000,
           "start": 4667998,
           "sourceOffset": 466285,
-          "sourceLength": 322285,
+          "sourceLength": 298285,
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "fadeIn": 48000,
+          "fadeIn": 24000,
           "start": 4942283,
           "sourceOffset": 740570,
           "sourceLength": 2139430,
@@ -5983,8 +6088,8 @@
       ],
       "courseCode": "Cinema",
       "variant": "a",
-      "index": 87,
-      "id": "87_Cinema_a",
+      "index": 88,
+      "id": "88_Cinema_a",
       "uniqueStems": [
         "BGM_Stage_Cinema_Pre",
         "BGM_Stage_Cinema",
@@ -5999,29 +6104,29 @@
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1870284,
+          "sourceLength": 1815426,
           "stem": "BGM_Stage_Cinema_Pre"
         },
         {
-          "start": 1842856,
+          "start": 1787998,
           "sourceOffset": 0,
           "sourceLength": 2880000,
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "start": 4722856,
+          "start": 4667998,
           "sourceOffset": 466285,
           "sourceLength": 2413715,
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "start": 7136571,
+          "start": 7081713,
           "sourceOffset": 466285,
           "sourceLength": 438857,
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "start": 7575428,
+          "start": 7520570,
           "sourceOffset": 0,
           "sourceLength": 274285,
           "stem": "BGM_Stage_Cinema_Outro05"
@@ -6029,15 +6134,15 @@
       ],
       "courseCode": "Cinema",
       "variant": "a_alt",
-      "index": 88,
-      "id": "88_Cinema_a_alt",
+      "index": 89,
+      "id": "89_Cinema_a_alt",
       "uniqueStems": [
         "BGM_Stage_Cinema_Pre",
         "BGM_Stage_Cinema",
         "BGM_Stage_Cinema_Outro05"
       ],
-      "durationMs": 163535,
-      "totalFrames": 7849713
+      "durationMs": 162392,
+      "totalFrames": 7794855
     },
     {
       "clips": [
@@ -6080,8 +6185,8 @@
       ],
       "courseCode": "Cinema",
       "variant": "b",
-      "index": 89,
-      "id": "89_Cinema_b",
+      "index": 90,
+      "id": "90_Cinema_b",
       "uniqueStems": [
         "BGM_Stage_Cinema_Pre_Short",
         "BGM_Stage_Cinema",
@@ -6105,14 +6210,14 @@
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "fadeOut": 48000,
+          "fadeOut": 24000,
           "start": 4667998,
           "sourceOffset": 466285,
-          "sourceLength": 267428,
+          "sourceLength": 243428,
           "stem": "BGM_Stage_Cinema"
         },
         {
-          "fadeIn": 48000,
+          "fadeIn": 24000,
           "start": 4887426,
           "sourceOffset": 685713,
           "sourceLength": 2194287,
@@ -6121,38 +6226,39 @@
         {
           "start": 7081713,
           "sourceOffset": 466285,
-          "sourceLength": 219428,
-          "stem": "BGM_Stage_Cinema_Pattern2"
+          "sourceLength": 224228,
+          "stem": "BGM_Stage_Cinema_Pattern2",
+          "fadeOut": 4800
         },
         {
-          "start": 7301141,
+          "start": 7307525,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 7490021,
+          "start": 7495541,
           "sourceOffset": 0,
           "sourceLength": 2562711,
           "stem": "BGM_Stage_Cinema_Fast"
         },
         {
-          "fadeOut": 48000,
-          "start": 10052732,
+          "fadeOut": 24000,
+          "start": 10058252,
           "sourceOffset": 414915,
-          "sourceLength": 389694,
+          "sourceLength": 365694,
           "stem": "BGM_Stage_Cinema_Fast"
         },
         {
-          "fadeIn": 48000,
-          "start": 10394426,
+          "fadeIn": 24000,
+          "start": 10399946,
           "sourceOffset": 756609,
           "sourceLength": 1806102,
           "stem": "BGM_Stage_Cinema_Fast_Pattern2"
         },
         {
           "fadeOut": 480000,
-          "start": 12200528,
+          "start": 12206048,
           "sourceOffset": 414915,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Cinema_Fast_Pattern2"
@@ -6160,8 +6266,8 @@
       ],
       "courseCode": "Cinema",
       "variant": "c",
-      "index": 90,
-      "id": "90_Cinema_c",
+      "index": 91,
+      "id": "91_Cinema_c",
       "uniqueStems": [
         "BGM_Stage_Cinema_Pre",
         "BGM_Stage_Cinema",
@@ -6170,38 +6276,39 @@
         "BGM_Stage_Cinema_Fast",
         "BGM_Stage_Cinema_Fast_Pattern2"
       ],
-      "durationMs": 264177,
-      "totalFrames": 12680528
+      "durationMs": 264292,
+      "totalFrames": 12686048
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1815426,
-          "stem": "BGM_Stage_Cinema_Pre"
+          "sourceLength": 1820226,
+          "stem": "BGM_Stage_Cinema_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1815426,
+          "start": 1821810,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2004306,
+          "start": 2009826,
           "sourceOffset": 0,
           "sourceLength": 2562711,
           "stem": "BGM_Stage_Cinema_Fast"
         },
         {
-          "start": 4567017,
+          "start": 4572537,
           "sourceOffset": 414915,
           "sourceLength": 2147796,
           "stem": "BGM_Stage_Cinema_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6714813,
+          "start": 6720333,
           "sourceOffset": 414915,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Cinema_Fast"
@@ -6209,15 +6316,15 @@
       ],
       "courseCode": "Cinema",
       "variant": "d",
-      "index": 91,
-      "id": "91_Cinema_d",
+      "index": 92,
+      "id": "92_Cinema_d",
       "uniqueStems": [
         "BGM_Stage_Cinema_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Cinema_Fast"
       ],
-      "durationMs": 149891,
-      "totalFrames": 7194813
+      "durationMs": 150006,
+      "totalFrames": 7200333
     },
     {
       "gFullOffline": 5.597721,
@@ -6265,8 +6372,8 @@
       ],
       "courseCode": "DinoBones",
       "variant": "a",
-      "index": 92,
-      "id": "92_DinoBones_a",
+      "index": 93,
+      "id": "93_DinoBones_a",
       "durationMs": 153923,
       "totalFrames": 7388301,
       "measuredResidualRms": 0.001075,
@@ -6313,8 +6420,8 @@
       ],
       "courseCode": "DinoBones",
       "variant": "b",
-      "index": 93,
-      "id": "93_DinoBones_b",
+      "index": 94,
+      "id": "94_DinoBones_b",
       "uniqueStems": [
         "BGM_Stage_DinoBones_Pre_Short",
         "BGM_Stage_DinoBones_Bridge",
@@ -6335,24 +6442,25 @@
         {
           "start": 2730459,
           "sourceOffset": 337846,
-          "sourceLength": 2259689,
-          "stem": "BGM_Stage_DinoBones"
+          "sourceLength": 2264489,
+          "stem": "BGM_Stage_DinoBones",
+          "fadeOut": 4800
         },
         {
-          "start": 4990148,
+          "start": 4996532,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5179028,
+          "start": 5184548,
           "sourceOffset": 0,
           "sourceLength": 2218500,
           "stem": "BGM_Stage_DinoBones_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7397528,
+          "start": 7403048,
           "sourceOffset": 274500,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DinoBones_Fast"
@@ -6360,45 +6468,46 @@
       ],
       "courseCode": "DinoBones",
       "variant": "c",
-      "index": 94,
-      "id": "94_DinoBones_c",
+      "index": 95,
+      "id": "95_DinoBones_c",
       "uniqueStems": [
         "BGM_Stage_DinoBones",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DinoBones_Fast"
       ],
-      "durationMs": 164115,
-      "totalFrames": 7877528
+      "durationMs": 164230,
+      "totalFrames": 7883048
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2193228,
-          "stem": "BGM_Stage_DinoBones_Pre"
+          "sourceLength": 2198028,
+          "stem": "BGM_Stage_DinoBones_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2193228,
+          "start": 2199612,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2382108,
+          "start": 2387628,
           "sourceOffset": 0,
           "sourceLength": 2218500,
           "stem": "BGM_Stage_DinoBones_Fast"
         },
         {
-          "start": 4600608,
+          "start": 4606128,
           "sourceOffset": 274500,
           "sourceLength": 1944000,
           "stem": "BGM_Stage_DinoBones_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6544608,
+          "start": 6550128,
           "sourceOffset": 274500,
           "sourceLength": 480000,
           "stem": "BGM_Stage_DinoBones_Fast"
@@ -6406,15 +6515,15 @@
       ],
       "courseCode": "DinoBones",
       "variant": "d",
-      "index": 95,
-      "id": "95_DinoBones_d",
+      "index": 96,
+      "id": "96_DinoBones_d",
       "uniqueStems": [
         "BGM_Stage_DinoBones_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_DinoBones_Fast"
       ],
-      "durationMs": 146346,
-      "totalFrames": 7024608
+      "durationMs": 146461,
+      "totalFrames": 7030128
     },
     {
       "gFullOffline": 4.958839,
@@ -6462,8 +6571,8 @@
       ],
       "courseCode": "MooMooFarm",
       "variant": "a",
-      "index": 96,
-      "id": "96_MooMooFarm_a",
+      "index": 97,
+      "id": "97_MooMooFarm_a",
       "durationMs": 180360,
       "totalFrames": 8657280,
       "measuredResidualRms": 0.000301,
@@ -6510,8 +6619,8 @@
       ],
       "courseCode": "MooMooFarm",
       "variant": "b",
-      "index": 97,
-      "id": "97_MooMooFarm_b",
+      "index": 98,
+      "id": "98_MooMooFarm_b",
       "uniqueStems": [
         "BGM_Stage_MooMooFarm_Pre_Short",
         "BGM_Stage_MooMooFarm_Bridge",
@@ -6532,24 +6641,25 @@
         {
           "start": 3240000,
           "sourceOffset": 450000,
-          "sourceLength": 2430000,
-          "stem": "BGM_Stage_MooMooFarm"
+          "sourceLength": 2434800,
+          "stem": "BGM_Stage_MooMooFarm",
+          "fadeOut": 4800
         },
         {
-          "start": 5670000,
+          "start": 5676384,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5858880,
+          "start": 5864400,
           "sourceOffset": 0,
           "sourceLength": 2842595,
           "stem": "BGM_Stage_MooMooFarm_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8701475,
+          "start": 8706995,
           "sourceOffset": 523636,
           "sourceLength": 480000,
           "stem": "BGM_Stage_MooMooFarm_Fast"
@@ -6557,45 +6667,46 @@
       ],
       "courseCode": "MooMooFarm",
       "variant": "c",
-      "index": 98,
-      "id": "98_MooMooFarm_c",
+      "index": 99,
+      "id": "99_MooMooFarm_c",
       "uniqueStems": [
         "BGM_Stage_MooMooFarm",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_MooMooFarm_Fast"
       ],
-      "durationMs": 191280,
-      "totalFrames": 9181475
+      "durationMs": 191395,
+      "totalFrames": 9186995
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2925000,
-          "stem": "BGM_Stage_MooMooFarm_Pre"
+          "sourceLength": 2929800,
+          "stem": "BGM_Stage_MooMooFarm_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2925000,
+          "start": 2931384,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3113880,
+          "start": 3119400,
           "sourceOffset": 0,
           "sourceLength": 2842595,
           "stem": "BGM_Stage_MooMooFarm_Fast"
         },
         {
-          "start": 5956475,
+          "start": 5961995,
           "sourceOffset": 523636,
           "sourceLength": 2318959,
           "stem": "BGM_Stage_MooMooFarm_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8275434,
+          "start": 8280954,
           "sourceOffset": 523636,
           "sourceLength": 480000,
           "stem": "BGM_Stage_MooMooFarm_Fast"
@@ -6603,15 +6714,15 @@
       ],
       "courseCode": "MooMooFarm",
       "variant": "d",
-      "index": 99,
-      "id": "99_MooMooFarm_d",
+      "index": 100,
+      "id": "100_MooMooFarm_d",
       "uniqueStems": [
         "BGM_Stage_MooMooFarm_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_MooMooFarm_Fast"
       ],
-      "durationMs": 182404,
-      "totalFrames": 8755434
+      "durationMs": 182519,
+      "totalFrames": 8760954
     },
     {
       "gFullOffline": 7.458381,
@@ -6659,8 +6770,8 @@
       ],
       "courseCode": "ChocoMountain",
       "variant": "a",
-      "index": 100,
-      "id": "100_ChocoMountain_a",
+      "index": 101,
+      "id": "101_ChocoMountain_a",
       "durationMs": 240908,
       "totalFrames": 11563560,
       "measuredResidualRms": 0.00058,
@@ -6707,8 +6818,8 @@
       ],
       "courseCode": "ChocoMountain",
       "variant": "b",
-      "index": 101,
-      "id": "101_ChocoMountain_b",
+      "index": 102,
+      "id": "102_ChocoMountain_b",
       "uniqueStems": [
         "BGM_Stage_ChocoMountain_Pre_Short",
         "BGM_Stage_ChocoMountain_Bridge",
@@ -6729,24 +6840,25 @@
         {
           "start": 4492800,
           "sourceOffset": 192000,
-          "sourceLength": 4147200,
-          "stem": "BGM_Stage_ChocoMountain"
+          "sourceLength": 4152000,
+          "stem": "BGM_Stage_ChocoMountain",
+          "fadeOut": 4800
         },
         {
-          "start": 8640000,
+          "start": 8646384,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 8828880,
+          "start": 8834400,
           "sourceOffset": 0,
           "sourceLength": 3919015,
           "stem": "BGM_Stage_ChocoMountain_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 12747895,
+          "start": 12753415,
           "sourceOffset": 168343,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ChocoMountain_Fast"
@@ -6754,45 +6866,46 @@
       ],
       "courseCode": "ChocoMountain",
       "variant": "c",
-      "index": 102,
-      "id": "102_ChocoMountain_c",
+      "index": 103,
+      "id": "103_ChocoMountain_c",
       "uniqueStems": [
         "BGM_Stage_ChocoMountain",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ChocoMountain_Fast"
       ],
-      "durationMs": 275581,
-      "totalFrames": 13227895
+      "durationMs": 275696,
+      "totalFrames": 13233415
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2649000,
-          "stem": "BGM_Stage_ChocoMountain_Pre"
+          "sourceLength": 2653800,
+          "stem": "BGM_Stage_ChocoMountain_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2649000,
+          "start": 2655384,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 2837880,
+          "start": 2843400,
           "sourceOffset": 0,
           "sourceLength": 3919015,
           "stem": "BGM_Stage_ChocoMountain_Fast"
         },
         {
-          "start": 6756895,
+          "start": 6762415,
           "sourceOffset": 168343,
           "sourceLength": 3750672,
           "stem": "BGM_Stage_ChocoMountain_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 10507567,
+          "start": 10513087,
           "sourceOffset": 168343,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ChocoMountain_Fast"
@@ -6800,15 +6913,15 @@
       ],
       "courseCode": "ChocoMountain",
       "variant": "d",
-      "index": 103,
-      "id": "103_ChocoMountain_d",
+      "index": 104,
+      "id": "104_ChocoMountain_d",
       "uniqueStems": [
         "BGM_Stage_ChocoMountain_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ChocoMountain_Fast"
       ],
-      "durationMs": 228907,
-      "totalFrames": 10987567
+      "durationMs": 229022,
+      "totalFrames": 10993087
     },
     {
       "gFullOffline": 7.391796,
@@ -6856,8 +6969,8 @@
       ],
       "courseCode": "ToadFactory",
       "variant": "a",
-      "index": 104,
-      "id": "104_ToadFactory_a",
+      "index": 105,
+      "id": "105_ToadFactory_a",
       "durationMs": 187716,
       "totalFrames": 9010380,
       "measuredResidualRms": 0.000173,
@@ -6904,8 +7017,8 @@
       ],
       "courseCode": "ToadFactory",
       "variant": "b",
-      "index": 105,
-      "id": "105_ToadFactory_b",
+      "index": 106,
+      "id": "106_ToadFactory_b",
       "uniqueStems": [
         "BGM_Stage_ToadFactory_Pre_Short",
         "BGM_Stage_ToadFactory_Bridge",
@@ -6926,24 +7039,25 @@
         {
           "start": 3828269,
           "sourceOffset": 738817,
-          "sourceLength": 2984724,
-          "stem": "BGM_Stage_ToadFactory"
+          "sourceLength": 2989524,
+          "stem": "BGM_Stage_ToadFactory",
+          "fadeOut": 4800
         },
         {
-          "start": 6812993,
+          "start": 6819377,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 7001873,
+          "start": 7007393,
           "sourceOffset": 0,
           "sourceLength": 3328931,
           "stem": "BGM_Stage_ToadFactory_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 10330804,
+          "start": 10336324,
           "sourceOffset": 642450,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ToadFactory_Fast"
@@ -6951,45 +7065,46 @@
       ],
       "courseCode": "ToadFactory",
       "variant": "c",
-      "index": 106,
-      "id": "106_ToadFactory_c",
+      "index": 107,
+      "id": "107_ToadFactory_c",
       "uniqueStems": [
         "BGM_Stage_ToadFactory",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ToadFactory_Fast"
       ],
-      "durationMs": 225225,
-      "totalFrames": 10810804
+      "durationMs": 225340,
+      "totalFrames": 10816324
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1727998,
-          "stem": "BGM_Stage_ToadFactory_Pre"
+          "sourceLength": 1732798,
+          "stem": "BGM_Stage_ToadFactory_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1727998,
+          "start": 1734382,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1916878,
+          "start": 1922398,
           "sourceOffset": 0,
           "sourceLength": 3328931,
           "stem": "BGM_Stage_ToadFactory_Fast"
         },
         {
-          "start": 5245809,
+          "start": 5251329,
           "sourceOffset": 642450,
           "sourceLength": 2686481,
           "stem": "BGM_Stage_ToadFactory_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7932290,
+          "start": 7937810,
           "sourceOffset": 642450,
           "sourceLength": 480000,
           "stem": "BGM_Stage_ToadFactory_Fast"
@@ -6997,15 +7112,15 @@
       ],
       "courseCode": "ToadFactory",
       "variant": "d",
-      "index": 107,
-      "id": "107_ToadFactory_d",
+      "index": 108,
+      "id": "108_ToadFactory_d",
       "uniqueStems": [
         "BGM_Stage_ToadFactory_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_ToadFactory_Fast"
       ],
-      "durationMs": 175256,
-      "totalFrames": 8412290
+      "durationMs": 175371,
+      "totalFrames": 8417810
     },
     {
       "gFullOffline": 7.843169,
@@ -7053,8 +7168,8 @@
       ],
       "courseCode": "Lava",
       "variant": "a",
-      "index": 108,
-      "id": "108_Lava_a",
+      "index": 109,
+      "id": "109_Lava_a",
       "durationMs": 174167,
       "totalFrames": 8359993,
       "measuredResidualRms": 0.000265,
@@ -7101,8 +7216,8 @@
       ],
       "courseCode": "Lava",
       "variant": "b",
-      "index": 109,
-      "id": "109_Lava_b",
+      "index": 110,
+      "id": "110_Lava_b",
       "uniqueStems": [
         "BGM_Stage_Lava_Pre_Short",
         "BGM_Stage_Lava_Bridge",
@@ -7123,24 +7238,25 @@
         {
           "start": 3521996,
           "sourceOffset": 386000,
-          "sourceLength": 2943996,
-          "stem": "BGM_Stage_Lava"
+          "sourceLength": 2948796,
+          "stem": "BGM_Stage_Lava",
+          "fadeOut": 4800
         },
         {
-          "start": 6465992,
+          "start": 6472376,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 6654872,
+          "start": 6660392,
           "sourceOffset": 0,
           "sourceLength": 3077474,
           "stem": "BGM_Stage_Lava_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 9732346,
+          "start": 9737866,
           "sourceOffset": 337281,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Lava_Fast"
@@ -7148,45 +7264,46 @@
       ],
       "courseCode": "Lava",
       "variant": "c",
-      "index": 110,
-      "id": "110_Lava_c",
+      "index": 111,
+      "id": "111_Lava_c",
       "uniqueStems": [
         "BGM_Stage_Lava",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Lava_Fast"
       ],
-      "durationMs": 212757,
-      "totalFrames": 10212346
+      "durationMs": 212872,
+      "totalFrames": 10217866
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1319998,
-          "stem": "BGM_Stage_Lava_Pre"
+          "sourceLength": 1324798,
+          "stem": "BGM_Stage_Lava_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1319998,
+          "start": 1326382,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1508878,
+          "start": 1514398,
           "sourceOffset": 0,
           "sourceLength": 3077474,
           "stem": "BGM_Stage_Lava_Fast"
         },
         {
-          "start": 4586352,
+          "start": 4591872,
           "sourceOffset": 337281,
           "sourceLength": 2740193,
           "stem": "BGM_Stage_Lava_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 7326545,
+          "start": 7332065,
           "sourceOffset": 337281,
           "sourceLength": 480000,
           "stem": "BGM_Stage_Lava_Fast"
@@ -7194,15 +7311,15 @@
       ],
       "courseCode": "Lava",
       "variant": "d",
-      "index": 111,
-      "id": "111_Lava_d",
+      "index": 112,
+      "id": "112_Lava_d",
       "uniqueStems": [
         "BGM_Stage_Lava_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_Lava_Fast"
       ],
-      "durationMs": 162636,
-      "totalFrames": 7806545
+      "durationMs": 162751,
+      "totalFrames": 7812065
     },
     {
       "gFullOffline": 8.286653,
@@ -7242,8 +7359,8 @@
       ],
       "courseCode": "BigTree",
       "variant": "a",
-      "index": 112,
-      "id": "112_BigTree_a",
+      "index": 113,
+      "id": "113_BigTree_a",
       "durationMs": 141562,
       "totalFrames": 6794988,
       "measuredResidualRms": 0.064049,
@@ -7284,8 +7401,8 @@
       ],
       "courseCode": "BigTree",
       "variant": "b",
-      "index": 113,
-      "id": "113_BigTree_b",
+      "index": 114,
+      "id": "114_BigTree_b",
       "uniqueStems": [
         "BGM_Stage_BigTree_Pre_Short",
         "BGM_Stage_BigTree",
@@ -7305,24 +7422,25 @@
         {
           "start": 3201427,
           "sourceOffset": 578571,
-          "sourceLength": 2159998,
-          "stem": "BGM_Stage_BigTree"
+          "sourceLength": 2164798,
+          "stem": "BGM_Stage_BigTree",
+          "fadeOut": 4800
         },
         {
-          "start": 5361425,
+          "start": 5367809,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 5550305,
+          "start": 5555825,
           "sourceOffset": 0,
           "sourceLength": 2758151,
           "stem": "BGM_Stage_BigTree_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 8308456,
+          "start": 8313976,
           "sourceOffset": 498461,
           "sourceLength": 480000,
           "stem": "BGM_Stage_BigTree_Fast"
@@ -7330,45 +7448,46 @@
       ],
       "courseCode": "BigTree",
       "variant": "c",
-      "index": 114,
-      "id": "114_BigTree_c",
+      "index": 115,
+      "id": "115_BigTree_c",
       "uniqueStems": [
         "BGM_Stage_BigTree",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_BigTree_Fast"
       ],
-      "durationMs": 183092,
-      "totalFrames": 8788456
+      "durationMs": 183207,
+      "totalFrames": 8793976
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 1279285,
-          "stem": "BGM_Stage_BigTree_Pre"
+          "sourceLength": 1284085,
+          "stem": "BGM_Stage_BigTree_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 1279285,
+          "start": 1285669,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 1468165,
+          "start": 1473685,
           "sourceOffset": 0,
           "sourceLength": 2758151,
           "stem": "BGM_Stage_BigTree_Fast"
         },
         {
-          "start": 4226316,
+          "start": 4231836,
           "sourceOffset": 498461,
           "sourceLength": 2259690,
           "stem": "BGM_Stage_BigTree_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 6486006,
+          "start": 6491526,
           "sourceOffset": 498461,
           "sourceLength": 480000,
           "stem": "BGM_Stage_BigTree_Fast"
@@ -7376,15 +7495,15 @@
       ],
       "courseCode": "BigTree",
       "variant": "d",
-      "index": 115,
-      "id": "115_BigTree_d",
+      "index": 116,
+      "id": "116_BigTree_d",
       "uniqueStems": [
         "BGM_Stage_BigTree_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_BigTree_Fast"
       ],
-      "durationMs": 145125,
-      "totalFrames": 6966006
+      "durationMs": 145240,
+      "totalFrames": 6971526
     },
     {
       "gFullOffline": 4.967068,
@@ -7432,8 +7551,8 @@
       ],
       "courseCode": "SFCMarioCircuit",
       "variant": "a",
-      "index": 116,
-      "id": "116_SFCMarioCircuit_a",
+      "index": 117,
+      "id": "117_SFCMarioCircuit_a",
       "durationMs": 133038,
       "totalFrames": 6385839,
       "measuredResidualRms": 0.000123,
@@ -7480,8 +7599,8 @@
       ],
       "courseCode": "SFCMarioCircuit",
       "variant": "b",
-      "index": 117,
-      "id": "117_SFCMarioCircuit_b",
+      "index": 118,
+      "id": "118_SFCMarioCircuit_b",
       "uniqueStems": [
         "BGM_Stage_SFCMarioCircuit_Pre_Short",
         "BGM_Stage_SFCMarioCircuit_Bridge",
@@ -7502,24 +7621,25 @@
         {
           "start": 1860921,
           "sourceOffset": 265846,
-          "sourceLength": 1506459,
-          "stem": "BGM_Stage_SFCMarioCircuit"
+          "sourceLength": 1511259,
+          "stem": "BGM_Stage_SFCMarioCircuit",
+          "fadeOut": 4800
         },
         {
-          "start": 3367380,
+          "start": 3373764,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3556260,
+          "start": 3561780,
           "sourceOffset": 0,
           "sourceLength": 1550768,
           "stem": "BGM_Stage_SFCMarioCircuit_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5107028,
+          "start": 5112548,
           "sourceOffset": 221538,
           "sourceLength": 480000,
           "stem": "BGM_Stage_SFCMarioCircuit_Fast"
@@ -7527,45 +7647,46 @@
       ],
       "courseCode": "SFCMarioCircuit",
       "variant": "c",
-      "index": 118,
-      "id": "118_SFCMarioCircuit_c",
+      "index": 119,
+      "id": "119_SFCMarioCircuit_c",
       "uniqueStems": [
         "BGM_Stage_SFCMarioCircuit",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_SFCMarioCircuit_Fast"
       ],
-      "durationMs": 116396,
-      "totalFrames": 5587028
+      "durationMs": 116511,
+      "totalFrames": 5592548
     },
     {
       "clips": [
         {
           "start": 0,
           "sourceOffset": 0,
-          "sourceLength": 2885535,
-          "stem": "BGM_Stage_SFCMarioCircuit_Pre"
+          "sourceLength": 2890335,
+          "stem": "BGM_Stage_SFCMarioCircuit_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 2885535,
+          "start": 2891919,
           "sourceOffset": 0,
           "sourceLength": 268759,
           "stem": "BGM_Seq_FinalLapFF"
         },
         {
-          "start": 3074415,
+          "start": 3079935,
           "sourceOffset": 0,
           "sourceLength": 1550768,
           "stem": "BGM_Stage_SFCMarioCircuit_Fast"
         },
         {
-          "start": 4625183,
+          "start": 4630703,
           "sourceOffset": 221538,
           "sourceLength": 1329230,
           "stem": "BGM_Stage_SFCMarioCircuit_Fast"
         },
         {
           "fadeOut": 480000,
-          "start": 5954413,
+          "start": 5959933,
           "sourceOffset": 221538,
           "sourceLength": 480000,
           "stem": "BGM_Stage_SFCMarioCircuit_Fast"
@@ -7573,15 +7694,15 @@
       ],
       "courseCode": "SFCMarioCircuit",
       "variant": "d",
-      "index": 119,
-      "id": "119_SFCMarioCircuit_d",
+      "index": 120,
+      "id": "120_SFCMarioCircuit_d",
       "uniqueStems": [
         "BGM_Stage_SFCMarioCircuit_Pre",
         "BGM_Seq_FinalLapFF",
         "BGM_Stage_SFCMarioCircuit_Fast"
       ],
-      "durationMs": 134050,
-      "totalFrames": 6434413
+      "durationMs": 134165,
+      "totalFrames": 6439933
     },
     {
       "clips": [
@@ -7600,14 +7721,16 @@
         {
           "start": 4575180,
           "sourceOffset": 0,
-          "sourceLength": 6069860,
-          "stem": "BGM_Rainbow_Area1_Inst"
+          "sourceLength": 6084260,
+          "stem": "BGM_Rainbow_Area1_Inst",
+          "fadeOut": 14400
         },
         {
           "start": 4575180,
           "sourceOffset": 0,
-          "sourceLength": 6069860,
-          "stem": "BGM_Rainbow_Area1_Melody"
+          "sourceLength": 6011349,
+          "stem": "BGM_Rainbow_Area1_Melody",
+          "fadeOut": 14400
         },
         {
           "start": 10633648,
@@ -7628,34 +7751,35 @@
           "stem": "BGM_Rainbow_Area3_Pre"
         },
         {
-          "fadeOut": 48000,
           "start": 14509335,
           "sourceOffset": 0,
-          "sourceLength": 3912295,
-          "stem": "BGM_Rainbow_Area3"
+          "sourceLength": 4065895,
+          "stem": "BGM_Rainbow_Area3",
+          "fadeOut": 144000
         },
         {
-          "fadeIn": 48000,
+          "fadeIn": 120000,
           "start": 18373630,
           "sourceOffset": 0,
-          "sourceLength": 583289,
-          "stem": "BGM_Rainbow_Final_Pre"
+          "sourceLength": 588089,
+          "stem": "BGM_Rainbow_Final_Pre",
+          "fadeOut": 4800
         },
         {
-          "start": 18956919,
+          "start": 18966519,
           "sourceOffset": 0,
           "sourceLength": 338824,
           "stem": "BGM_Rainbow_FinalLapFanfare"
         },
         {
-          "start": 19175653,
+          "start": 19185253,
           "sourceOffset": 0,
           "sourceLength": 4161636,
           "stem": "BGM_Rainbow_Final"
         },
         {
           "fadeOut": 480000,
-          "start": 23337289,
+          "start": 23346889,
           "sourceOffset": 224430,
           "sourceLength": 480000,
           "stem": "BGM_Rainbow_Final"
@@ -7663,8 +7787,8 @@
       ],
       "courseCode": "Rainbow",
       "variant": "a",
-      "index": 120,
-      "id": "120_Rainbow_a",
+      "index": 121,
+      "id": "121_Rainbow_a",
       "uniqueStems": [
         "BGM_Rainbow_Area1_Pre",
         "BGM_Rainbow_Area1_Bridge",
@@ -7678,8 +7802,8 @@
         "BGM_Rainbow_FinalLapFanfare",
         "BGM_Rainbow_Final"
       ],
-      "durationMs": 496193,
-      "totalFrames": 23817289
+      "durationMs": 496393,
+      "totalFrames": 23826889
     }
   ],
   "sampleRate": 48000

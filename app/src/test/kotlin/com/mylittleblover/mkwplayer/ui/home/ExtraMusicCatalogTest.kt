@@ -10,8 +10,8 @@ import kotlin.test.assertTrue
 class ExtraMusicCatalogTest {
 
     @Test
-    fun specialCupHiddenIdsAreConcealedWhenLockedAndVisibleWhenUnlocked() {
-        val hiddenIds = listOf(
+    fun specialCupHiddenIdsAreConcealedWhenLockedAndStaffCreditsRequiresItsOwnUnlock() {
+        val specialOnlyIds = listOf(
             "opening_special",
             "victory_lap_rainbow",
             "results_rainbow",
@@ -19,13 +19,46 @@ class ExtraMusicCatalogTest {
             "rainbow_fl_fanfare",
             "nm_special_092",
             "nm_special_111",
+        )
+        val staffCreditsIds = listOf(
             "staff_credits",
             "nm_special_119",
         )
-        assertEquals(hiddenIds.toSet(), ExtraMusicCatalog.HIDDEN_UNTIL_SPECIAL_UNLOCKED_IDS)
-        for (id in hiddenIds) {
+        assertEquals((specialOnlyIds + staffCreditsIds).toSet(), ExtraMusicCatalog.HIDDEN_UNTIL_SPECIAL_UNLOCKED_IDS)
+        assertEquals(staffCreditsIds.toSet(), ExtraMusicCatalog.STAFF_CREDITS_TRACK_IDS)
+
+        for (id in specialOnlyIds) {
             assertFalse(ExtraMusicCatalog.isVisible(id, specialUnlocked = false), "$id must be hidden when locked")
-            assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = true), "$id must be visible when unlocked")
+            assertFalse(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = false, staffCreditsUnlocked = true),
+                "$id must remain hidden when only staffCreditsUnlocked is true",
+            )
+            assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = true), "$id must be visible when Special Cup unlocked")
+            assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = true, staffCreditsUnlocked = true))
+        }
+
+        // Staff Credits (#25) tracks stay hidden when staffCreditsUnlocked = false, even when specialUnlocked = true.
+        for (id in staffCreditsIds) {
+            assertFalse(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = false),
+                "$id must be hidden when locked",
+            )
+            assertFalse(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = true),
+                "$id must remain hidden with default staffCreditsUnlocked = false even when Special Cup is unlocked",
+            )
+            assertFalse(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = true, staffCreditsUnlocked = false),
+                "$id must remain hidden while staffCreditsUnlocked = false",
+            )
+            assertTrue(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = false, staffCreditsUnlocked = true),
+                "$id must be visible once staffCreditsUnlocked = true",
+            )
+            assertTrue(
+                ExtraMusicCatalog.isVisible(id, specialUnlocked = true, staffCreditsUnlocked = true),
+                "$id must be visible when both Special Cup and Staff Credits are unlocked",
+            )
         }
     }
 
@@ -35,6 +68,7 @@ class ExtraMusicCatalogTest {
         for (id in listOf("BigTree", "SFCMarioCircuit", "opening_mushroom", "opening_knockout", "title_main")) {
             assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = false), "$id must remain visible when locked")
             assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = true))
+            assertTrue(ExtraMusicCatalog.isVisible(id, specialUnlocked = true, staffCreditsUnlocked = true))
         }
     }
 

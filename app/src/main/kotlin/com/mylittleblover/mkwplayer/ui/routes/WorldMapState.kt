@@ -43,8 +43,9 @@ internal class WorldMapState(
         private set
     var editingRouteName by mutableStateOf("")
     var draftLoopWholeRoute by mutableStateOf(false)
-    var draftRoadRuleMode by mutableStateOf(com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO)
+    var draftRoadRuleMode by mutableStateOf(com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE)
     var draftRouteSuiteMode by mutableStateOf(com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE)
+    var draftPureFreeRoamConfig by mutableStateOf(com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig())
     var draftStopPresets by mutableStateOf<Map<Int, String?>>(emptyMap())
         private set
     var draftEdgeConfigs by mutableStateOf<Map<Int, com.mylittleblover.mkwplayer.routes.CustomRouteEdgeConfig>>(emptyMap())
@@ -64,14 +65,16 @@ internal class WorldMapState(
         editingRouteId = null
         editingRouteName = ""
         draftLoopWholeRoute = false
-        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO
+        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE
         draftRouteSuiteMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE
+        draftPureFreeRoamConfig = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig()
         draftStopPresets = emptyMap()
         draftEdgeConfigs = emptyMap()
         editFrom = null
         draft = emptyList()
         editRefusal = null
         selectedRouteId = null
+        selectedCourseCode = null
     }
 
     fun exitEdit() {
@@ -79,8 +82,9 @@ internal class WorldMapState(
         editingRouteId = null
         editingRouteName = ""
         draftLoopWholeRoute = false
-        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO
+        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE
         draftRouteSuiteMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE
+        draftPureFreeRoamConfig = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig()
         draftStopPresets = emptyMap()
         draftEdgeConfigs = emptyMap()
         editFrom = null
@@ -99,6 +103,7 @@ internal class WorldMapState(
         draftLoopWholeRoute = route.loopWholeRoute
         draftRoadRuleMode = route.roadRuleMode
         draftRouteSuiteMode = route.routeSuiteMode
+        draftPureFreeRoamConfig = route.pureFreeRoamConfig.normalized()
         draft = pairs
         editFrom = route.stops.lastOrNull()?.stageCode?.removeSuffix("_00")
         draftStopPresets = route.stops.mapIndexed { idx, s -> idx to s.presetId }.toMap()
@@ -163,8 +168,9 @@ internal class WorldMapState(
     fun editClear() {
         editingRouteId = null
         draft = emptyList()
-        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO
+        draftRoadRuleMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE
         draftRouteSuiteMode = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE
+        draftPureFreeRoamConfig = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig()
         draftEdgeConfigs = emptyMap()
         draftStopPresets = emptyMap()
         editFrom = null
@@ -173,12 +179,36 @@ internal class WorldMapState(
 
     fun setEdgeMusic(edgeIndex: Int, musicEnabled: Boolean, selectedJukeboxKey: String?) {
         val pair = draft.getOrNull(edgeIndex) ?: return
+        val existing = edgeConfigAt(edgeIndex)
         draftEdgeConfigs = draftEdgeConfigs + (
-            edgeIndex to com.mylittleblover.mkwplayer.routes.CustomRouteEdgeConfig(
+            edgeIndex to existing.copy(
                 from = pair.first,
                 to = pair.second,
                 musicEnabled = musicEnabled,
                 selectedJukeboxKey = selectedJukeboxKey,
+            )
+            )
+    }
+
+    fun setEdgeFreeRoamOverride(
+        edgeIndex: Int,
+        trackCountOverride: Int?,
+        durationMinutesOverride: Int?,
+    ) {
+        val pair = draft.getOrNull(edgeIndex) ?: return
+        val existing = edgeConfigAt(edgeIndex)
+        draftEdgeConfigs = draftEdgeConfigs + (
+            edgeIndex to existing.copy(
+                from = pair.first,
+                to = pair.second,
+                freeRoamTrackCountOverride = trackCountOverride?.coerceIn(
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+                ),
+                freeRoamDurationMinutesOverride = durationMinutesOverride?.coerceIn(
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+                ),
             )
             )
     }
@@ -252,6 +282,81 @@ internal class WorldMapState(
                     (it.getOrNull(4) as? String)?.takeIf(String::isNotBlank),
                 )
             },
+        )
+    }
+}
+
+/**
+ * Resolves which course (if any) displays its reachable outgoing connected road segments on the
+ * world map canvas (#2).
+ *
+ * - Outside connecting/edit mode (`!editing`), outgoing road segments are NEVER drawn on the map.
+ * - Inside connecting/edit mode (`editing`), ONLY the currently active tail stop (`editFrom`)
+ *   shows its reachable outgoing segments; once the user extends the route to a new stop, the
+ *   previous stop immediately stops showing its reachable outgoing segments.
+ */
+internal fun activeMapReachableOrigin(
+    editing: Boolean,
+    editFrom: String?,
+    visibleStages: Set<String>,
+): String? = if (editing) editFrom?.removeSuffix("_00")?.takeIf { it in visibleStages } else null
+
+internal fun activeMapReachableNeighbours(
+    editing: Boolean,
+    editFrom: String?,
+    connections: com.mylittleblover.mkwplayer.library.StageConnections.Catalog?,
+    visibleStages: Set<String>,
+): List<String> {
+    val origin = activeMapReachableOrigin(editing, editFrom, visibleStages) ?: return emptyList()
+    return connections?.neighbours(origin)?.filter { it in visibleStages }.orEmpty()
+}
+
+internal data class MapPinVisualState(
+    val isSelectedOrActive: Boolean,
+    val isHighlighted: Boolean,
+    val isDimmed: Boolean,
+)
+
+/**
+ * Pure visual-state resolver for map course pins (#2, #3):
+ * - When nothing is selected or edited, every course stays at full brightness.
+ * - Outside edit mode, only the selected course and stops of the selected official route stay
+ *   highlighted; all other courses dim BOTH their icon and outline together.
+ * - Inside edit mode, once a starting stop or draft exists, only the active stop (`editFrom`),
+ *   chosen draft stops, and currently reachable next stops stay bright; all other courses dim.
+ */
+internal fun computeMapPinVisualState(
+    stageCode: String,
+    editing: Boolean,
+    selectedCourseCode: String?,
+    selectedRouteStages: Set<String>,
+    editFrom: String?,
+    draftStages: Set<String>,
+    reachableEditNeighbours: Set<String>,
+): MapPinVisualState {
+    val code = stageCode.removeSuffix("_00")
+    return if (!editing) {
+        val sel = selectedCourseCode?.removeSuffix("_00")
+        val hasFocus = sel != null || selectedRouteStages.isNotEmpty()
+        val isSelected = sel != null && code == sel
+        val inRoute = code in selectedRouteStages
+        val highlighted = isSelected || inRoute
+        MapPinVisualState(
+            isSelectedOrActive = isSelected,
+            isHighlighted = highlighted,
+            isDimmed = hasFocus && !highlighted,
+        )
+    } else {
+        val active = editFrom?.removeSuffix("_00")
+        val hasFocus = active != null || draftStages.isNotEmpty()
+        val isActive = active != null && code == active
+        val inDraft = code in draftStages
+        val isReachableNext = active != null && code in reachableEditNeighbours
+        val highlighted = isActive || inDraft || isReachableNext
+        MapPinVisualState(
+            isSelectedOrActive = isActive,
+            isHighlighted = highlighted,
+            isDimmed = hasFocus && !highlighted,
         )
     }
 }

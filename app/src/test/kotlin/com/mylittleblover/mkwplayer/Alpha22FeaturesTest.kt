@@ -146,10 +146,22 @@ class Alpha22FeaturesTest {
         assertEquals(ExtraMedleyCatalog.TargetType.TITLE, title.targetType)
         assertEquals(86_666L, title.medley.durationMs)
         assertEquals(listOf("BGM_Seq_Title"), title.medley.uniqueStems)
-        for (entry in bundled.entries.filter { it.targetType != ExtraMedleyCatalog.TargetType.TITLE }) {
+        for (entry in bundled.entries.filter { it.targetType == ExtraMedleyCatalog.TargetType.TWO_STATE_COURSE }) {
+            val ffClip = entry.medley.clips.firstOrNull { it.stem == "BGM_Seq_FinalLapFF" }
+            assertNotNull(ffClip, "Missing BGM_Seq_FinalLapFF in ${entry.medley.id}")
+            val fastClip = entry.medley.clips.first { it.stem.endsWith("_Fast") }
+            assertEquals(
+                FinalLapFanfareCompiler.FANFARE_EXIT_FRAMES,
+                fastClip.start - ffClip.start,
+                "Unexpected v1.8.0 FinalLapFF -> Fast spacing in ${entry.medley.id}",
+            )
+            assertEquals(480_000L, entry.medley.clips.last().fadeOut, "Expected 10s fadeOut in ${entry.medley.id}")
+        }
+        for (entry in bundled.entries.filter { it.targetType == ExtraMedleyCatalog.TargetType.BATTLE }) {
             assertTrue(
-                entry.medley.clips.any { it.stem == "BGM_Seq_FinalLapFF" },
-                "Missing BGM_Seq_FinalLapFF in ${entry.medley.id}",
+                entry.medley.clips.none { it.stem == "BGM_Seq_FinalLapFF" } &&
+                    "BGM_Seq_FinalLapFF" !in entry.medley.uniqueStems,
+                "Battle medley ${entry.medley.id} must not include BGM_Seq_FinalLapFF under v1.8.0",
             )
             assertEquals(480_000L, entry.medley.clips.last().fadeOut, "Expected 10s fadeOut in ${entry.medley.id}")
         }

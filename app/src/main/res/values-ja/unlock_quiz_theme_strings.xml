@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #24 謎のコース・スペシャルカップ解放バナー、通知、演出、完了ダイアログ -->
+    <string name="unlock_mystery_course_name">謎のコース</string>
+    <string name="unlock_mystery_banner_title">謎のコースの解放条件を達成しました！</string>
+    <string name="unlock_mystery_banner_subtitle">解放演出を最後まで見ると、謎のコースが正式に解放されます。</string>
+    <string name="unlock_mystery_banner_action">演出を見る</string>
+    <string name="unlock_mystery_notif_title">謎のコース解放の準備完了</string>
+    <string name="unlock_mystery_notif_body">謎のコースの解放条件を達成しました。タップして解放演出を開始します。</string>
+    <string name="unlock_notice_badge_new">NEW</string>
+
+    <string name="unlock_ceremony_congrats_title">スペシャルカップ解放！</string>
+    <string name="unlock_ceremony_congrats_body">『マリオカート』の音楽と本アプリへの温かい応援に心より感謝いたします。それでは最後のグランプリ——スペシャルカップをお楽しみください。</string>
+    <string name="unlock_ceremony_congrats_enter">スペシャルカップへ</string>
+    <string name="unlock_ceremony_congrats_close">ライブラリへ戻る</string>
+
+    <string name="unlock_ceremony_screen_readonly_hint">解放演出中はプログレスバーを操作できません。</string>
+    <string name="unlock_ceremony_screen_controls_hint">演出中は一時停止・シーク・スキップ・曲変更はできません。演出の終了のみ可能です。</string>
+    <string name="unlock_ceremony_screen_leave">演出を出る</string>
+
+    <!-- #24 ロック中の謎のコースダイアログ -->
+    <string name="mystery_dialog_title">謎のコース</string>
+    <string name="mystery_dialog_subtitle">残りのコースをそれぞれ30秒以上再生するか、全10問のクイズに挑戦して解放演出へ進めます。</string>
+    <string name="mystery_dialog_progress_fmt">再生済み %1$d / %2$d コース</string>
+    <string name="mystery_dialog_tab_remaining">残りのコース</string>
+    <string name="mystery_dialog_tab_quiz">クイズで解放</string>
+    <string name="mystery_dialog_remaining_header">残りのコース（%1$d）</string>
+    <string name="mystery_dialog_remaining_hint">各コースを合計30秒以上再生すると達成になります。</string>
+    <string name="mystery_dialog_remaining_all_done">対象コースをすべて再生しました！解放演出へ進んで謎のコースを解放しましょう。</string>
+    <string name="mystery_dialog_course_seconds_fmt">%1$d / %2$d 秒</string>
+    <string name="mystery_dialog_course_unheard">未再生</string>
+    <string name="mystery_dialog_close">閉じる</string>
+
+    <!-- #24 全10問 スペシャルカップ解放チャレンジ -->
+    <string name="quiz_title">JukeKart スペシャルカップ解放チャレンジ</string>
+    <string name="quiz_subtitle">全10問すべてに正解すると、謎のコース解放演出へ進めます。</string>
+    <string name="quiz_progress_fmt">%1$d / %2$d</string>
+    <string name="quiz_final_challenge_badge">最終チャレンジ</string>
+    <string name="quiz_wrong_feedback">不正解です。もう一度挑戦してみましょう！</string>
+    <string name="quiz_retry_button">もう一度答える</string>
+    <string name="quiz_congrats_title">全問正解おめでとうございます！</string>
+    <string name="quiz_congrats_body">謎のコース解放演出の準備が整いました。演出を最後まで視聴すると正式に解放されます。</string>
+    <string name="quiz_ready_title">解放条件を達成しました！</string>
+    <string name="quiz_ready_body">謎のコースの解放演出を開始できます。今すぐ演出を見て最後のグランプリを解放しましょう。</string>
+    <string name="quiz_enter_ceremony_button">演出を見る</string>
+
+    <string name="quiz_q1_question">『マリオカート ワールド』の発売日はいつですか？</string>
+    <string name="quiz_q1_a">2024年6月5日</string>
+    <string name="quiz_q1_b">2025年4月2日</string>
+    <string name="quiz_q1_c">2025年6月5日</string>
+    <string name="quiz_q1_d">2025年7月17日</string>
+
+    <string name="quiz_q2_question">発売時点でグランプリのカップはいくつありますか？</string>
+    <string name="quiz_q2_a">6個</string>
+    <string name="quiz_q2_b">8個</string>
+    <string name="quiz_q2_c">10個</string>
+    <string name="quiz_q2_d">12個</string>
+
+    <string name="quiz_q3_question">発売時点でサバイバルのラリールートはいくつありますか？</string>
+    <string name="quiz_q3_a">8ルート</string>
+    <string name="quiz_q3_b">10ルート</string>
+    <string name="quiz_q3_c">12ルート</string>
+    <string name="quiz_q3_d">16ルート</string>
+
+    <string name="quiz_q4_question">1つのグランプリカップにはいくつのコースが含まれますか？</string>
+    <string name="quiz_q4_a">3コース</string>
+    <string name="quiz_q4_b">5コース</string>
+    <string name="quiz_q4_c">6コース</string>
+    <string name="quiz_q4_d">4コース</string>
+
+    <string name="quiz_q5_question">『マリオカート ワールド』で1レースに同時参加できる最大レーサー数は何人ですか？</string>
+    <string name="quiz_q5_a">8人</string>
+    <string name="quiz_q5_b">12人</string>
+    <string name="quiz_q5_c">24人</string>
+    <string name="quiz_q5_d">32人</string>
+
+    <string name="quiz_q6_question">標準の24人サバイバルでは、脱落チェックポイントを通過するごとに何人が脱落しますか？</string>
+    <string name="quiz_q6_a">2人</string>
+    <string name="quiz_q6_b">4人</string>
+    <string name="quiz_q6_c">6人</string>
+    <string name="quiz_q6_d">8人</string>
+
+    <string name="quiz_q7_question">ゲームの世界を自由に探索できるモードはどれですか？</string>
+    <string name="quiz_q7_a">タイムアタック</string>
+    <string name="quiz_q7_b">ふうせんバトル</string>
+    <string name="quiz_q7_c">グランプリ</string>
+    <string name="quiz_q7_d">フリーラン</string>
+
+    <string name="quiz_q8_question">次のうち、『マリオカート ワールド』で初登場の新コースはどれですか？</string>
+    <string name="quiz_q8_a">トロフィーシティ</string>
+    <string name="quiz_q8_b">チョコマウンテン</string>
+    <string name="quiz_q8_c">キノピオファクトリー</string>
+    <string name="quiz_q8_d">ディノディノジャングル</string>
+
+    <string name="quiz_q9_question">レースがファイナルラップに入ると、通常BGMはどのように変化しますか？</string>
+    <string name="quiz_q9_a">すべてのBGMが即座に停止する</string>
+    <string name="quiz_q9_b">表彰式のBGMに切り替わる</string>
+    <string name="quiz_q9_c">テンポの速いファイナルラップ版に切り替わる</string>
+    <string name="quiz_q9_d">コースの序曲から再生し直す</string>
+
+    <string name="quiz_q10_question">あなたがこれから解放するコース名と、所属するグランプリカップはどれですか？</string>
+    <string name="quiz_q10_a">クッパキャッスル（サンダーカップ）</string>
+    <string name="quiz_q10_b">レインボーロード（スペシャルカップ）</string>
+    <string name="quiz_q10_c">ロゼッタてんもんだい（スターカップ）</string>
+    <string name="quiz_q10_d">ピーチスタジアム（こうらカップ）</string>
+
+    <!-- #28 7種類のキャラクターテーマカラー -->
+    <string name="settings_theme_title">テーマカラー</string>
+    <string name="settings_theme_hint">キャラクターのアクセントカラーを選択します。再起動なしで即座に反映されます。</string>
+    <string name="theme_accent_mario_red">マリオレッド</string>
+    <string name="theme_accent_luigi_green">ルイージグリーン</string>
+    <string name="theme_accent_peach_pink">ピーチピンク</string>
+    <string name="theme_accent_wario_yellow">ワリオイエロー</string>
+    <string name="theme_accent_waluigi_purple">ワルイージパープル</string>
+    <string name="theme_accent_daisy_orange">デイジーオレンジ</string>
+    <string name="theme_accent_rosalina_blue">ロゼッタブルー</string>
+
+    <!-- #26 書き出しフォルダ、アップデート確認・リンク -->
+    <string name="settings_export_folder_title">音声書き出しフォルダ</string>
+    <string name="settings_export_folder_hint">書き出した音声ファイルを保存するフォルダを選択します。</string>
+    <string name="settings_export_folder_default">デフォルト（Music/JukeKart）</string>
+    <string name="settings_export_folder_change">選択</string>
+
+    <string name="settings_updates_links_title">アップデートとリンク</string>
+    <string name="settings_updates_links_hint">GitHub Releases で最新バージョンを確認したり、不具合報告や作者ページへアクセスできます。</string>
+    <string name="settings_update_check_btn">アップデートを確認</string>
+    <string name="settings_update_checking">確認中…</string>
+    <string name="settings_update_up_to_date">最新バージョンです（%1$s）。</string>
+    <string name="settings_update_available_title">新しいバージョンがあります：%1$s</string>
+    <string name="settings_update_available_subtitle">現在のバージョン：%1$s</string>
+    <string name="settings_update_download_btn">ダウンロードページへ</string>
+    <string name="settings_update_err_network">GitHub に接続できませんでした。通信環境を確認して再試行してください。</string>
+    <string name="settings_update_err_rate_limited">GitHub API の回数制限に達しました。しばらくしてから再試行してください。</string>
+    <string name="settings_update_err_http">アップデート確認に失敗しました（HTTP %1$s）。</string>
+    <string name="settings_update_err_no_releases">公開済みのリリースが見つかりませんでした。</string>
+    <string name="settings_update_err_parse">GitHub のリリース情報を読み取れませんでした。</string>
+
+    <string name="settings_link_github_title">GitHub プロジェクトページ</string>
+    <string name="settings_link_github_subtitle">github.com/mylittleblover/JukeKart-Android</string>
+    <string name="settings_link_issues_title">不具合報告・ご要望</string>
+    <string name="settings_link_issues_subtitle">GitHub Issues でバグ報告や機能提案を送信</string>
+    <string name="settings_link_bilibili_title">作者の Bilibili ページ</string>
+    <string name="settings_link_bilibili_subtitle">b23.tv/mWNhhtI</string>
+    <string name="settings_link_open_failed">リンクを開けるブラウザアプリが見つかりませんでした。</string>
+</resources>

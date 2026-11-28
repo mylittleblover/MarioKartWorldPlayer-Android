@@ -54,7 +54,10 @@ internal class SpecialCupUnlock(
         val listenedFrames: Map<String, Long>,
         /** Stages that have met the requirement, including short tracks played to the end. */
         val completedStages: Set<String>,
-        /** True once the cup is permanently open. */
+        /**
+         * True once the unlock condition has been satisfied (all eligible courses heard OR the
+         * 10-question Special Cup quiz passed) and the user is entitled to enter the ceremony.
+         */
         val entitled: Boolean,
         /** Ceremony phase. */
         val ceremony: CeremonyPhase,
@@ -67,7 +70,33 @@ internal class SpecialCupUnlock(
         /** Total frames of the current track, or 0 when unknown. */
         val currentTrackFrames: Long,
         val currentSampleRate: Int,
+        /** True once the user passed the 10-question Special Cup knowledge quiz. */
+        val quizPassed: Boolean = false,
+        /**
+         * True once the Mystery Course & Special Cup are officially unlocked for browsing/playback.
+         *
+         * Completing all eligible courses or passing the quiz only makes the ceremony ready
+         * ([ceremonyReady] = true); [specialUnlocked] becomes true ONLY after watching the unlock
+         * ceremony to completion (`ceremony == COMPLETED`), or when migrating a legacy save that
+         * had already unlocked the cup prior to this rule.
+         */
+        val specialUnlocked: Boolean = (ceremony == CeremonyPhase.COMPLETED),
     ) {
+        /** True once the user satisfied the listening or quiz requirement and may enter the ceremony. */
+        val ceremonyReady: Boolean
+            get() = entitled || quizPassed
+
+        /** True once the unlock ceremony has played to its natural end at least once. */
+        val ceremonyWatched: Boolean
+            get() = ceremony == CeremonyPhase.COMPLETED
+
+        /**
+         * True while the persistent, non-dismissible top ceremony banner must stay visible
+         * (unlock condition satisfied, ceremony not yet watched to completion, and not playing).
+         */
+        val shouldShowPersistentCeremonyBanner: Boolean
+            get() = ceremonyReady && !ceremonyWatched && ceremony != CeremonyPhase.PLAYING
+
         companion object {
             fun initial(): UnlockState = UnlockState(
                 listenedFrames = emptyMap(),
@@ -79,6 +108,8 @@ internal class SpecialCupUnlock(
                 lastReportedFrames = -1,
                 currentTrackFrames = 0,
                 currentSampleRate = 0,
+                quizPassed = false,
+                specialUnlocked = false,
             )
         }
     }
@@ -93,7 +124,7 @@ internal class SpecialCupUnlock(
         /** Not running. */
         NONE,
 
-        /** Offered to the user but not entered. The top notification is showing. */
+        /** Offered to the user but not entered. The persistent top notification is showing. */
         PENDING,
 
         /** Playing the "Special Cup Appears" audio. Pause and seek are disabled here. */
@@ -108,7 +139,7 @@ internal class SpecialCupUnlock(
         val state: UnlockState,
         /** True when this call completed a stage it had not completed before. */
         val newlyCompleted: Boolean,
-        /** True when this call opened the cup. */
+        /** True when this call satisfied the unlock condition and made the ceremony ready. */
         val newlyEntitled: Boolean,
         /** True when the report was rejected because it looked like a seek or was malformed. */
         val ignored: Boolean,
@@ -119,10 +150,22 @@ internal class SpecialCupUnlock(
     /** Current progress, for display. */
     val snapshot: UnlockState get() = state
 
-    /** True when the cup is open. */
+    /** True when the unlock requirement is satisfied and the ceremony may be entered. */
     val isEntitled: Boolean get() = state.entitled
 
-    /** True when every eligible stage is complete but the ceremony has not been entered. */
+    /** True when either all eligible stages are heard or the 10-question quiz was passed. */
+    val isCeremonyReady: Boolean get() = state.ceremonyReady
+
+    /** True once the unlock ceremony has been watched to completion. */
+    val isCeremonyWatched: Boolean get() = state.ceremonyWatched
+
+    /** True only after the ceremony has been watched (or preserved from a legacy unlocked save). */
+    val isSpecialUnlocked: Boolean get() = state.specialUnlocked
+
+    /** True while the persistent non-dismissible top ceremony banner should be shown. */
+    val shouldShowCeremonyBanner: Boolean get() = state.shouldShowPersistentCeremonyBanner
+
+    /** True when the requirement is satisfied and the ceremony is awaiting entry. */
     val isPending: Boolean get() = state.ceremony == CeremonyPhase.PENDING
 
     /** How many stages the cup requires. Exposed so the screen can count without guessing. */
@@ -238,16 +281,17 @@ internal class SpecialCupUnlock(
         val newlyCompleted = completed && stage !in state.completedStages
 
         val allDone = eligibleStages.isNotEmpty() && completedStages.containsAll(eligibleStages)
-        val newlyEntitled = allDone && !state.entitled
+        val newlyEntitled = allDone && !state.ceremonyReady
+        val nextEntitled = state.entitled || allDone
 
         return Progress(
             state = copyState(
                 listenedFrames = state.listenedFrames + (stage to credited.coerceAtMost(required)),
                 completedStages = completedStages,
-                entitled = state.entitled || allDone,
-                // Entitlement alone does not start a ceremony: normal mode waits for the track to
-                // end, so the offer is only recorded here.
-                ceremony = if ((state.entitled || allDone) && state.ceremony == CeremonyPhase.NONE) {
+                entitled = nextEntitled,
+                // Reaching all eligible stages makes the ceremony ready (PENDING), while
+                // `specialUnlocked` waits until the ceremony itself plays to completion.
+                ceremony = if ((nextEntitled || state.quizPassed) && state.ceremony == CeremonyPhase.NONE) {
                     CeremonyPhase.PENDING
                 } else {
                     state.ceremony
@@ -261,13 +305,35 @@ internal class SpecialCupUnlock(
     }
 
     /**
+     * Marks the 10-question Special Cup knowledge quiz as passed.
+     *
+     * Like completing all eligible courses, passing the quiz makes the ceremony ready
+     * ([UnlockState.ceremonyReady] = true, [CeremonyPhase.PENDING]) without unlocking the Special
+     * Cup early: the user still watches the unlock ceremony to officially unlock the Mystery Course.
+     */
+    fun passQuiz(): UnlockState {
+        val nextCeremony = if (state.ceremony == CeremonyPhase.NONE) {
+            CeremonyPhase.PENDING
+        } else {
+            state.ceremony
+        }
+        return copyState(
+            entitled = true,
+            quizPassed = true,
+            ceremony = nextCeremony,
+        )
+    }
+
+    /**
      * Enters the ceremony.
      *
      * Always starts from the beginning, including on a replay: the requirement says re-entering
      * restarts the ceremony, so there is no resume-from-where-you-left path.
      */
     fun beginCeremony(): UnlockState {
-        require(state.entitled) { "the ceremony cannot start before the cup is unlocked" }
+        require(state.ceremonyReady || state.specialUnlocked) {
+            "the ceremony cannot start before the unlock condition is satisfied"
+        }
         return copyState(ceremony = CeremonyPhase.PLAYING)
     }
 
@@ -276,21 +342,26 @@ internal class SpecialCupUnlock(
      *
      * Takes a boolean rather than trusting a timer so the caller must be the one that knows the
      * audio finished; a UI timer calling this would be the fake-timing mistake the specification
-     * forbids.
+     * forbids. Reaching the natural end is what officially unlocks the Special Cup & Mystery Course.
      */
     fun finishCeremony(reachedEnd: Boolean): UnlockState {
         require(state.ceremony == CeremonyPhase.PLAYING) {
             "the ceremony is not playing, so it cannot finish"
         }
         if (!reachedEnd) return state
-        return copyState(ceremony = CeremonyPhase.COMPLETED)
+        return copyState(
+            ceremony = CeremonyPhase.COMPLETED,
+            specialUnlocked = true,
+        )
     }
 
     /**
      * Leaves the ceremony early.
      *
-     * The entitlement is deliberately preserved: quitting the show must not take the cup away. The
-     * phase returns to [CeremonyPhase.PENDING] so the user can enter again from the start.
+     * Ceremony readiness is deliberately preserved: quitting the show does not erase the listening
+     * or quiz progress. On a first-time viewing, [UnlockState.specialUnlocked] remains `false` and
+     * the phase returns to [CeremonyPhase.PENDING] so the persistent banner stays visible until the
+     * ceremony is watched to completion. On a replay, an already-true `specialUnlocked` is preserved.
      */
     fun leaveCeremonyEarly(): UnlockState {
         require(state.ceremony == CeremonyPhase.PLAYING) {
@@ -316,9 +387,9 @@ internal class SpecialCupUnlock(
     val owesCongratulations: Boolean
         get() = state.ceremony == CeremonyPhase.COMPLETED && !state.congratulated
 
-    /** True when the ceremony may be replayed from the detail page. */
+    /** True when the ceremony may be entered or replayed. */
     val canReplayCeremony: Boolean
-        get() = state.entitled && state.ceremony != CeremonyPhase.PLAYING
+        get() = (state.ceremonyReady || state.specialUnlocked) && state.ceremony != CeremonyPhase.PLAYING
 
     private fun copyState(
         listenedFrames: Map<String, Long> = state.listenedFrames,
@@ -330,6 +401,8 @@ internal class SpecialCupUnlock(
         lastReportedFrames: Long = state.lastReportedFrames,
         currentTrackFrames: Long = state.currentTrackFrames,
         currentSampleRate: Int = state.currentSampleRate,
+        quizPassed: Boolean = state.quizPassed,
+        specialUnlocked: Boolean = state.specialUnlocked,
     ): UnlockState = UnlockState(
         listenedFrames = listenedFrames,
         completedStages = completedStages,
@@ -340,6 +413,8 @@ internal class SpecialCupUnlock(
         lastReportedFrames = lastReportedFrames,
         currentTrackFrames = currentTrackFrames,
         currentSampleRate = currentSampleRate,
+        quizPassed = quizPassed,
+        specialUnlocked = specialUnlocked,
     )
 
     /**
@@ -359,7 +434,7 @@ internal class SpecialCupUnlock(
 
     /**
      * Normalizes persisted [listenedFrames] and [completedStages] keys against [eligibleStages]
-     * and retroactively grants entitlement if all eligible stages are already satisfied.
+     * and retroactively marks the ceremony ready if all eligible stages are already satisfied.
      */
     fun reconcile(defaultSampleRate: Int = 48_000): UnlockState {
         val required = requiredFrames(defaultSampleRate)
@@ -381,12 +456,13 @@ internal class SpecialCupUnlock(
             }
         }
         val allDone = eligibleStages.isNotEmpty() && normalizedCompleted.containsAll(eligibleStages)
-        val entitled = state.entitled || allDone
+        val entitled = state.entitled || state.quizPassed || allDone
         val ceremony = if (entitled && state.ceremony == CeremonyPhase.NONE) {
             CeremonyPhase.PENDING
         } else {
             state.ceremony
         }
+        val specialUnlocked = state.specialUnlocked || ceremony == CeremonyPhase.COMPLETED
         val currentStage = state.currentStage?.let { resolveEligibleStage(it) ?: it }
         return copyState(
             listenedFrames = normalizedListened,
@@ -394,6 +470,7 @@ internal class SpecialCupUnlock(
             entitled = entitled,
             ceremony = ceremony,
             currentStage = currentStage,
+            specialUnlocked = specialUnlocked,
         )
     }
 

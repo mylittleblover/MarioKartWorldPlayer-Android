@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #24 神秘赛道与特别杯解锁横幅、通知、演出与恭喜提示 -->
+    <string name="unlock_mystery_course_name">神秘赛道</string>
+    <string name="unlock_mystery_banner_title">神秘赛道已达成解锁条件！</string>
+    <string name="unlock_mystery_banner_subtitle">观看解锁演出以正式揭晓神秘赛道。</string>
+    <string name="unlock_mystery_banner_action">进入演出</string>
+    <string name="unlock_mystery_notif_title">神秘赛道已就绪</string>
+    <string name="unlock_mystery_notif_body">神秘赛道已达成解锁条件，点击进入解锁演出。</string>
+    <string name="unlock_notice_badge_new">新</string>
+
+    <string name="unlock_ceremony_congrats_title">特别杯已解锁！</string>
+    <string name="unlock_ceremony_congrats_body">感谢您对《马力欧卡丁车》音乐与本软件的支持与热爱，接下来请聆听最后的大奖赛——特别杯。</string>
+    <string name="unlock_ceremony_congrats_enter">前往特别杯</string>
+    <string name="unlock_ceremony_congrats_close">返回乐库</string>
+
+    <string name="unlock_ceremony_screen_readonly_hint">解锁演出进行期间，进度条为只读状态。</string>
+    <string name="unlock_ceremony_screen_controls_hint">演出期间已禁用暂停、拖动、跳过与切歌操作，仅支持离开演出。</string>
+    <string name="unlock_ceremony_screen_leave">离开演出</string>
+
+    <!-- #24 神秘赛道锁定弹窗 -->
+    <string name="mystery_dialog_title">神秘赛道</string>
+    <string name="mystery_dialog_subtitle">聆听剩余赛道各满 30 秒，或通过 10 道知识问答挑战即可进入解锁演出。</string>
+    <string name="mystery_dialog_progress_fmt">已收听 %1$d / %2$d 条赛道</string>
+    <string name="mystery_dialog_tab_remaining">剩余曲目列表</string>
+    <string name="mystery_dialog_tab_quiz">知识问答解锁</string>
+    <string name="mystery_dialog_remaining_header">剩余赛道（%1$d）</string>
+    <string name="mystery_dialog_remaining_hint">每条赛道累计有效聆听满 30 秒即可完成记录。</string>
+    <string name="mystery_dialog_remaining_all_done">所有前置赛道均已收听完成！请进入解锁演出揭晓神秘赛道。</string>
+    <string name="mystery_dialog_course_seconds_fmt">已听 %1$d / %2$d 秒</string>
+    <string name="mystery_dialog_course_unheard">尚未收听</string>
+    <string name="mystery_dialog_close">关闭</string>
+
+    <!-- #24 10 题特别杯知识问答 -->
+    <string name="quiz_title">JukeKart 特别杯解锁挑战</string>
+    <string name="quiz_subtitle">连续答对全部 10 道题目，即可直接进入神秘赛道解锁演出。</string>
+    <string name="quiz_progress_fmt">%1$d / %2$d</string>
+    <string name="quiz_final_challenge_badge">最终挑战</string>
+    <string name="quiz_wrong_feedback">回答不正确，请再试一次！</string>
+    <string name="quiz_retry_button">重新作答</string>
+    <string name="quiz_congrats_title">恭喜全部答对！</string>
+    <string name="quiz_congrats_body">神秘赛道解锁演出已就绪，观看完整演出后即可正式解锁。</string>
+    <string name="quiz_ready_title">已达成解锁条件！</string>
+    <string name="quiz_ready_body">神秘赛道解锁演出已准备就绪，立即进入演出揭晓最后的大奖赛。</string>
+    <string name="quiz_enter_ceremony_button">进入演出</string>
+
+    <string name="quiz_q1_question">《马力欧卡丁车世界》于哪一天发售？</string>
+    <string name="quiz_q1_a">2024 年 6 月 5 日</string>
+    <string name="quiz_q1_b">2025 年 4 月 2 日</string>
+    <string name="quiz_q1_c">2025 年 6 月 5 日</string>
+    <string name="quiz_q1_d">2025 年 7 月 17 日</string>
+
+    <string name="quiz_q2_question">游戏发售时共有多少个大奖赛杯赛？</string>
+    <string name="quiz_q2_a">6 个</string>
+    <string name="quiz_q2_b">8 个</string>
+    <string name="quiz_q2_c">10 个</string>
+    <string name="quiz_q2_d">12 个</string>
+
+    <string name="quiz_q3_question">游戏发售时共有多少条生存赛拉力赛路线？</string>
+    <string name="quiz_q3_a">8 条</string>
+    <string name="quiz_q3_b">10 条</string>
+    <string name="quiz_q3_c">12 条</string>
+    <string name="quiz_q3_d">16 条</string>
+
+    <string name="quiz_q4_question">每个大奖赛杯赛包含几条赛道？</string>
+    <string name="quiz_q4_a">3 条</string>
+    <string name="quiz_q4_b">5 条</string>
+    <string name="quiz_q4_c">6 条</string>
+    <string name="quiz_q4_d">4 条</string>
+
+    <string name="quiz_q5_question">《马力欧卡丁车世界》最多支持多少名车手在同一场比赛中竞速？</string>
+    <string name="quiz_q5_a">8 名</string>
+    <string name="quiz_q5_b">12 名</string>
+    <string name="quiz_q5_c">24 名</string>
+    <string name="quiz_q5_d">32 名</string>
+
+    <string name="quiz_q6_question">在标准 24 人生存赛中，每经过一个淘汰检查点，会有多少名车手被淘汰？</string>
+    <string name="quiz_q6_a">2 名</string>
+    <string name="quiz_q6_b">4 名</string>
+    <string name="quiz_q6_c">6 名</string>
+    <string name="quiz_q6_d">8 名</string>
+
+    <string name="quiz_q7_question">以下哪个模式允许玩家在游戏世界中自由探索？</string>
+    <string name="quiz_q7_a">计时赛</string>
+    <string name="quiz_q7_b">气球对战</string>
+    <string name="quiz_q7_c">大奖赛</string>
+    <string name="quiz_q7_d">自由行驶</string>
+
+    <string name="quiz_q8_question">以下哪条赛道是《马力欧卡丁车世界》首次推出的全新赛道？</string>
+    <string name="quiz_q8_a">奖杯城</string>
+    <string name="quiz_q8_b">巧克力山</string>
+    <string name="quiz_q8_c">奇诺比奥工厂</string>
+    <string name="quiz_q8_d">龙龙丛林</string>
+
+    <string name="quiz_q9_question">在赛道比赛进入最后一圈时，通常会发生怎样的音乐变化？</string>
+    <string name="quiz_q9_a">所有背景音乐立即停止</string>
+    <string name="quiz_q9_b">切换为颁奖音乐</string>
+    <string name="quiz_q9_c">进入速度更快的最后一圈音乐版本</string>
+    <string name="quiz_q9_d">从赛道前奏重新播放</string>
+
+    <string name="quiz_q10_question">你将要解锁的赛道叫什么名字，属于哪个大奖赛杯赛？</string>
+    <string name="quiz_q10_a">酷霸城堡，闪电杯</string>
+    <string name="quiz_q10_b">彩虹之路，特别杯</string>
+    <string name="quiz_q10_c">罗莎塔天文台，星星杯</string>
+    <string name="quiz_q10_d">碧姬竞技场，龟壳杯</string>
+
+    <!-- #28 7 种角色主题配色 -->
+    <string name="settings_theme_title">主题配色</string>
+    <string name="settings_theme_hint">选择角色主题强调色，切换后全局界面即时生效，无需重启。</string>
+    <string name="theme_accent_mario_red">马力欧红</string>
+    <string name="theme_accent_luigi_green">路易吉绿</string>
+    <string name="theme_accent_peach_pink">碧姬粉</string>
+    <string name="theme_accent_wario_yellow">瓦力欧黄</string>
+    <string name="theme_accent_waluigi_purple">瓦路易吉紫</string>
+    <string name="theme_accent_daisy_orange">黛西橙</string>
+    <string name="theme_accent_rosalina_blue">罗莎塔蓝</string>
+
+    <!-- #26 音频导出目录、检查更新与外链 -->
+    <string name="settings_export_folder_title">音频导出目录</string>
+    <string name="settings_export_folder_hint">导出混音或渲染音频文件时默认保存的目标目录。</string>
+    <string name="settings_export_folder_default">默认目录（Music/JukeKart）</string>
+    <string name="settings_export_folder_change">选择</string>
+
+    <string name="settings_updates_links_title">更新与链接</string>
+    <string name="settings_updates_links_hint">通过 GitHub Releases 检查新版本、反馈问题或访问作者主页。</string>
+    <string name="settings_update_check_btn">检查更新</string>
+    <string name="settings_update_checking">正在检查更新…</string>
+    <string name="settings_update_up_to_date">已是最新版本（%1$s）。</string>
+    <string name="settings_update_available_title">发现新版本 %1$s</string>
+    <string name="settings_update_available_subtitle">当前版本：%1$s</string>
+    <string name="settings_update_download_btn">前往下载</string>
+    <string name="settings_update_err_network">无法连接至 GitHub，请检查网络连接后重试。</string>
+    <string name="settings_update_err_rate_limited">GitHub API 请求频率受限，请稍后再试。</string>
+    <string name="settings_update_err_http">检查更新失败（HTTP %1$s）。</string>
+    <string name="settings_update_err_no_releases">GitHub 上暂未找到已发布的版本。</string>
+    <string name="settings_update_err_parse">无法解析 GitHub 返回的版本信息。</string>
+
+    <string name="settings_link_github_title">GitHub 项目主页</string>
+    <string name="settings_link_github_subtitle">github.com/mylittleblover/JukeKart-Android</string>
+    <string name="settings_link_issues_title">问题反馈与建议</string>
+    <string name="settings_link_issues_subtitle">前往 GitHub Issues 提交故障反馈或功能建议</string>
+    <string name="settings_link_bilibili_title">作者 Bilibili 主页</string>
+    <string name="settings_link_bilibili_subtitle">b23.tv/mWNhhtI</string>
+    <string name="settings_link_open_failed">未找到可打开该链接的浏览器应用。</string>
+</resources>

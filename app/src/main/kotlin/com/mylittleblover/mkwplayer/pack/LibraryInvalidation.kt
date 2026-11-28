@@ -146,8 +146,10 @@ internal object LibraryInvalidation {
                 }
                 val alternateReports = if (env.routeMusicCatalog != null) {
                     listOf(
+                        RoadJukeboxCatalog.RoadMusicRuleMode.GRAND_PRIX,
                         RoadJukeboxCatalog.RoadMusicRuleMode.VS_DAY,
                         RoadJukeboxCatalog.RoadMusicRuleMode.VS_NIGHT,
+                        RoadJukeboxCatalog.RoadMusicRuleMode.KNOCKOUT_DIRECT,
                     ).map { mode ->
                         RoadJukeboxCatalog.inspectOfficialRoute(
                             route = route,
@@ -242,8 +244,10 @@ internal object LibraryInvalidation {
                 if (!report.canPlay) return false
                 val alternateReports = if (env.routeMusicCatalog != null) {
                     listOf(
+                        RoadJukeboxCatalog.RoadMusicRuleMode.GRAND_PRIX,
                         RoadJukeboxCatalog.RoadMusicRuleMode.VS_DAY,
                         RoadJukeboxCatalog.RoadMusicRuleMode.VS_NIGHT,
+                        RoadJukeboxCatalog.RoadMusicRuleMode.KNOCKOUT_DIRECT,
                     ).map { mode ->
                         RoadJukeboxCatalog.inspectOfficialRoute(
                             route = route,

@@ -15,7 +15,17 @@ class NintendoWaveSource final:public AudioFrameSource {
     std::vector<Histories> checkpoints_;Histories history_{};
     std::vector<ImaHistories> imaCheckpoints_;ImaHistories imaHistory_{};
     SourceSamplePosition position_;SourceStatus status_{SourceStatus::Ok};
+    void recordCheckpointIfNeeded() {
+        if(layout_.codec<2 || position_.value%static_cast<std::int64_t>(CheckpointFrames)!=0)return;
+        const auto index=static_cast<std::size_t>(position_.value)/CheckpointFrames;
+        if(layout_.codec==2) {
+            if(index==checkpoints_.size())checkpoints_.push_back(history_);
+        } else {
+            if(index==imaCheckpoints_.size())imaCheckpoints_.push_back(imaHistory_);
+        }
+    }
     void next(float* output) {
+        recordCheckpointIfNeeded();
         auto history=history_;auto ima=imaHistory_;std::array<float,2> pcm{};const auto frame=static_cast<std::size_t>(position_.value);
         for(unsigned ch=0;ch<static_cast<unsigned>(metadata().channels);++ch) {
             auto& bytes=ch ? right_ : left_;
@@ -39,14 +49,8 @@ public:
         if(layout_.codec>=2) {
             const auto count=(std::uint64_t(metadata().duration.value)+CheckpointFrames-1)/CheckpointFrames;
             if(count>MaximumCheckpoints || count>(limits.maximumDecodedBytes-16384)/sizeof(Histories))fail(SourceStatus::ResourceLimit);
-            if(layout_.codec==2)checkpoints_.reserve(static_cast<std::size_t>(count));
-            else imaCheckpoints_.reserve(static_cast<std::size_t>(count));
-            while(position_.value<metadata().duration.value) {
-                if(position_.value%CheckpointFrames==0) {
-                    if(layout_.codec==2)checkpoints_.push_back(history_);else imaCheckpoints_.push_back(imaHistory_);
-                }
-                next(nullptr);
-            }
+            if(layout_.codec==2)checkpoints_.push_back(history_);
+            else imaCheckpoints_.push_back(imaHistory_);
         }
         reset();
     }
@@ -59,23 +63,33 @@ public:
         const auto wanted=std::min(frames,static_cast<std::size_t>(metadata().duration.value-position_.value));std::size_t count=0;
         try{while(count<wanted){next(output+count*channels);++count;}}
         catch(const SourceFailure& error){status_=error.status;}
+        catch(const std::bad_alloc&){status_=SourceStatus::ResourceLimit;}
         catch(...){status_=SourceStatus::MalformedSource;}
         std::fill_n(output+count*channels,(frames-count)*channels,0.0f);return count;
     }
     SourceStatus seek(SourceSamplePosition target)noexcept override {
         if(target.value<0 || target.value>metadata().duration.value)return SourceStatus::InvalidRequest;
-        const auto oldPosition=position_;const auto oldHistory=history_;const auto oldIma=imaHistory_;status_=SourceStatus::Ok;
+        if(status_==SourceStatus::Ok && target.value==position_.value)return SourceStatus::Ok;
+        const auto oldPosition=position_;const auto oldHistory=history_;const auto oldIma=imaHistory_;
+        const auto oldDspCount=checkpoints_.size();const auto oldImaCount=imaCheckpoints_.size();
+        const bool wasOk=status_==SourceStatus::Ok;
+        status_=SourceStatus::Ok;
         try {
             if(layout_.codec>=2) {
                 const auto count=layout_.codec==2 ? checkpoints_.size() : imaCheckpoints_.size();
                 const auto n=std::min(static_cast<std::size_t>(target.value)/CheckpointFrames,count-1);
-                position_.value=static_cast<std::int64_t>(n*CheckpointFrames);
-                if(layout_.codec==2)history_=checkpoints_[n];else imaHistory_=imaCheckpoints_[n];
+                const auto cpFrame=static_cast<std::int64_t>(n*CheckpointFrames);
+                if(!wasOk || target.value<position_.value || position_.value<cpFrame) {
+                    position_.value=cpFrame;
+                    if(layout_.codec==2)history_=checkpoints_[n];else imaHistory_=imaCheckpoints_[n];
+                }
                 while(position_.value<target.value)next(nullptr);
             } else position_=target;
         }catch(const SourceFailure& error){status_=error.status;}
+         catch(const std::bad_alloc&){status_=SourceStatus::ResourceLimit;}
          catch(...){status_=SourceStatus::MalformedSource;}
-        if(status_!=SourceStatus::Ok){position_=oldPosition;history_=oldHistory;imaHistory_=oldIma;}return status_;
+        if(status_!=SourceStatus::Ok){position_=oldPosition;history_=oldHistory;imaHistory_=oldIma;checkpoints_.resize(oldDspCount);imaCheckpoints_.resize(oldImaCount);}
+        return status_;
     }
     void reset()noexcept override {
         position_.value=0;status_=SourceStatus::Ok;

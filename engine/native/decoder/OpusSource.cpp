@@ -19,9 +19,11 @@ struct OpusState {
     }
 };
 class OpusSource final:public AudioFrameSource {
+    static constexpr std::uint64_t kSeekPreRollFrames=5760;
     std::unique_ptr<EncodedSourceInput> input_;
     DecodeLimits limits_;
     OpusLayout layout_;
+    std::vector<std::uint64_t> packetEnds_;
     std::unique_ptr<OpusState> state_;
     SourceSamplePosition position_;
     SourceStatus status_{SourceStatus::Ok};
@@ -40,6 +42,9 @@ class OpusSource final:public AudioFrameSource {
     }
 public:
     OpusSource(std::unique_ptr<EncodedSourceInput> input,const DecodeLimits& limits,OpusLayout layout):input_(std::move(input)),limits_(limits),layout_(std::move(layout)) {
+        packetEnds_.reserve(layout_.packets.size());
+        std::uint64_t total=0;
+        for(const auto& packet:layout_.packets){total+=static_cast<std::uint64_t>(packet.frames);packetEnds_.push_back(total);}
         state_=std::make_unique<OpusState>(*input_,limits,layout_);
     }
     const SourceMetadata& metadata()const noexcept override{return layout_.metadata;}
@@ -63,9 +68,12 @@ public:
     }
     SourceStatus seek(SourceSamplePosition target)noexcept override {
         if(target.value<0 || target.value>metadata().duration.value)return SourceStatus::InvalidRequest;
-        if(state_ && status_==SourceStatus::Ok && target.value>=position_.value) {
+        if(state_ && status_==SourceStatus::Ok && target.value==position_.value)return SourceStatus::Ok;
+        const auto rawTarget=layout_.preSkip+static_cast<std::uint64_t>(target.value);
+        if(state_ && status_==SourceStatus::Ok && target.value>=position_.value &&
+            (rawTarget<state_->end || rawTarget-state_->end<=kSeekPreRollFrames)) {
             try {
-                if(target.value<metadata().duration.value)prepare(*state_,layout_.preSkip+static_cast<std::uint64_t>(target.value));
+                if(target.value<metadata().duration.value)prepare(*state_,rawTarget);
                 position_=target;status_=SourceStatus::Ok;return status_;
             }catch(const SourceFailure& failure){return failure.status;}
              catch(const std::bad_alloc&){return SourceStatus::ResourceLimit;}
@@ -73,7 +81,18 @@ public:
         }
         try {
             auto next=std::make_unique<OpusState>(*input_,limits_,layout_);
-            if(target.value<metadata().duration.value)prepare(*next,layout_.preSkip+static_cast<std::uint64_t>(target.value));
+            if(target.value<metadata().duration.value && !packetEnds_.empty()) {
+                const auto preRollStart=rawTarget>kSeekPreRollFrames ? rawTarget-kSeekPreRollFrames : 0ULL;
+                const auto it=std::upper_bound(packetEnds_.begin(),packetEnds_.end(),preRollStart);
+                const auto startIdx=static_cast<std::size_t>(it-packetEnds_.begin());
+                if(startIdx<layout_.packets.size()) {
+                    next->nextPacket=startIdx;
+                    const auto origin=startIdx>0 ? packetEnds_[startIdx-1] : 0ULL;
+                    next->start=origin;
+                    next->end=origin;
+                }
+                prepare(*next,rawTarget);
+            }
             state_=std::move(next);position_=target;status_=SourceStatus::Ok;return status_;
         }catch(const SourceFailure& failure){return failure.status;}
          catch(const std::bad_alloc&){return SourceStatus::ResourceLimit;}
@@ -115,9 +134,10 @@ public:
     static constexpr std::uint64_t kInitialCheckpointStride=192000; // 4s at 48kHz
     std::vector<Checkpoint> checkpoints_;
     std::uint64_t checkpointStride_=kInitialCheckpointStride;
+    std::uint64_t minCheckpointEnd_=0;
 
     void maybeSaveCheckpoint() {
-        if(nextPacket_==0||end_==0)return;
+        if(nextPacket_==0||end_==0||end_<minCheckpointEnd_)return;
         if(!checkpoints_.empty()&&(end_<=checkpoints_.back().sampleEnd||end_-checkpoints_.back().sampleEnd<checkpointStride_))return;
         if(checkpoints_.empty()&&end_<checkpointStride_)return;
         const int sz=opus_decoder_get_size(1);
@@ -149,7 +169,7 @@ public:
     }
     void reset() {
         if(decoder_)opus_decoder_ctl(decoder_.get(),OPUS_RESET_STATE);
-        nextPacket_=0;start_=0;end_=0;
+        nextPacket_=0;start_=0;end_=0;minCheckpointEnd_=0;
         checkpoints_.clear();checkpointStride_=kInitialCheckpointStride;
     }
     void seekTo(std::int64_t target) {
@@ -164,14 +184,14 @@ public:
         if(rawTarget<start_) {
             if(best!=nullptr) {
                 std::copy_n(best->state.data(),best->state.size(),reinterpret_cast<unsigned char*>(decoder_.get()));
-                nextPacket_=best->nextPacket;start_=best->sampleEnd;end_=best->sampleEnd;
+                nextPacket_=best->nextPacket;start_=best->sampleEnd;end_=best->sampleEnd;minCheckpointEnd_=0;
             } else {
                 if(decoder_)opus_decoder_ctl(decoder_.get(),OPUS_RESET_STATE);
-                nextPacket_=0;start_=0;end_=0;
+                nextPacket_=0;start_=0;end_=0;minCheckpointEnd_=0;
             }
         } else if(best!=nullptr&&best->sampleEnd>end_) {
             std::copy_n(best->state.data(),best->state.size(),reinterpret_cast<unsigned char*>(decoder_.get()));
-            nextPacket_=best->nextPacket;start_=best->sampleEnd;end_=best->sampleEnd;
+            nextPacket_=best->nextPacket;start_=best->sampleEnd;end_=best->sampleEnd;minCheckpointEnd_=0;
         }
         // BWAV uses independent CELT packets with fixed duration. Warm the decoder before
         // an uncached jump, without replaying minutes of audio on the control thread.
@@ -180,6 +200,7 @@ public:
             opus_decoder_ctl(decoder_.get(),OPUS_RESET_STATE);
             nextPacket_=static_cast<std::size_t>((rawTarget-preRollFrames)/packetFrames);
             start_=end_=nextPacket_*packetFrames;
+            minCheckpointEnd_=start_+preRollFrames;
         }
         while(rawTarget>end_)decodeNextPacket();
     }

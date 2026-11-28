@@ -143,18 +143,18 @@ class CupArtTest {
     }
 
     @Test
-    fun allTwelveKnockoutRalliesHaveUniqueEmblemsAndHighlightMasks() {
-        assertEquals(12, CupArt.rallies.size)
-        assertEquals(12, CupArt.rallies.map { it.id }.toSet().size)
-        assertEquals(12, CupArt.rallies.map { it.drawable }.toSet().size)
+    fun allFourteenKnockoutRalliesHaveUniqueEmblemsAndHighlightMasks() {
+        assertEquals(14, CupArt.rallies.size)
+        assertEquals(14, CupArt.rallies.map { it.id }.toSet().size)
+        assertEquals(14, CupArt.rallies.map { it.drawable }.toSet().size)
         for (rally in CupArt.rallies) {
             assertEquals(rally.drawable, CupArt.routeEmblem(rally.id))
             assertTrue(CupArt.routeHighlightMask(rally.id) != null, "missing highlight mask for ${rally.id}")
         }
         val gpRouteIds = CupArt.all().map { "${it.id}_cup" }
         val allMasks = (gpRouteIds + CupArt.rallies.map { it.id }).mapNotNull { CupArt.routeHighlightMask(it) }
-        assertEquals(20, allMasks.size)
-        assertEquals(20, allMasks.toSet().size)
+        assertEquals(22, allMasks.size)
+        assertEquals(22, allMasks.toSet().size)
         assertNull(CupArt.routeEmblem("unknown_route"))
         assertNull(CupArt.routeHighlightMask("unknown_route"))
     }

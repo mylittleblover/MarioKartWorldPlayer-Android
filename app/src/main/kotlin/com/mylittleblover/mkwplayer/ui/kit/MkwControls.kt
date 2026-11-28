@@ -590,6 +590,7 @@ internal fun MkwSlider(
     smoothProgress: Boolean = false,
     snapImmediate: Boolean = false,
     resetKey: Any? = null,
+    specialStyle: MkwSliderSpecialStyle? = null,
 ) {
     val reduceMotion = rememberReducedMotion()
     var dragging by remember { mutableStateOf(false) }
@@ -651,6 +652,11 @@ internal fun MkwSlider(
     )
     val fillCol = if (enabled) activeColor else MkwKitTokens.Palette.inkSecondary.copy(alpha = 0.4f)
     val trackCol = MkwKitTokens.Palette.trackStrong
+    val specialState = rememberSpecialBarVisualState(
+        specialStyle = specialStyle,
+        resetKey = resetKey,
+        reduceMotion = reduceMotion,
+    )
 
     Box(
         modifier = modifier
@@ -711,13 +717,31 @@ internal fun MkwSlider(
             val barH = trackHeight.toPx()
             val barTop = (size.height - barH) / 2f
             val corner = CornerRadius(barH / 2f, barH / 2f)
+            val (fillStart, fillEnd) = MkwSliderMath.fillFractions(displayedFraction, valueRange, centerZero)
+            val fillLeft = thumbPadPx + fillStart * usableW
+            val fillWidth = (fillEnd - fillStart) * usableW
 
-            drawRoundRect(
-                color = trackCol,
-                topLeft = Offset(thumbPadPx, barTop),
-                size = Size(usableW, barH),
-                cornerRadius = corner,
-            )
+            if (specialState.currentStyle != null) {
+                drawSpecialProgressBar(
+                    visualState = specialState,
+                    trackLeft = thumbPadPx,
+                    barTop = barTop,
+                    usableW = usableW,
+                    barH = barH,
+                    corner = corner,
+                    fillLeft = fillLeft,
+                    fillWidth = fillWidth,
+                    baseTrackColor = trackCol,
+                    enabled = enabled,
+                )
+            } else {
+                drawRoundRect(
+                    color = trackCol,
+                    topLeft = Offset(thumbPadPx, barTop),
+                    size = Size(usableW, barH),
+                    cornerRadius = corner,
+                )
+            }
 
             markers.forEach { marker ->
                 val startF = marker.startFraction.coerceIn(0f, 1f)
@@ -763,10 +787,7 @@ internal fun MkwSlider(
                 )
             }
 
-            val (fillStart, fillEnd) = MkwSliderMath.fillFractions(displayedFraction, valueRange, centerZero)
-            val fillLeft = thumbPadPx + fillStart * usableW
-            val fillWidth = (fillEnd - fillStart) * usableW
-            if (fillWidth > 1f) {
+            if (specialState.currentStyle == null && fillWidth > 1f) {
                 drawRoundRect(
                     color = fillCol,
                     topLeft = Offset(fillLeft, barTop),
@@ -782,13 +803,14 @@ internal fun MkwSlider(
                 val maxX = minOf(size.width - thumbPadPx, size.width - thumbR).coerceAtLeast(minX)
                 val thumbX = (thumbPadPx + displayedFraction * usableW).coerceIn(minX, maxX)
                 val thumbY = size.height / 2f
+                val thumbStrokeCol = sampleSpecialBarThumbColor(specialState, displayedFraction, fillCol)
                 drawCircle(
                     color = MkwKitTokens.Palette.ground,
                     radius = thumbR,
                     center = Offset(thumbX, thumbY),
                 )
                 drawCircle(
-                    color = fillCol,
+                    color = thumbStrokeCol,
                     radius = thumbR,
                     center = Offset(thumbX, thumbY),
                     style = Stroke(width = 2.2.dp.toPx()),

@@ -282,4 +282,30 @@ class UnlockStoreTest {
         assertNull(after.problem)
         assertNull(after.state)
     }
+
+    @Test
+    fun legacySaveWithoutSpecialUnlockedFieldPreservesExistingUnlockedUsers() {
+        val dir = tempDir()
+        val file = File(dir, "special-cup.json")
+        file.writeText("""{"schemaVersion":1,"entitled":true,"ceremony":"PENDING","congratulated":false}""")
+
+        val restored = UnlockStore(file).load().state!!
+        assertTrue(restored.entitled)
+        assertTrue(restored.specialUnlocked, "legacy entitled users must remain unlocked after update")
+    }
+
+    @Test
+    fun newSavePendingCeremonyKeepsSpecialUnlockedFalseAcrossRestarts() {
+        val s = store()
+        var u = SpecialCupUnlock(setOf("A"))
+        u = u.withState(u.passQuiz())
+        assertFalse(u.isSpecialUnlocked)
+
+        assertNull(s.save(u.snapshot))
+        val restored = s.load().state!!
+        assertTrue(restored.quizPassed)
+        assertTrue(restored.ceremonyReady)
+        assertEquals(SpecialCupUnlock.CeremonyPhase.PENDING, restored.ceremony)
+        assertFalse(restored.specialUnlocked, "ceremony-ready save must stay locked until ceremony completes")
+    }
 }

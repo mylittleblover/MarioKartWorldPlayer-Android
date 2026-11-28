@@ -245,8 +245,8 @@ class CeremonyStateTest {
     }
 
     @Test
-    fun theNoticeActionLabelDoesNotRevealTheCup() {
-        val notice = assertNotNull(noticeFor(ui()), "an offered, visible cup is announced")
+    fun theNoticeActionLabelDoesNotRevealTheCupOrRainbowRoad() {
+        val notice = assertNotNull(noticeFor(ui()), "an offered, ceremony-ready cup is announced")
         assertFalse(
             notice.actionLabel.contains("unlock", ignoreCase = true),
             "the button must not promise an unlock the user has not entered: ${notice.actionLabel}",
@@ -256,22 +256,28 @@ class CeremonyStateTest {
             "the button must not name the hidden cup: ${notice.actionLabel}",
         )
         assertFalse(
+            notice.actionLabel.contains("rainbow", ignoreCase = true),
+            "the button must not spoil Rainbow Road: ${notice.actionLabel}",
+        )
+        assertFalse(
             notice.message.contains("Special Cup"),
             "the message must not name the hidden cup: ${notice.message}",
+        )
+        assertFalse(
+            notice.message.contains("Rainbow", ignoreCase = true),
+            "the message must not spoil Rainbow Road: ${notice.message}",
         )
     }
 
     @Test
-    fun theNoticeIsDismissibleAndCarriesAnAction() {
-        val notice = assertNotNull(noticeFor(ui()), "an offered, visible cup is announced")
-        assertTrue(notice.dismissible, "closing only hides the notification; the cup stays earned")
+    fun theNoticeIsPersistentNonDismissibleAndCarriesAnAction() {
+        val notice = assertNotNull(noticeFor(ui()), "an offered, ceremony-ready cup is announced")
+        assertFalse(notice.dismissible, "the ceremony notice must stay persistent and non-dismissible until watched")
         assertTrue(notice.actionLabel.isNotBlank(), "the notification needs an action")
     }
 
     @Test
     fun theNoticeUsesTheSameWordingAsTheOffer() {
-        // One statement of what has happened, so the notification cannot say something the rest of
-        // the app would not.
         val notice = assertNotNull(noticeFor(ui()), "an offered cup is announced")
         assertEquals(
             UnlockPresentation.offerLabel(),
@@ -281,13 +287,22 @@ class CeremonyStateTest {
     }
 
     @Test
-    fun theNoticeStaysBehindTheCupsVisibilityGate() {
-        // The notification is itself a representation of the cup. A state whose two flags disagree --
-        // offered but not entitled, which a restored or hand-built snapshot can produce -- must not be
-        // the path that leaks it.
+    fun theNoticeShowsBeforeCeremonyWatchedAndHidesOnceCompletedOrPlaying() {
+        // Ceremony ready (`canEnter = true`) before watching (`visible = false`): banner MUST show.
+        val preCeremony = ui(offered = true, visible = false).copy(canEnter = true, ceremonyCompleted = false)
+        val shown = assertNotNull(noticeFor(preCeremony), "persistent banner must appear before ceremony is watched")
+        assertFalse(shown.dismissible)
+
+        // While ceremony plays: hidden.
+        assertNull(noticeFor(preCeremony.copy(ceremonyPlaying = true)))
+
+        // After ceremony watched to completion: hidden.
+        assertNull(noticeFor(ui(offered = true, visible = true).copy(ceremonyCompleted = true)))
+
+        // Inconsistent unearned state (offered but neither canEnter nor visible): never leaks.
         assertNull(
-            noticeFor(ui(offered = true, visible = false)),
-            "an offered but still-hidden cup must not be announced",
+            noticeFor(ui(offered = true, visible = false).copy(canEnter = false)),
+            "an unearned cup must not be announced",
         )
     }
 

@@ -1,9 +1,11 @@
 <resources>
     <string name="recording_version">音乐版本</string>
     <string name="recording_version_number">版本 %1$d</string>
-    <string name="recording_version_hint">保持当前乐句进度，用一秒交叉淡化切换。</string>
-    <string name="music_region">音乐区域</string>
-    <string name="music_region_number">区域 %1$d</string>
-    <string name="music_region_hint">按曲目的切换点向下一个区域推进，区域 5 之后进入最后一圈。</string>
+    <string name="recording_version_hint">保持当前乐句进度，平滑交叉淡化切换。</string>
+    <string name="recording_version_hint_snow">同相位平滑交叉淡化（进入水上 0.5 秒 / 返回普通 2.0 秒），常规圈与最后一圈均支持。</string>
+    <string name="recording_version_hint_cinema">普通与荧幕内双向 0.5 秒同相位交叉淡化，常规圈与最后一圈均支持。</string>
+    <string name="music_region">音乐圈数</string>
+    <string name="music_region_number">第 %1$d 圈</string>
+    <string name="music_region_hint">按曲目的切换点向下一圈推进，第 5 圈之后进入最后一圈。</string>
     <string name="cancel_pending_transition">取消等待中的切换</string>
 </resources>

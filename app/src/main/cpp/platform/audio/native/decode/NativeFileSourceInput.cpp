@@ -22,16 +22,18 @@ public:
     audio::SourceReadResult read(audio::SourceByteOffset offset,std::uint8_t* destination,std::size_t count)noexcept override {
         if((!destination && count) || count>65536 || offset.value>byteLength() || count>byteLength()-offset.value)
             return {SourceStatus::InvalidRequest,0};
-        struct stat current{};
-        if(::fstat(descriptor_,&current)!=0)return {SourceStatus::InputUnavailable,0};
-        if(!sameRevision(revision_,current))return {SourceStatus::InputChanged,0};
         std::size_t done=0;unsigned interrupts=0;
         while(done<count) {
             const auto received=::pread(descriptor_,destination+done,count-done,static_cast<off_t>(offset.value+done));
             if(received<0 && errno==EINTR && ++interrupts<=16)continue;
-            if(received<=0)return {SourceStatus::InputUnavailable,0};
+            if(received<=0) {
+                struct stat current{};
+                if(::fstat(descriptor_,&current)==0 && !sameRevision(revision_,current))return {SourceStatus::InputChanged,0};
+                return {SourceStatus::InputUnavailable,0};
+            }
             done+=static_cast<std::size_t>(received);
         }
+        struct stat current{};
         if(::fstat(descriptor_,&current)!=0)return {SourceStatus::InputUnavailable,0};
         if(!sameRevision(revision_,current))return {SourceStatus::InputChanged,0};
         return {SourceStatus::Ok,done};

@@ -332,6 +332,7 @@ class PlaybackService : Service() {
 
                 override fun onStop() {
                     if (session.uninterruptible) return
+                    PlaybackHolder.linear().clearSession()
                     session.stop()
                     pausedByFocus = false
                     focus.abandon()
@@ -463,6 +464,7 @@ class PlaybackService : Service() {
             }
             ACTION_STOP -> {
                 if (!session.uninterruptible) {
+                    PlaybackHolder.linear().clearSession()
                     session.stop()
                     pausedByFocus = false
                     focus.abandon()
@@ -619,9 +621,9 @@ class PlaybackService : Service() {
 
         val subtitleText = state.subtitle?.takeIf { it.isNotBlank() } ?: when {
             state.detail != null -> state.detail
-            state.paused -> "Paused"
-            state.playing -> "Playing"
-            else -> "Stopped"
+            state.paused -> getString(R.string.tile_paused)
+            state.playing -> getString(R.string.tile_playing)
+            else -> getString(R.string.stage_stopped)
         }
 
         val titleText = state.title.ifEmpty { getString(R.string.app_name) }
@@ -651,33 +653,33 @@ class PlaybackService : Service() {
             if (canSkip) {
                 prevIdx = actionCount++
                 builder.addAction(
-                    R.drawable.ic_notif_prev, "Previous",
+                    R.drawable.ic_notif_prev, getString(R.string.widget_prev_desc),
                     command(ACTION_PREV),
                 )
             }
             if (!state.playing) {
                 playPauseIdx = actionCount++
                 builder.addAction(
-                    R.drawable.ic_widget_play, "Resume",
+                    R.drawable.ic_widget_play, getString(R.string.interactive_resume),
                     command(ACTION_RESUME),
                 )
             }
             if (state.playing) {
                 playPauseIdx = actionCount++
                 builder.addAction(
-                    R.drawable.ic_widget_pause, "Pause",
+                    R.drawable.ic_widget_pause, getString(R.string.interactive_pause),
                     command(ACTION_PAUSE),
                 )
             }
             if (canSkip) {
                 nextIdx = actionCount++
                 builder.addAction(
-                    R.drawable.ic_notif_next, "Next",
+                    R.drawable.ic_notif_next, getString(R.string.widget_next_desc),
                     command(ACTION_NEXT),
                 )
             }
             stopIdx = actionCount++
-            builder.addAction(R.drawable.ic_notif_stop, "Stop", command(ACTION_STOP))
+            builder.addAction(R.drawable.ic_notif_stop, getString(R.string.interactive_stop), command(ACTION_STOP))
         }
 
         mediaSession?.let { media ->
@@ -711,10 +713,10 @@ class PlaybackService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Playback",
+            getString(R.string.notif_channel_playback_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Shows what is playing and offers transport controls."
+            description = getString(R.string.notif_channel_playback_desc)
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)

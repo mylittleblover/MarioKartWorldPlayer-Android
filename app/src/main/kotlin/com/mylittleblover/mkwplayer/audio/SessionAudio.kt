@@ -38,6 +38,9 @@ internal interface SessionAudioEngine : PlaybackEngine {
     fun setVisualizerEnabled(enabled: Boolean) {}
 
     fun visualizerSpectrum(outBands: FloatArray): Boolean = false
+
+    /** Renders [frames] stereo float samples into [output] on the control thread (offline / drain). */
+    fun renderInto(output: FloatArray, frames: Int): Int = 1
 }
 
 internal interface SessionAudioOutput {
@@ -45,6 +48,7 @@ internal interface SessionAudioOutput {
     fun suspendStream(): Boolean = false
     fun resumeStream(sampleRate: Int): Boolean = false
     fun rebindEngine(engineHandle: Long, sampleRate: Int): Boolean = false
+    fun rebindEngine(engineHandle: Long, sampleRate: Int, flush: Boolean): Boolean = rebindEngine(engineHandle, sampleRate)
     fun rebuildStream(sampleRate: Int): Boolean? = null
     fun close()
 }

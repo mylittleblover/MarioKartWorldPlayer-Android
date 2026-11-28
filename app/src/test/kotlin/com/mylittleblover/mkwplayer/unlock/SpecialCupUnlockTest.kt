@@ -385,4 +385,54 @@ class SpecialCupUnlockTest {
         assertEquals("BGM_Stage_Coaster", u.stageOf("BGM_Stage_Coaster_Pre.bwav"))
         assertEquals("BGM_Stage_Coaster", u.stageOf("BGM_Stage_Coaster_Outro00.bwav"))
     }
+
+    // ---------------------------------------------------------------- ceremony-gated unlock & quiz (#24)
+
+    @Test
+    fun completingEligibleCoursesMakesCeremonyReadyButDoesNotUnlockUntilCeremonyFinishes() {
+        var u = unlock("A", "B")
+        u = play(u, "A", 0, required)
+        u = play(u, "B", 0, required)
+
+        assertTrue(u.isCeremonyReady, "all eligible courses heard should make the ceremony ready")
+        assertTrue(u.shouldShowCeremonyBanner, "persistent banner should be active before ceremony is watched")
+        assertFalse(u.isCeremonyWatched)
+        assertFalse(u.isSpecialUnlocked, "Special Cup must stay locked until ceremony completes")
+
+        u = u.withState(u.beginCeremony())
+        assertFalse(u.isSpecialUnlocked, "still locked while ceremony is playing")
+        assertFalse(u.shouldShowCeremonyBanner, "banner hides while ceremony is actively playing")
+
+        u = u.withState(u.leaveCeremonyEarly())
+        assertFalse(u.isSpecialUnlocked, "leaving early on first viewing must not unlock the cup")
+        assertTrue(u.shouldShowCeremonyBanner, "banner stays persistent after leaving early")
+
+        u = u.withState(u.beginCeremony())
+        u = u.withState(u.finishCeremony(reachedEnd = true))
+        assertTrue(u.isCeremonyWatched)
+        assertTrue(u.isSpecialUnlocked, "watching the ceremony to completion officially unlocks Special Cup")
+        assertFalse(u.shouldShowCeremonyBanner, "banner disappears once ceremony is watched")
+
+        // Leaving early on a later replay keeps the already-unlocked state intact.
+        u = u.withState(u.beginCeremony())
+        u = u.withState(u.leaveCeremonyEarly())
+        assertTrue(u.isSpecialUnlocked, "replay exit must never re-lock an already unlocked cup")
+    }
+
+    @Test
+    fun passingTheQuizMakesCeremonyReadyWithoutBypassingTheCeremony() {
+        var u = unlock("A", "B")
+        u = u.withState(u.passQuiz())
+
+        assertTrue(u.snapshot.quizPassed)
+        assertTrue(u.isCeremonyReady)
+        assertEquals(SpecialCupUnlock.CeremonyPhase.PENDING, u.snapshot.ceremony)
+        assertTrue(u.shouldShowCeremonyBanner)
+        assertFalse(u.isSpecialUnlocked, "passing the quiz must still require watching the ceremony")
+
+        u = u.withState(u.beginCeremony())
+        u = u.withState(u.finishCeremony(reachedEnd = true))
+        assertTrue(u.isSpecialUnlocked)
+        assertFalse(u.shouldShowCeremonyBanner)
+    }
 }

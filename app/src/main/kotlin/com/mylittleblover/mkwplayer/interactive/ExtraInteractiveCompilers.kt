@@ -193,8 +193,8 @@ internal object ExtraInteractiveCompilers {
         val fastBytes = bytesByStem[track.fast.stem] ?: bytesByStem.getValue(fastPath)
 
         val assets = listOf(
-            G.Asset(mainPath, track.main.sampleRate, projectedChannels(track.main.channels), track.main.frames, sha256(mainBytes)),
-            G.Asset(fastPath, track.fast.sampleRate, projectedChannels(track.fast.channels), track.fast.frames, sha256(fastBytes)),
+            G.Asset(mainPath, track.main.sampleRate, projectedChannels(track.main.channels), track.main.frames, sha256(mainBytes), lookAheadFrames = track.main.sampleRate * 2L),
+            G.Asset(fastPath, track.fast.sampleRate, projectedChannels(track.fast.channels), track.fast.frames, sha256(fastBytes), lookAheadFrames = track.fast.sampleRate * 2L),
         )
         val mainSeg = G.Segment(
             index = TWO_STATE_SEG_MAIN,
@@ -212,15 +212,28 @@ internal object ExtraInteractiveCompilers {
             G.Track(200, TWO_STATE_SEG_MAIN, listOf(G.Clip(300, 0, sourceLength = track.main.frames))),
             G.Track(201, TWO_STATE_SEG_FAST, listOf(G.Clip(301, 1, sourceLength = track.fast.frames))),
         )
-        val transition = G.Transition(
-            index = 400,
-            sources = listOf(TWO_STATE_SEG_MAIN),
-            destinations = listOf(TWO_STATE_SEG_FAST),
-            sync = if (perfectBeatEnabled) G.SyncPoint.NextBar else G.SyncPoint.NextBeat,
-            entry = G.EntryMode.EntryCue,
-            fadeOut = G.Fade(beats = 0.5),
-            postExit = true,
-        )
+        val transition = if (isBattle) {
+            // Verified v1.8.0 (0x0243a478): Battle final minute switches directly to BattleFL without FinalLapFF.
+            G.Transition(
+                index = 400,
+                sources = listOf(TWO_STATE_SEG_MAIN),
+                destinations = listOf(TWO_STATE_SEG_FAST),
+                sync = if (perfectBeatEnabled) G.SyncPoint.NextBar else G.SyncPoint.Immediate,
+                entry = G.EntryMode.EntryCue,
+                fadeOut = G.Fade(beats = FinalLapFanfareCompiler.FULL_FADE_OUT_SEC * 140.0 / 60.0, offset = 0.0, shape = G.Shape.Linear),
+                postExit = true,
+            )
+        } else {
+            G.Transition(
+                index = 400,
+                sources = listOf(TWO_STATE_SEG_MAIN),
+                destinations = listOf(TWO_STATE_SEG_FAST),
+                sync = if (perfectBeatEnabled) G.SyncPoint.NextBar else G.SyncPoint.NextBeat,
+                entry = G.EntryMode.EntryCue,
+                fadeOut = G.Fade(beats = 0.5),
+                postExit = true,
+            )
+        }
         val spec = G.Spec(
             assets = assets,
             segments = listOf(mainSeg, fastSeg),
@@ -257,15 +270,20 @@ internal object ExtraInteractiveCompilers {
             entryPreparedAssets = entryPrepared,
             customInitialSegments = listOf(TWO_STATE_SEG_MAIN, TWO_STATE_SEG_FAST),
         )
-        val ffBytes = bytesByStem[FinalLapFanfareCompiler.ASSET]
-            ?: bytesByStem[FinalLapFanfareCompiler.ASSET.removeSuffix(".bwav")]
-        val extendBytes = if (ffBytes != null) {
-            bytesByStem + (FinalLapFanfareCompiler.ASSET to ffBytes)
+        val extendedPlan = if (isBattle) {
+            basePlan
         } else {
-            bytesByStem
+            val ffBytes = bytesByStem[FinalLapFanfareCompiler.ASSET]
+                ?: bytesByStem[FinalLapFanfareCompiler.ASSET.removeSuffix(".bwav")]
+            val extendBytes = if (ffBytes != null) {
+                bytesByStem + (FinalLapFanfareCompiler.ASSET to ffBytes)
+            } else {
+                bytesByStem
+            }
+            FinalLapFanfareCompiler.extend(basePlan, extendBytes, perfectBeatEnabled = perfectBeatEnabled)
         }
         return InteractivePlaybackPlan.applySwitchFadeToPlan(
-            FinalLapFanfareCompiler.extend(basePlan, extendBytes, perfectBeatEnabled = perfectBeatEnabled),
+            extendedPlan,
             segmentSwitchFadeOutMs,
         )
     }
@@ -279,8 +297,8 @@ internal object ExtraInteractiveCompilers {
         val telopPath = "${item.telop.stem}.bwav"
         val totalFrames = maxOf(item.totalFrames, item.op.frames, item.deltaFrames + item.telop.frames)
         val assets = listOf(
-            G.Asset(opPath, item.op.sampleRate, projectedChannels(item.op.channels), item.op.frames, sha256(opBytes)),
-            G.Asset(telopPath, item.telop.sampleRate, projectedChannels(item.telop.channels), item.telop.frames, sha256(telopBytes)),
+            G.Asset(opPath, item.op.sampleRate, projectedChannels(item.op.channels), item.op.frames, sha256(opBytes), lookAheadFrames = item.op.sampleRate * 2L),
+            G.Asset(telopPath, item.telop.sampleRate, projectedChannels(item.telop.channels), item.telop.frames, sha256(telopBytes), lookAheadFrames = item.telop.sampleRate * 2L),
         )
         val segment = G.Segment(index = 100, entry = 0L, exit = totalFrames, loop = null)
         val tracks = listOf(

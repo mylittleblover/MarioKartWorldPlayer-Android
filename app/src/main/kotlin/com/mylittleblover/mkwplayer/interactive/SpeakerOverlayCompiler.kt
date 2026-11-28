@@ -81,6 +81,7 @@ internal object SpeakerOverlayCompiler {
                 channels = config.normalAsset.channels,
                 frames = config.normalAsset.frames,
                 sha256 = normalDigest,
+                lookAheadFrames = config.normalAsset.sampleRate * 2L,
             ),
             G.Asset(
                 path = fastPath,
@@ -88,6 +89,7 @@ internal object SpeakerOverlayCompiler {
                 channels = config.fastAsset.channels,
                 frames = config.fastAsset.frames,
                 sha256 = fastDigest,
+                lookAheadFrames = config.fastAsset.sampleRate * 2L,
             ),
         )
         val spec = base.spec.copy(

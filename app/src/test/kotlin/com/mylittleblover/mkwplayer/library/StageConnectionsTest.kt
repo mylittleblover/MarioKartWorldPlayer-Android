@@ -9,11 +9,11 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The shipped connection table, checked against the facts it was exported with.
+ * The shipped connection table, checked against Mario Kart World v1.8.0 reverse-engineered data
+ * (`REPORT_TRACK_CONNECTIONS.md` / `RSDB/Course.Product.180.rstbl` & `CourseAreaGParam.CourseEx`).
  *
- * The numbers here are not arbitrary: 214 rows, 29 sources, 30 destinations, and Rainbow as a sink came from
- * `Stage_Connections_Final.csv` itself. A future edit to the asset that changes any of them has to change
- * this test too, which is the point -- otherwise a silently reversed or invented edge would look fine.
+ * 202 directed inter-stage edges (137 `InterStageEx1` + 65 `InterStageEx2`), 29 sources,
+ * 30 destinations, 96 bidirectional pairs + 10 strictly one-way edges, and Rainbow as sole sink.
  */
 class StageConnectionsTest {
 
@@ -26,46 +26,77 @@ class StageConnectionsTest {
 
     @Test
     fun `the exported table is intact`() {
-        assertEquals(214, catalog.edges.size)
+        assertEquals(202, catalog.edges.size)
         assertEquals(29, catalog.sources().size)
+        assertEquals(137, catalog.edges.count { it.kind == "InterStageEx1" })
+        assertEquals(65, catalog.edges.count { it.kind == "InterStageEx2" })
     }
 
     @Test
     fun `rainbow is entered only from peach stadium`() {
-        // The single entrance is Central (Peach Stadium / 碧姬竞技场) -> Rainbow. There is no second way in,
-        // and inventing one would put a road on the map the game does not have.
         val entrances = catalog.incoming("Rainbow")
         assertEquals("Rainbow has exactly one entrance", 1, entrances.size)
         assertEquals("Central", entrances.single().from)
         assertEquals("InterStageEx1", entrances.single().kind)
         assertTrue(catalog.connects("Central", "Rainbow"))
+        assertTrue(catalog.isOneWay("Central", "Rainbow"))
     }
 
     @Test
     fun `rainbow is a finish line and never a start`() {
-        // Rainbow appears only as a destination. Filling the gap with a reverse edge would be inventing
-        // game data, so the sink is preserved and reported as such.
         assertTrue("Rainbow must have no outgoing connection", catalog.outgoing("Rainbow").isEmpty())
         assertTrue("Rainbow must have no neighbours", catalog.neighbours("Rainbow").isEmpty())
         assertTrue("Rainbow must be reported as a sink", catalog.sinks().contains("Rainbow"))
-        // Every other stage still leaves somewhere, so the sink is Rainbow in particular rather than a bug.
         assertEquals(listOf("Rainbow"), catalog.sinks())
     }
 
     @Test
-    fun `connections are directed and never reversed`() {
-        // 96 of the 214 pairs exist in both directions, so most edges are symmetric -- but 22 are not, and
-        // those are the ones that prove the table is a directed graph rather than a list of neighbour pairs.
-        // Airship Fortress <-> Dino Bones happens to exist both ways, so it cannot show direction; Donkey
-        // Kong -> First Circuit exists in one direction only.
+    fun `connections are directed and match exact 96 bidirectional plus 10 one-way topology`() {
+        val bidirectional = catalog.edges.filter { catalog.isBidirectional(it.from, it.to) }
+        val oneWay = catalog.edges.filter { catalog.isOneWay(it.from, it.to) }
+        assertEquals(192, bidirectional.size)
+        assertEquals(10, oneWay.size)
+        assertEquals(
+            setOf(
+                "Central" to "Rainbow",
+                "Coaster" to "KoopaTroopaBeach",
+                "DesertHills" to "KoopaTroopaBeach",
+                "DonkeyKong" to "Central",
+                "DonkeyKong" to "DesertHills",
+                "DonkeyKong" to "FirstCircuit",
+                "IceBuildings" to "LagoonCity",
+                "IceBuildings" to "RaftingRiver",
+                "SFCMarioCircuit" to "Central",
+                "StormClouds" to "KoopaTroopaBeach",
+            ),
+            oneWay.map { it.from to it.to }.toSet(),
+        )
         assertTrue("Donkey Kong to First Circuit is in the export", catalog.connects("DonkeyKong", "FirstCircuit"))
         assertFalse(
             "the reverse is not implied by the forward edge",
             catalog.connects("FirstCircuit", "DonkeyKong"),
         )
-        // A symmetric pair is symmetric because the export says so, not because the reader mirrored it.
         assertTrue(catalog.connects("AirshipFortress", "DinoBones"))
         assertTrue(catalog.connects("DinoBones", "AirshipFortress"))
+    }
+
+    @Test
+    fun `long rally full-tour courses are excluded from direct connections`() {
+        assertFalse(catalog.connects("DesertHills", "BigTree"))
+        assertFalse(catalog.connects("AirshipFortress", "StormClouds"))
+        assertFalse(catalog.connects("BigTree", "AirshipFortress"))
+        assertFalse(catalog.connects("Cinema", "WarioShipyard"))
+        assertFalse(catalog.connects("PeachBeach", "DesertHills"))
+        assertEquals(0, catalog.edges.count { it.kind == "LongRally" })
+        // Defensive parser guard also rejects LongRally rows even if present in custom JSON.
+        val mixed = """{"edges":[
+            {"from":"DesertHills","to":"BigTree","kind":"LongRally","rowId":"LongRally_DesertHillsToBigTree_A_00"},
+            {"from":"Central","to":"Rainbow","kind":"InterStageEx1","rowId":"InterStageEx1_CentralToRainbow_A_00"}
+        ]}"""
+        val parsed = StageConnections.parse(mixed)!!
+        assertEquals(1, parsed.edges.size)
+        assertTrue(parsed.connects("Central", "Rainbow"))
+        assertFalse(parsed.connects("DesertHills", "BigTree"))
     }
 
     @Test
@@ -74,17 +105,30 @@ class StageConnectionsTest {
         assertNotNull("Ice Buildings to Lagoon City is in the export", edge)
         assertEquals("InterStageEx2", edge!!.kind)
         assertNull("Lagoon City to Ice Buildings is not", catalog.between("LagoonCity", "IceBuildings"))
-        // Lagoon City does leave, just somewhere else, so this is direction and not a missing row.
         assertTrue(catalog.outgoing("LagoonCity").isNotEmpty())
+    }
+
+    @Test
+    fun `stage connect end ratio overrides match v1_8_0 StageConnectInfos`() {
+        val overridden = catalog.edges.filter { it.overrideJukeBoxEndRatio != null }
+            .associate { (it.from to it.to) to it.overrideJukeBoxEndRatio }
+        assertEquals(
+            mapOf(
+                ("Cave" to "Cinema") to 0.8,
+                ("DKPass" to "SnowMountain") to 0.75,
+                ("ShyGuyBazaar" to "WarioStadium") to 0.75,
+                ("SFCMarioCircuit" to "Central") to 0.8,
+            ),
+            overridden,
+        )
     }
 
     @Test
     fun `outgoing returns the real neighbours ordered by the export`() {
         val neighbours = catalog.neighbours("BigTree")
-        assertTrue("Big Tree has neighbours", neighbours.isNotEmpty())
+        assertEquals(5, neighbours.size)
         assertTrue(neighbours.contains("Cave"))
         assertTrue(neighbours.contains("Cinema"))
-        // No neighbour is the stage itself.
         assertFalse(neighbours.contains("BigTree"))
     }
 
@@ -100,12 +144,11 @@ class StageConnectionsTest {
             )
         }
         val kinds = catalog.edges.map { it.kind }.toSet()
-        assertEquals(setOf("InterStageEx1", "InterStageEx2", "LongRally"), kinds)
+        assertEquals(setOf("InterStageEx1", "InterStageEx2"), kinds)
     }
 
     @Test
     fun `the archive suffix spelling resolves to the same stage`() {
-        // The pack says AirshipFortress_00, the export says AirshipFortress.
         val withSuffix = catalog.outgoing("AirshipFortress_00")
         val without = catalog.outgoing("AirshipFortress")
         assertEquals(without.size, withSuffix.size)
@@ -123,7 +166,6 @@ class StageConnectionsTest {
     fun `a malformed asset is refused instead of half loaded`() {
         assertNull(StageConnections.parse("not json"))
         assertNull(StageConnections.parse("""{"edges":[]}"""))
-        // An edge without an endpoint is dropped, and a table left empty is null rather than a catalog.
         val onlyBroken = """{"edges":[{"from":"","to":"Cave","kind":"InterStageEx1"}]}"""
         assertNull(StageConnections.parse(onlyBroken))
     }

@@ -52,7 +52,7 @@ EngineStatus EngineRuntime::setLinearRepeat(bool enabled,std::optional<audio::So
     for(auto& voice:voices_.slots())if(voice.active)voice.repeatRange(enabled,range);
     return EngineStatus::Ok;
 }
-void EngineRuntime::bindLinear(std::unique_ptr<AudioBuffer> buffer,bool loop) noexcept { linear_=std::move(buffer); linearLoop_=loop; }
+void EngineRuntime::bindLinear(std::unique_ptr<AudioBuffer> buffer,bool loop) noexcept { linear_=std::move(buffer); linearLoop_=loop; linearFadeEnd_=-1; linearFadeDuration_=0; }
 bool EngineRuntime::submit(const api::EngineCommand& command) noexcept {
     const int kind=static_cast<int>(command.kind);
     if(!api::validEngineCommandKind(kind) || command.at.value< -1 || !std::isfinite(command.number)) return false;
@@ -81,7 +81,7 @@ EngineStatus EngineRuntime::startSegment(int target) noexcept {
         // command-history epoch, including replay of a restart while paused.
         if(clock_.frame()!=0 || clock_.status()!=TransportStatus::Stopped)journal_->stopped(clock_.frame(),rebuilding_);
         voices_.clear(); clock_.seek(0); Voice voice; voice.sourceLength=linear_->frames();
-        voice.begin(linear_.get(),rate_); voice.repeatRange(linearLoop_,linearRepeatRange_); voices_.add(voice); clock_.play(); return EngineStatus::Ok;
+        voice.begin(linear_.get(),rate_); voice.repeatRange(linearLoop_,linearRepeatRange_); applyLinearFadeWindow(voice); voices_.add(voice); clock_.play(); return EngineStatus::Ok;
     }
     const auto* object=graph_->node(target);
     if(!object || (object->kind!=Kind::Segment && object->kind!=Kind::Playlist && object->kind!=Kind::Switch)) return EngineStatus::InvalidRequest;
@@ -211,11 +211,15 @@ void EngineRuntime::execute(const api::EngineCommand& command,int depth) noexcep
     switch(command.kind) {
         case EngineCommandKind::Play:
             last_=requestPlay(command.target);
-            if(last_==EngineStatus::Ok && albumActive_){albumActive_=false;albumState_.phase=api::AlbumFlowPhase::Overridden;}
-            if(last_==EngineStatus::Ok && musicalLoopActive_){musicalLoopActive_=false;musicalLoopState_.phase=api::MusicalLoopPhase::Overridden;}
+            if(last_==EngineStatus::Ok) {
+                globalFadeEnd_=-1;
+                if(albumActive_){albumActive_=false;albumState_.phase=api::AlbumFlowPhase::Overridden;}
+                if(musicalLoopActive_){musicalLoopActive_=false;musicalLoopState_.phase=api::MusicalLoopPhase::Overridden;}
+            }
             break;
         case EngineCommandKind::CancelPendingTransition:
-            if(!transition_.active || transition_.sourceLeft || transition_.destinationStarted || transition_.bridgeStarted) {
+            if(!transition_.active || transition_.sourceLeft || transition_.destinationStarted || transition_.bridgeStarted ||
+                (transition_.source && transition_.source->departure && clock_.frame()>=transition_.source->departureStart)) {
                 last_=EngineStatus::InvalidRequest;
             } else {
                 queuedTransition_=-1; queuedSwitch_=false;
@@ -299,6 +303,19 @@ void EngineRuntime::execute(const api::EngineCommand& command,int depth) noexcep
         case EngineCommandKind::AlbumFlow:last_=startAlbumFlow(command.target);break;
         case EngineCommandKind::AlbumNext:last_=nextAlbumFlow();break;
         case EngineCommandKind::StopMusicalLoop:last_=stopMusicalLoop(command.target,command.number);break;
+        case EngineCommandKind::LinearFadeWindow:
+            if(graph_ || !linear_) {
+                last_=EngineStatus::InvalidRequest;
+            } else {
+                const Frame endFrame=(std::isfinite(command.number) && command.number>0.0)
+                    ? static_cast<Frame>(std::llround(command.number))
+                    : Frame{-1};
+                const Frame fadeFrames=command.value>0 ? static_cast<Frame>(command.value) : Frame{0};
+                linearFadeEnd_=endFrame;
+                linearFadeDuration_=endFrame>0 ? fadeFrames : Frame{0};
+                for(auto& voice:voices_.slots()) if(voice.active) applyLinearFadeWindow(voice);
+            }
+            break;
     }
     if(last_!=EngineStatus::Ok) ++rejected_;
 }

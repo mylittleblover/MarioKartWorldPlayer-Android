@@ -1,6 +1,17 @@
 # DonkeyKong 区域与待执行切换取消
 
-用户确认 base Full 与 Pattern2/3/4/5 是区域切换。DonkeyRegionCompiler 在生产 MINF 图上新增 5 个区域与 20 条有向边；源退出点来自每个源自己的 label=1，包含非循环前奏内的原始点，目标按真实 phase 提前进入并在 G 提交。当前五个目标 phase 都是 0，不使用 SameTime 或一秒版本淡化。Pattern 没有确认的 Outro/Fast 标记，因此只开放区域间切换，需返回区域 1 才可使用已验证的结束/Fast。
+> **MKW v1.8.0 游戏内提取报告对齐校正（2026-11-28，已实装于 `Beta 0.1.6`）**
+>
+> 经《马力欧卡丁车 世界》v1.8.0 逆向提取（`main.bin` `0x0243c230`、`BgmAll.Product.180.bars.zs` 与 `Default.game__SoundBgmSetting.bgyml`）核实，本文早期 `alpha08` 阶段“5 个区域全部按每 4 拍 `label=1` 切出”的假设已修正并全量实装：
+> - **区域 1（`BGM_Stage_DonkeyKong`，174 BPM）**：每 **4 拍**（`label == 1`）可切出；持有全部 7 个尾奏（`Outro00..06`）。
+> - **区域 2（`BGM_Stage_DonkeyKong_Pattern2`）**：7 小节前奏 + 8 小节循环，`loopStart` 位于第 28 拍，按 **`loopStart` 对齐的 8 拍网格**切出（拍索引 `[4, 12, 20, 28, 36, 44, 52, 60]`）。
+> - **区域 3～5（`BGM_Stage_DonkeyKong_Pattern3/4/5`）**：三轨均**逐样本锁定在 `1,191,722` 帧**（循环窗 `132,414..1,191,722`，`loopStart` 位于第 8 拍），按 **`loopStart` 对齐的 8 拍网格**切出（拍索引 `[0, 8, 16, 24, 32, 40, 48, 56, 64, 72]`）。
+> - **尾奏与第 6 段最终圈**：`Pattern2..5` 经全量 AMTA 普查确认为 **0 条 `Full_ToOutro` 标记**且无独立 `_Fast`；第 6 段（`lap == totalLaps`）通过标准最终圈流程（原曲 `0.10 s` 淡出 + `FinalLapFanfareDelay = 0.133 s` + `BGM_Seq_FinalLapFF` + `FastDelay = 4.05 s`）进入独立 10.05 s 短循环 **`BGM_Stage_DonkeyKong_Fast`**。
+> - **单元测试钉死**：见 `VerifiedV180TransitionsTest.donkeyKongUses4BeatGridOnRegion1AndLoopAnchored8BeatGridOnRegions2To5WithLookAhead`（全部 5 个区域网格及 `Pattern2..5` 2 秒 `lookAheadFrames = 96,000` 均已验证）。
+
+## 历史记录（2026-11-12 `alpha08` 初版接入与取消语义验收）
+
+早期接入确认 base Full 与 Pattern2/3/4/5 是区域切换。`DonkeyRegionCompiler` 在生产 MINF 图上新增 5 个区域与 20 条有向边；目标按真实 phase 提前进入并在 G 提交，当前五个目标 phase 都是 0，不使用 SameTime 或双版本淡化。Pattern2..5 没有 Outro/Fast 标记，因此只开放区域间切换，需返回区域 1 才可使用已验证的结束尾奏，或由区域 5 进入最终圈 Fast。（注：下述早期 40 份 WAV 验收对应 `alpha08` 初版全 `label=1` 网格，现已由 v1.8.0 4 拍 / 8 拍网格取代。）
 
 40 份实际 Native WAV（20 个方向 × early/loop-end）已全部成功，sourceSync、destinationEntry、firstStart 均等于原始首拍。最早测试 G=132413，循环末端分别为 2979305、993101、1191722；没有把末端前后一帧四舍五入。首次 voice 观测的 transport-source 恰等于 G；未将后续 cursor 推演描述成直接观测 G 时刻 source=0。全部 PCM16 双声道48kHz，零削波、欠载、解码失败，长度另经 WAV 头独立复核。
 

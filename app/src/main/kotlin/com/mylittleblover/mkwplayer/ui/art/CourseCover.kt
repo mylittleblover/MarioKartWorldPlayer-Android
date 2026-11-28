@@ -45,70 +45,57 @@ internal fun CourseCover(
         (listOfNotNull(artworkName) + (code?.let { CourseCoverArt.packCandidates(it) }.orEmpty())).distinct()
     }
 
-    when {
-        formalArt != null -> Box(modifier) {
-            Image(painter = formalArt, contentDescription = null, modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop)
+    if (formalArt != null) {
+        Box(modifier) {
+            Image(
+                painter = formalArt,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
             if (showIcon) code?.let { StageArt.resolve(it) }?.let {
                 ResourceArtwork(it, Modifier.align(Alignment.BottomEnd).size(72.dp))
             }
         }
+        return
+    }
 
-        packDirectory != null && packArtNames.isNotEmpty() -> ArtworkSlot(modifier) { edge ->
-            Box(Modifier.fillMaxSize()) {
-                val packedLookup = PackArtwork.rememberArtworkState(packDirectory, packArtNames, edge)
-                val packed = packedLookup.loaded
-                when {
-                    packed != null -> {
-                        FadingArtwork(packed.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !packedLookup.fromCache)
-                    }
-                    // Only decode bundled/placeholder art when the pack does not ship this artwork file.
-                    !PackArtwork.hasAnyCandidate(packDirectory, packArtNames) -> {
-                        if (cover != null) {
-                            val coverLookup = rememberResourceArtworkState(cover, edge)
-                            coverLookup.loaded?.let {
-                                FadingArtwork(it.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !coverLookup.fromCache)
-                            }
-                        } else {
-                            CoursePlaceholderContent(code, edge = edge, showIcon = false)
+    ArtworkSlot(modifier) { edge ->
+        Box(Modifier.fillMaxSize()) {
+            val usePack = packDirectory != null && packArtNames.isNotEmpty()
+            val packedLookup = if (usePack) {
+                PackArtwork.rememberArtworkState(packDirectory, packArtNames, edge)
+            } else {
+                ArtworkLookup(null, fromCache = true)
+            }
+            val packed = packedLookup.loaded
+            when {
+                packed != null -> {
+                    FadingArtwork(packed.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !packedLookup.fromCache)
+                }
+                !usePack || !PackArtwork.hasAnyCandidate(packDirectory, packArtNames) -> {
+                    if (cover != null) {
+                        val coverLookup = rememberResourceArtworkState(cover, edge)
+                        coverLookup.loaded?.let {
+                            FadingArtwork(it.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !coverLookup.fromCache)
                         }
-                    }
-                }
-                if (showIcon) code?.let { StageArt.resolve(it) }?.let {
-                    val iconLookup = rememberResourceArtworkState(it, edge)
-                    iconLookup.loaded?.let { loadedIcon ->
-                        FadingArtwork(
-                            loadedIcon.bitmap,
-                            Modifier.align(Alignment.BottomEnd).size(72.dp),
-                            ContentScale.Fit,
-                            animate = !iconLookup.fromCache,
-                        )
+                    } else {
+                        CoursePlaceholderContent(code, edge = edge, showIcon = false)
                     }
                 }
             }
-        }
-
-        cover != null -> ArtworkSlot(modifier) { edge ->
-            Box(Modifier.fillMaxSize()) {
-                val coverLookup = rememberResourceArtworkState(cover, edge)
-                coverLookup.loaded?.let {
-                    FadingArtwork(it.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !coverLookup.fromCache)
-                }
-                if (showIcon) code?.let { StageArt.resolve(it) }?.let {
-                    val iconLookup = rememberResourceArtworkState(it, edge)
-                    iconLookup.loaded?.let { loadedIcon ->
-                        FadingArtwork(
-                            loadedIcon.bitmap,
-                            Modifier.align(Alignment.BottomEnd).size(72.dp),
-                            ContentScale.Fit,
-                            animate = !iconLookup.fromCache,
-                        )
-                    }
+            if (showIcon) code?.let { StageArt.resolve(it) }?.let {
+                val iconLookup = rememberResourceArtworkState(it, minOf(edge, 256))
+                iconLookup.loaded?.let { loadedIcon ->
+                    FadingArtwork(
+                        loadedIcon.bitmap,
+                        Modifier.align(Alignment.BottomEnd).size(72.dp),
+                        ContentScale.Fit,
+                        animate = !iconLookup.fromCache,
+                    )
                 }
             }
         }
-
-        else -> CoursePlaceholder(code, modifier, showIcon = showIcon)
     }
 }
 

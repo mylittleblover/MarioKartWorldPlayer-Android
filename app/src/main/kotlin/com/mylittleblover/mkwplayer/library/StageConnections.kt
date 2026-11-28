@@ -5,21 +5,23 @@ import org.json.JSONObject
 /**
  * The stage-to-stage connections the game itself defines.
  *
- * Exported from `Stage_Connections_Final.csv`: 214 rows, 29 source stages, 30 destination stages. Each row
- * is one inter-stage route with its own kind (`InterStageEx1` / `InterStageEx2` / `LongRally`), race rule,
- * starting type and traffic density.
+ * Verified from Mario Kart World v1.8.0 (`RSDB/Course.Product.180.rstbl` & `CourseAreaGParam.CourseEx`):
+ * 202 directed inter-stage connections (137 `InterStageEx1` + 65 `InterStageEx2`), 29 source stages,
+ * 30 destination stages. The 12 multi-stop `LongRally` Knockout Tour course IDs are excluded because
+ * they are 6-stage rallies rather than direct single-hop connections.
  *
  * Two facts about this data are load-bearing and are preserved rather than tidied:
  *
- * - **It is directed.** 214 rows are 214 distinct ordered pairs; there is not one reverse duplicate. A
- *   route from A to B says nothing about B to A, so the app never reverses an edge to fill a gap.
- * - **Rainbow is a sink.** It appears 30 times as a destination and never as a source. That is the data
- *   saying the world tour ends at Rainbow, not a missing row, so [outgoing] returns empty for it and the
- *   UI treats "no outgoing connection" as a real answer.
+ * - **It is directed.** 96 pairs are bidirectional (192 edges) and 10 edges are strictly one-way
+ *   (1 `InterStageEx1`: `Central -> Rainbow`, plus 9 `InterStageEx2` routes). A route from A to B
+ *   says nothing about B to A, so the app never reverses an edge to fill a gap.
+ * - **Rainbow is a sink.** It has exactly 1 incoming edge (`Central -> Rainbow`) and 0 outgoing
+ *   edges. That is the data saying the world tour ends at Rainbow, not a missing row, so [outgoing]
+ *   returns empty for it and the UI treats "no outgoing connection" as a real answer.
  */
 internal object StageConnections {
 
-    /** One directed connection, exactly as the export states it. */
+    /** One directed connection, exactly as the v1.8.0 game data defines it. */
     data class Edge(
         val from: String,
         val to: String,
@@ -29,6 +31,7 @@ internal object StageConnections {
         val traffic: String,
         val rowId: String,
         val displayName: String,
+        val overrideJukeBoxEndRatio: Double? = null,
     )
 
     data class Catalog(
@@ -58,6 +61,12 @@ internal object StageConnections {
         /** True when the game defines [from] to [to]. Never true just because it defines the reverse. */
         fun connects(from: String, to: String): Boolean = between(from, to) != null
 
+        /** True when both [from] -> [to] and [to] -> [from] exist in the directed connection graph. */
+        fun isBidirectional(from: String, to: String): Boolean = connects(from, to) && connects(to, from)
+
+        /** True when [from] -> [to] exists but [to] -> [from] does not. */
+        fun isOneWay(from: String, to: String): Boolean = connects(from, to) && !connects(to, from)
+
         /** Source stages that have at least one outgoing connection. */
         fun sources(): List<String> = bySource.keys.sorted()
 
@@ -86,17 +95,25 @@ internal object StageConnections {
             val item = array.optJSONObject(index) ?: continue
             val from = item.optString("from")
             val to = item.optString("to")
-            // An edge missing an endpoint is not a connection; skipping it is better than inventing one.
+            val kind = item.optString("kind")
+            // An edge missing an endpoint is not a connection; LongRally IDs are 6-stage rallies, not direct edges.
             if (from.isBlank() || to.isBlank()) continue
+            if (kind.equals("LongRally", ignoreCase = true)) continue
+            val overrideRatio = if (item.has("overrideJukeBoxEndRatio") && !item.isNull("overrideJukeBoxEndRatio")) {
+                item.optDouble("overrideJukeBoxEndRatio").takeIf { it.isFinite() && it in 0.0..1.0 }
+            } else {
+                null
+            }
             edges += Edge(
                 from = from,
                 to = to,
-                kind = item.optString("kind"),
+                kind = kind,
                 rule = item.optString("rule"),
                 start = item.optString("start"),
                 traffic = item.optString("traffic"),
                 rowId = item.optString("rowId"),
                 displayName = item.optString("displayName"),
+                overrideJukeBoxEndRatio = overrideRatio,
             )
         }
         if (edges.isEmpty()) return@runCatching null

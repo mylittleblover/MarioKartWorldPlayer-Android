@@ -1,5 +1,6 @@
 package com.mylittleblover.mkwplayer.routes
 
+import com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog
 import com.mylittleblover.mkwplayer.library.StageConnections
 import com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog
 import org.json.JSONArray
@@ -122,6 +123,9 @@ internal object RoadJukeboxCatalog {
         }
     }
 
+    /** Courses whose bundled medley catalog provides an `"a_alt"` variant (non-special-layer / rally variant). */
+    private val COURSES_WITH_A_ALT: Set<String> = setOf("DonkeyKong", "SnowMountain", "Cinema", "KoopaTroopaBeach")
+
     /**
      * Resolves the target built-in suite variant (`"a"`, `"a_alt"`, `"b"`, `"c"`, `"d"`) for stop
      * [stopIndex] of [stopCount] under [suiteMode].
@@ -132,37 +136,171 @@ internal object RoadJukeboxCatalog {
         stopIndex: Int,
         stopCount: Int,
         stageCode: String,
+        roadRuleMode: RoadMusicRuleMode? = null,
+        availableVariants: Set<String>? = null,
     ): String {
         if (suiteMode == RouteSuiteMode.COMPLETE_SUITE) return "a"
         val canonical = stageCode.trim().removeSuffix("_00")
-        return when (officialKind) {
-            OfficialRouteKind.RALLY -> when {
+        val hasAAlt = availableVariants?.contains("a_alt") ?: (canonical in COURSES_WITH_A_ALT)
+        val useRallyProgression = officialKind == OfficialRouteKind.RALLY ||
+            (officialKind == null && roadRuleMode == RoadMusicRuleMode.KNOCKOUT_DIRECT)
+        return if (useRallyProgression) {
+            when {
                 stopIndex == 0 -> "b"
                 stopCount > 1 && stopIndex == stopCount - 1 -> "d"
+                hasAAlt -> "a_alt"
                 else -> "a"
             }
-            OfficialRouteKind.GRAND_PRIX, null -> when {
+        } else {
+            when {
                 stopIndex == 0 -> "c"
-                stopCount > 1 &&
-                    stopIndex == stopCount - 1 &&
-                    canonical.equals("DonkeyKong", ignoreCase = true) -> "a_alt"
                 else -> "a"
             }
         }
     }
+
+    val DEFAULT_ROAD_RULE_MODE: RoadMusicRuleMode = RoadMusicRuleMode.VS_AUTO
+
+    const val PURE_FREE_ROAM_MIN_TRACKS_PER_LEG: Int = 1
+    const val PURE_FREE_ROAM_MAX_TRACKS_PER_LEG: Int = 10
+    const val PURE_FREE_ROAM_DEFAULT_TRACKS_PER_LEG: Int = 2
+
+    const val PURE_FREE_ROAM_MIN_MINUTES_PER_LEG: Int = 1
+    const val PURE_FREE_ROAM_MAX_MINUTES_PER_LEG: Int = 30
+    const val PURE_FREE_ROAM_DEFAULT_MINUTES_PER_LEG: Int = 5
 
     enum class RoadMusicRuleMode {
         AUTO,
         GRAND_PRIX,
+        VS_AUTO,
         VS_DAY,
         VS_NIGHT,
+        KNOCKOUT_DIRECT,
         ;
 
         companion object {
             fun fromStored(raw: String?): RoadMusicRuleMode =
-                entries.firstOrNull { it.name.equals(raw?.trim(), ignoreCase = true) } ?: AUTO
+                entries.firstOrNull { it.name.equals(raw?.trim(), ignoreCase = true) } ?: VS_AUTO
         }
     }
+
+    enum class PureFreeRoamControlMode {
+        TRACK_COUNT,
+        DURATION,
+        ;
+
+        companion object {
+            fun fromStored(raw: String?): PureFreeRoamControlMode = when (raw?.trim()?.uppercase(Locale.ROOT)) {
+                DURATION.name -> DURATION
+                else -> TRACK_COUNT
+            }
+        }
+    }
+
+    /**
+     * Source track library for Pure Free Roam route playback:
+     * - [ROUTE_RULES]: per-leg route road music pools (GP / VS Day biome + TypeAll / VS Night).
+     * - [GAME_FREE_ROAM]: authentic in-game solo Free Roam `SoundJukeBoxPlaylist` tables
+     *   (`Default` / `Night` / merged 202-track pool / 93 `IsFreerunOnly` tracks), never road pools.
+     */
+    enum class PureFreeRoamTrackPool {
+        ROUTE_RULES,
+        GAME_FREE_ROAM,
+        ;
+
+        companion object {
+            fun fromStored(raw: String?): PureFreeRoamTrackPool = when (raw?.trim()?.uppercase(Locale.ROOT)) {
+                GAME_FREE_ROAM.name -> GAME_FREE_ROAM
+                else -> ROUTE_RULES
+            }
+        }
+    }
+
+    data class PureFreeRoamConfig(
+        val enabled: Boolean = false,
+        val controlMode: PureFreeRoamControlMode = PureFreeRoamControlMode.TRACK_COUNT,
+        val defaultTracksPerLeg: Int = PURE_FREE_ROAM_DEFAULT_TRACKS_PER_LEG,
+        val defaultMinutesPerLeg: Int = PURE_FREE_ROAM_DEFAULT_MINUTES_PER_LEG,
+        val trackPool: PureFreeRoamTrackPool = PureFreeRoamTrackPool.ROUTE_RULES,
+        val freeRoamMode: FreeRoamJukeboxCatalog.FreeRoamMode = FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+    ) {
+        fun normalized(): PureFreeRoamConfig = copy(
+            defaultTracksPerLeg = defaultTracksPerLeg.coerceIn(
+                PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+            ),
+            defaultMinutesPerLeg = defaultMinutesPerLeg.coerceIn(
+                PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+            ),
+            freeRoamMode = FreeRoamJukeboxCatalog.coerceInGameFreeRoamMode(freeRoamMode),
+        )
+
+        fun toJsonObject(): JSONObject {
+            val clean = normalized()
+            return JSONObject()
+                .put("enabled", clean.enabled)
+                .put("controlMode", clean.controlMode.name)
+                .put("defaultTracksPerLeg", clean.defaultTracksPerLeg)
+                .put("defaultMinutesPerLeg", clean.defaultMinutesPerLeg)
+                .put("trackPool", clean.trackPool.name)
+                .put("freeRoamMode", clean.freeRoamMode.name)
+        }
+
+        companion object {
+            fun fromJsonObject(obj: JSONObject?): PureFreeRoamConfig {
+                if (obj == null) return PureFreeRoamConfig()
+                return PureFreeRoamConfig(
+                    enabled = obj.optBoolean("enabled", false),
+                    controlMode = PureFreeRoamControlMode.fromStored(obj.optString("controlMode", "")),
+                    defaultTracksPerLeg = obj.optInt("defaultTracksPerLeg", PURE_FREE_ROAM_DEFAULT_TRACKS_PER_LEG),
+                    defaultMinutesPerLeg = obj.optInt("defaultMinutesPerLeg", PURE_FREE_ROAM_DEFAULT_MINUTES_PER_LEG),
+                    trackPool = PureFreeRoamTrackPool.fromStored(obj.optString("trackPool", "")),
+                    freeRoamMode = FreeRoamJukeboxCatalog.FreeRoamMode.fromStored(obj.optString("freeRoamMode", "")),
+                ).normalized()
+            }
+        }
+    }
+
+    data class EdgeFreeRoamOverride(
+        val trackCountOverride: Int? = null,
+        val durationMinutesOverride: Int? = null,
+    ) {
+        fun normalized(): EdgeFreeRoamOverride = EdgeFreeRoamOverride(
+            trackCountOverride = trackCountOverride?.coerceIn(
+                PURE_FREE_ROAM_MIN_TRACKS_PER_LEG,
+                PURE_FREE_ROAM_MAX_TRACKS_PER_LEG,
+            ),
+            durationMinutesOverride = durationMinutesOverride?.coerceIn(
+                PURE_FREE_ROAM_MIN_MINUTES_PER_LEG,
+                PURE_FREE_ROAM_MAX_MINUTES_PER_LEG,
+            ),
+        )
+
+        val isEmpty: Boolean
+            get() = trackCountOverride == null && durationMinutesOverride == null
+    }
+
+    data class PureFreeRoamLegPlan(
+        val edgeIndex: Int,
+        val from: String,
+        val to: String,
+        val effectiveRule: EffectiveRuleMode,
+        val controlMode: PureFreeRoamControlMode,
+        val trackCount: Int,
+        val durationMs: Long,
+        val rankedCandidates: List<RouteMusicCatalog.RankedCandidate>,
+        val trackPool: PureFreeRoamTrackPool = PureFreeRoamTrackPool.ROUTE_RULES,
+        val freeRoamMode: FreeRoamJukeboxCatalog.FreeRoamMode = FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+    )
+
+    /** Matches `WorldInfo::evalTimeOfDayEnum` (`0x007cd400`): Day = 03:00–19:00, Night = 19:00–03:00. */
+    fun isNightHour(hourOfDay: Int): Boolean {
+        val h = ((hourOfDay % 24) + 24) % 24
+        return h < 3 || h >= 19
+    }
+
+    fun isCurrentLocalNight(): Boolean = isNightHour(java.time.LocalTime.now().hour)
 
     enum class EffectiveRuleMode {
         GRAND_PRIX,
@@ -180,12 +318,12 @@ internal object RoadJukeboxCatalog {
     }
 
     /**
-     * Bundled MarioWiki Route music ruleset (`assets/route_music_catalog.json`).
+     * Bundled MKW v1.8.0 Route music ruleset (`assets/route_music_catalog.json`).
      *
      * Models:
-     * - Grand Prix per-edge pools (23 Jukebox edges + `Central -> Rainbow` special approach)
-     * - VS Race Daytime (Main order interlaced 4:1 with origin theme / course-exclusive order)
-     * - VS Race Nighttime (independent Night order across all routes)
+     * - Grand Prix per-edge pools (23 `PrimaryCourse` Jukebox edges + `Central -> Rainbow` special approach)
+     * - VS Race Daytime (8 biome first-song playlists throttled 4:1 with `TypeAll`, 03:00–19:00)
+     * - VS Race Nighttime (`24040117_J25YUWHR` / `レース夜`, 38 tracks / 111 slots, 19:00–03:00, overrides biomes)
      */
     data class RouteMusicCatalog(
         val schemaVersion: Int = 1,
@@ -210,6 +348,8 @@ internal object RoadJukeboxCatalog {
             val dayCourses: Set<String>,
             val likelyDayThemes: Set<String>,
             val likelyDayCourses: Set<String>,
+            val nightWeight: Int = if (anyOriginNight) 1 else 0,
+            val inRacePool: Boolean = false,
         )
 
         data class RankedCandidate(
@@ -220,6 +360,17 @@ internal object RoadJukeboxCatalog {
 
         fun specialFor(from: String, to: String): SpecialEdgeRule? =
             specialEdges[EdgeKey(from.trim().removeSuffix("_00"), to.trim().removeSuffix("_00"))]
+
+        /**
+         * Returns the origin biome key for [from] if it maps to one of the 8 v1.8.0 dedicated biome
+         * first-song playlists (`beach`, `desert`, `evil`, `ice`, `mesa`, `wooded`, `Cinema`,
+         * `RaftingRiver`), or null if [from] uses the general `TypeAll` playlist.
+         */
+        fun originBiomeKey(from: String): String? {
+            val clean = from.trim().removeSuffix("_00")
+            themesByStage[clean]?.let { return it }
+            return clean.takeIf { it in exclusiveOriginCourses }
+        }
 
         fun resolveRuleCandidates(
             from: String,
@@ -253,7 +404,13 @@ internal object RoadJukeboxCatalog {
                 EffectiveRuleMode.VS_NIGHT -> {
                     tracks
                         .filter { it.anyOriginNight }
-                        .map { RankedCandidate(it.jukeboxCode, CandidateTier.NIGHT_ORDER, weight = 1) }
+                        .map {
+                            RankedCandidate(
+                                jukeboxCode = it.jukeboxCode,
+                                tier = CandidateTier.NIGHT_ORDER,
+                                weight = it.nightWeight.coerceAtLeast(1),
+                            )
+                        }
                 }
             }
         }
@@ -312,14 +469,17 @@ internal object RoadJukeboxCatalog {
                         val a = o.optJSONArray(key) ?: return emptySet()
                         return (0 until a.length()).map { a.getString(it).trim() }.filter { it.isNotEmpty() }.toSet()
                     }
+                    val anyNight = o.optBoolean("anyOriginNight", false)
                     TrackRule(
                         jukeboxCode = o.getString("jukeboxCode").trim(),
                         anyOriginDay = o.optBoolean("anyOriginDay", false),
-                        anyOriginNight = o.optBoolean("anyOriginNight", false),
+                        anyOriginNight = anyNight,
                         dayThemes = strSet("dayThemes"),
                         dayCourses = strSet("dayCourses"),
                         likelyDayThemes = strSet("likelyDayThemes"),
                         likelyDayCourses = strSet("likelyDayCourses"),
+                        nightWeight = o.optInt("nightWeight", if (anyNight) 1 else 0),
+                        inRacePool = o.optBoolean("inRacePool", false),
                     )
                 }
 
@@ -345,6 +505,7 @@ internal object RoadJukeboxCatalog {
             val candidateTiers: Map<String, CandidateTier> = emptyMap(),
             val candidateWeights: List<Int> = List(candidates.size) { 1 },
             val ruleModeUsed: EffectiveRuleMode? = null,
+            val originBiomeKey: String? = null,
         ) : EdgeMusicResolution
 
         data class KnownPoolIncomplete(
@@ -391,6 +552,15 @@ internal object RoadJukeboxCatalog {
         val resolution: EdgeMusicResolution,
     )
 
+    sealed interface BlockingCause {
+        data object TooFewStops : BlockingCause
+        data object NoStops : BlockingCause
+        data class InvalidEdges(val edges: List<EdgeKey>) : BlockingCause
+        data class IncompletePools(val edges: List<EdgeKey>) : BlockingCause
+        data class MissingSubstitutes(val edges: List<EdgeKey>) : BlockingCause
+        data class UnplayableStages(val stageCodes: List<String>) : BlockingCause
+    }
+
     data class RouteValidationReport(
         val canPlay: Boolean,
         val invalidTopologyEdges: List<EdgeKey>,
@@ -399,25 +569,37 @@ internal object RoadJukeboxCatalog {
         val missingSubstituteEdges: List<EdgeKey>,
         val legs: List<RouteLegInspection>,
         val blockingReason: String? = null,
+        val blockingCause: BlockingCause? = null,
     )
 
-    fun effectiveModeForOfficial(routeKind: OfficialRouteKind, mode: RoadMusicRuleMode): EffectiveRuleMode =
+    fun effectiveModeForOfficial(
+        routeKind: OfficialRouteKind,
+        mode: RoadMusicRuleMode,
+        isNightNow: Boolean = isCurrentLocalNight(),
+    ): EffectiveRuleMode =
         when (mode) {
             RoadMusicRuleMode.AUTO -> when (routeKind) {
                 OfficialRouteKind.GRAND_PRIX -> EffectiveRuleMode.GRAND_PRIX
                 OfficialRouteKind.RALLY -> EffectiveRuleMode.KNOCKOUT_DIRECT
             }
             RoadMusicRuleMode.GRAND_PRIX -> EffectiveRuleMode.GRAND_PRIX
+            RoadMusicRuleMode.VS_AUTO -> if (isNightNow) EffectiveRuleMode.VS_NIGHT else EffectiveRuleMode.VS_DAY
             RoadMusicRuleMode.VS_DAY -> EffectiveRuleMode.VS_DAY
             RoadMusicRuleMode.VS_NIGHT -> EffectiveRuleMode.VS_NIGHT
+            RoadMusicRuleMode.KNOCKOUT_DIRECT -> EffectiveRuleMode.KNOCKOUT_DIRECT
         }
 
-    fun effectiveModeForCustom(mode: RoadMusicRuleMode): EffectiveRuleMode =
+    fun effectiveModeForCustom(
+        mode: RoadMusicRuleMode,
+        isNightNow: Boolean = isCurrentLocalNight(),
+    ): EffectiveRuleMode =
         when (mode) {
             RoadMusicRuleMode.AUTO,
             RoadMusicRuleMode.VS_DAY -> EffectiveRuleMode.VS_DAY
+            RoadMusicRuleMode.VS_AUTO -> if (isNightNow) EffectiveRuleMode.VS_NIGHT else EffectiveRuleMode.VS_DAY
             RoadMusicRuleMode.VS_NIGHT -> EffectiveRuleMode.VS_NIGHT
             RoadMusicRuleMode.GRAND_PRIX -> EffectiveRuleMode.GRAND_PRIX
+            RoadMusicRuleMode.KNOCKOUT_DIRECT -> EffectiveRuleMode.KNOCKOUT_DIRECT
         }
 
     /** Auto-identifies installed Jukebox track strictly by verified metadata (#83). */
@@ -439,6 +621,119 @@ internal object RoadJukeboxCatalog {
         return match.takeIf(readableCheck)
     }
 
+    fun buildPureFreeRoamLegPlans(
+        edges: List<EdgeKey>,
+        config: PureFreeRoamConfig,
+        ruleMode: RoadMusicRuleMode,
+        officialKind: OfficialRouteKind? = null,
+        edgeOverrides: Map<Int, EdgeFreeRoamOverride> = emptyMap(),
+        disabledEdgeIndices: Set<Int> = emptySet(),
+        wikiCatalog: RouteMusicCatalog? = null,
+        isNightNow: Boolean = isCurrentLocalNight(),
+    ): List<PureFreeRoamLegPlan> {
+        if (edges.isEmpty()) return emptyList()
+        val cleanConfig = config.normalized()
+        val nominalRule = if (officialKind != null) {
+            effectiveModeForOfficial(officialKind, ruleMode, isNightNow)
+        } else {
+            effectiveModeForCustom(ruleMode, isNightNow)
+        }
+        val vsFallbackRule = if (isNightNow) EffectiveRuleMode.VS_NIGHT else EffectiveRuleMode.VS_DAY
+        val useGameFreeRoamPool = cleanConfig.trackPool == PureFreeRoamTrackPool.GAME_FREE_ROAM
+        val plans = ArrayList<PureFreeRoamLegPlan>(edges.size)
+        for ((index, rawEdge) in edges.withIndex()) {
+            if (index in disabledEdgeIndices) continue
+            val from = rawEdge.canonicalFrom
+            val to = rawEdge.canonicalTo
+            var effectiveRule = if (nominalRule == EffectiveRuleMode.KNOCKOUT_DIRECT) vsFallbackRule else nominalRule
+            var ranked = if (useGameFreeRoamPool) {
+                emptyList()
+            } else {
+                wikiCatalog?.resolveRuleCandidates(from, to, effectiveRule).orEmpty()
+            }
+            if (!useGameFreeRoamPool && ranked.isEmpty() && effectiveRule == EffectiveRuleMode.GRAND_PRIX) {
+                effectiveRule = vsFallbackRule
+                ranked = wikiCatalog?.resolveRuleCandidates(from, to, effectiveRule).orEmpty()
+            }
+            val override = edgeOverrides[index]?.normalized()
+            val trackCount = (override?.trackCountOverride ?: cleanConfig.defaultTracksPerLeg)
+                .coerceIn(PURE_FREE_ROAM_MIN_TRACKS_PER_LEG, PURE_FREE_ROAM_MAX_TRACKS_PER_LEG)
+            val minutes = (override?.durationMinutesOverride ?: cleanConfig.defaultMinutesPerLeg)
+                .coerceIn(PURE_FREE_ROAM_MIN_MINUTES_PER_LEG, PURE_FREE_ROAM_MAX_MINUTES_PER_LEG)
+            plans += PureFreeRoamLegPlan(
+                edgeIndex = index,
+                from = from,
+                to = to,
+                effectiveRule = effectiveRule,
+                controlMode = cleanConfig.controlMode,
+                trackCount = trackCount,
+                durationMs = minutes.toLong() * 60_000L,
+                rankedCandidates = ranked,
+                trackPool = cleanConfig.trackPool,
+                freeRoamMode = cleanConfig.freeRoamMode,
+            )
+        }
+        return plans
+    }
+
+    fun buildPureFreeRoamLegPlans(
+        route: CustomRoute,
+        wikiCatalog: RouteMusicCatalog?,
+        ruleModeOverride: RoadMusicRuleMode? = null,
+        configOverride: PureFreeRoamConfig? = null,
+        isNightNow: Boolean = isCurrentLocalNight(),
+    ): List<PureFreeRoamLegPlan> {
+        val stopCodes = route.stops.map { it.stageCode.trim().removeSuffix("_00") }
+        if (stopCodes.size < 2) return emptyList()
+        val edges = (0 until stopCodes.lastIndex).map { idx -> EdgeKey(stopCodes[idx], stopCodes[idx + 1]) }
+        val overrides = buildMap<Int, EdgeFreeRoamOverride> {
+            for (idx in edges.indices) {
+                val cfg = route.edges.getOrNull(idx) ?: continue
+                val ov = EdgeFreeRoamOverride(
+                    trackCountOverride = cfg.freeRoamTrackCountOverride,
+                    durationMinutesOverride = cfg.freeRoamDurationMinutesOverride,
+                ).normalized()
+                if (!ov.isEmpty) put(idx, ov)
+            }
+        }
+        val disabled = edges.indices.filterTo(mutableSetOf()) { idx ->
+            route.edges.getOrNull(idx)?.musicEnabled == false
+        }
+        return buildPureFreeRoamLegPlans(
+            edges = edges,
+            config = configOverride ?: route.pureFreeRoamConfig,
+            ruleMode = ruleModeOverride ?: route.roadRuleMode,
+            officialKind = null,
+            edgeOverrides = overrides,
+            disabledEdgeIndices = disabled,
+            wikiCatalog = wikiCatalog,
+            isNightNow = isNightNow,
+        )
+    }
+
+    fun buildPureFreeRoamLegPlans(
+        route: OfficialRoute,
+        config: PureFreeRoamConfig,
+        ruleMode: RoadMusicRuleMode = DEFAULT_ROAD_RULE_MODE,
+        edgeOverrides: Map<Int, EdgeFreeRoamOverride> = emptyMap(),
+        wikiCatalog: RouteMusicCatalog?,
+        isNightNow: Boolean = isCurrentLocalNight(),
+    ): List<PureFreeRoamLegPlan> {
+        val stopCodes = route.stops.map { it.stageCode.trim().removeSuffix("_00") }
+        if (stopCodes.size < 2) return emptyList()
+        val edges = (0 until stopCodes.lastIndex).map { idx -> EdgeKey(stopCodes[idx], stopCodes[idx + 1]) }
+        return buildPureFreeRoamLegPlans(
+            edges = edges,
+            config = config,
+            ruleMode = ruleMode,
+            officialKind = route.kind,
+            edgeOverrides = edgeOverrides,
+            disabledEdgeIndices = emptySet(),
+            wikiCatalog = wikiCatalog,
+            isNightNow = isNightNow,
+        )
+    }
+
     fun inspectCustomRoute(
         route: CustomRoute,
         connections: StageConnections.Catalog?,
@@ -449,14 +744,25 @@ internal object RoadJukeboxCatalog {
         isJukeboxReadable: (JukeboxCatalog.TrackItem) -> Boolean = { true },
         wikiCatalog: RouteMusicCatalog? = null,
         ruleModeOverride: RoadMusicRuleMode? = null,
+        isNightNow: Boolean = isCurrentLocalNight(),
+        pureFreeRoamEnabled: Boolean = route.pureFreeRoamConfig.enabled,
+        pureFreeRoamTrackPool: PureFreeRoamTrackPool = route.pureFreeRoamConfig.trackPool,
     ): RouteValidationReport {
         val stopCodes = route.stops.map { it.stageCode.removeSuffix("_00") }
-        val unplayable = stopCodes.filter { isStageHidden(it) || !isStagePlayable(it) }.distinct()
+        val unplayable = stopCodes.filter {
+            isStageHidden(it) || (!pureFreeRoamEnabled && !isStagePlayable(it))
+        }.distinct()
+        val useGameFreeRoamPool = pureFreeRoamEnabled && pureFreeRoamTrackPool == PureFreeRoamTrackPool.GAME_FREE_ROAM
         val invalidEdges = mutableListOf<EdgeKey>()
         val incompletePools = mutableListOf<EdgeKey>()
         val missingSubstitutes = mutableListOf<EdgeKey>()
         val legs = mutableListOf<RouteLegInspection>()
-        val effectiveMode = effectiveModeForCustom(ruleModeOverride ?: route.roadRuleMode)
+        val rawEffectiveMode = effectiveModeForCustom(ruleModeOverride ?: route.roadRuleMode, isNightNow)
+        val effectiveMode = if (pureFreeRoamEnabled && rawEffectiveMode == EffectiveRuleMode.KNOCKOUT_DIRECT) {
+            if (isNightNow) EffectiveRuleMode.VS_NIGHT else EffectiveRuleMode.VS_DAY
+        } else {
+            rawEffectiveMode
+        }
 
         if (stopCodes.size >= 2) {
             for (i in 0 until stopCodes.lastIndex) {
@@ -482,32 +788,49 @@ internal object RoadJukeboxCatalog {
                     wikiCatalog = wikiCatalog,
                     effectiveRuleMode = effectiveMode,
                 )
-                if (resolution is EdgeMusicResolution.KnownPoolIncomplete) {
-                    incompletePools += EdgeKey(from, to)
-                } else if (resolution is EdgeMusicResolution.SubstituteMissing) {
-                    missingSubstitutes += EdgeKey(from, to)
+                if (!useGameFreeRoamPool) {
+                    if (resolution is EdgeMusicResolution.KnownPoolIncomplete) {
+                        incompletePools += EdgeKey(from, to)
+                    } else if (resolution is EdgeMusicResolution.SubstituteMissing) {
+                        missingSubstitutes += EdgeKey(from, to)
+                    }
                 }
                 legs += RouteLegInspection(i, from, to, conn, connValid, musicEnabled, resolution)
             }
         }
 
+        val hasReadableJukebox = !useGameFreeRoamPool || installedJukebox.any(isJukeboxReadable)
+        val cause: BlockingCause? = when {
+            stopCodes.size < 2 -> BlockingCause.TooFewStops
+            invalidEdges.isNotEmpty() -> BlockingCause.InvalidEdges(invalidEdges)
+            incompletePools.isNotEmpty() -> BlockingCause.IncompletePools(incompletePools)
+            missingSubstitutes.isNotEmpty() -> BlockingCause.MissingSubstitutes(missingSubstitutes)
+            unplayable.isNotEmpty() -> BlockingCause.UnplayableStages(unplayable)
+            else -> null
+        }
+        val missingGameFreeRoamJukebox = cause == null && useGameFreeRoamPool && !hasReadableJukebox
         val reason = when {
-            stopCodes.size < 2 -> "Route needs at least 2 stage stops (#74)."
-            invalidEdges.isNotEmpty() -> "Invalid directed road connection: ${invalidEdges.joinToString { "${it.from}->${it.to}" }} (#74/#87)."
-            incompletePools.isNotEmpty() -> "Missing required candidate track(s) on ${incompletePools.joinToString { "${it.from}->${it.to}" }} (#82)."
-            missingSubstitutes.isNotEmpty() -> "Selected custom substitute track unavailable on ${missingSubstitutes.joinToString { "${it.from}->${it.to}" }}."
-            unplayable.isNotEmpty() -> "Missing or locked stage audio: ${unplayable.joinToString()}."
+            cause != null -> when (cause) {
+                BlockingCause.TooFewStops -> "Route needs at least 2 stops."
+                is BlockingCause.InvalidEdges -> "Invalid road connection: ${cause.edges.joinToString { "${it.from}->${it.to}" }}."
+                is BlockingCause.IncompletePools -> "Missing required road music on ${cause.edges.joinToString { "${it.from}->${it.to}" }}."
+                is BlockingCause.MissingSubstitutes -> "Custom substitute track unavailable on ${cause.edges.joinToString { "${it.from}->${it.to}" }}."
+                is BlockingCause.UnplayableStages -> "Missing or locked course audio: ${cause.stageCodes.joinToString()}."
+                else -> null
+            }
+            missingGameFreeRoamJukebox -> "No playable Jukebox tracks installed for in-game Free Roam playback."
             else -> null
         }
 
         return RouteValidationReport(
-            canPlay = reason == null,
+            canPlay = cause == null && !missingGameFreeRoamJukebox,
             invalidTopologyEdges = invalidEdges,
             unplayableStops = unplayable,
             incompletePoolEdges = incompletePools,
             missingSubstituteEdges = missingSubstitutes,
             legs = legs,
             blockingReason = reason,
+            blockingCause = cause,
         )
     }
 
@@ -522,12 +845,23 @@ internal object RoadJukeboxCatalog {
         isJukeboxReadable: (JukeboxCatalog.TrackItem) -> Boolean = { true },
         wikiCatalog: RouteMusicCatalog? = null,
         ruleMode: RoadMusicRuleMode = RoadMusicRuleMode.AUTO,
+        isNightNow: Boolean = isCurrentLocalNight(),
+        pureFreeRoamEnabled: Boolean = false,
+        pureFreeRoamTrackPool: PureFreeRoamTrackPool = PureFreeRoamTrackPool.ROUTE_RULES,
     ): RouteValidationReport {
         val stopCodes = route.stops.map { it.stageCode.removeSuffix("_00") }
-        val unplayable = stopCodes.filter { isStageHidden(it) || !isStagePlayable(it) }.distinct()
+        val unplayable = stopCodes.filter {
+            isStageHidden(it) || (!pureFreeRoamEnabled && !isStagePlayable(it))
+        }.distinct()
+        val useGameFreeRoamPool = pureFreeRoamEnabled && pureFreeRoamTrackPool == PureFreeRoamTrackPool.GAME_FREE_ROAM
         val incompletePools = mutableListOf<EdgeKey>()
         val legs = mutableListOf<RouteLegInspection>()
-        val effectiveMode = effectiveModeForOfficial(route.kind, ruleMode)
+        val rawEffectiveMode = effectiveModeForOfficial(route.kind, ruleMode, isNightNow)
+        val effectiveMode = if (pureFreeRoamEnabled && rawEffectiveMode == EffectiveRuleMode.KNOCKOUT_DIRECT) {
+            if (isNightNow) EffectiveRuleMode.VS_NIGHT else EffectiveRuleMode.VS_DAY
+        } else {
+            rawEffectiveMode
+        }
 
         for (i in 0 until stopCodes.lastIndex) {
             val from = stopCodes[i]
@@ -546,27 +880,40 @@ internal object RoadJukeboxCatalog {
                 wikiCatalog = wikiCatalog,
                 effectiveRuleMode = effectiveMode,
             )
-            if (resolution is EdgeMusicResolution.KnownPoolIncomplete) {
+            if (!useGameFreeRoamPool && resolution is EdgeMusicResolution.KnownPoolIncomplete) {
                 incompletePools += EdgeKey(from, to)
             }
             legs += RouteLegInspection(i, from, to, conn, connectionValid = true, musicEnabled = true, resolution = resolution)
         }
 
+        val hasReadableJukebox = !useGameFreeRoamPool || installedJukebox.any(isJukeboxReadable)
+        val cause: BlockingCause? = when {
+            stopCodes.isEmpty() -> BlockingCause.NoStops
+            incompletePools.isNotEmpty() -> BlockingCause.IncompletePools(incompletePools)
+            unplayable.isNotEmpty() -> BlockingCause.UnplayableStages(unplayable)
+            else -> null
+        }
+        val missingGameFreeRoamJukebox = cause == null && useGameFreeRoamPool && !hasReadableJukebox
         val reason = when {
-            stopCodes.isEmpty() -> "Official route has no stops."
-            incompletePools.isNotEmpty() -> "Missing required candidate track(s) on ${incompletePools.joinToString { "${it.from}->${it.to}" }} (#82)."
-            unplayable.isNotEmpty() -> "Missing or locked stage audio: ${unplayable.joinToString()}."
+            cause != null -> when (cause) {
+                BlockingCause.NoStops -> "This route has no stops."
+                is BlockingCause.IncompletePools -> "Missing required road music on ${cause.edges.joinToString { "${it.from}->${it.to}" }}."
+                is BlockingCause.UnplayableStages -> "Missing or locked course audio: ${cause.stageCodes.joinToString()}."
+                else -> null
+            }
+            missingGameFreeRoamJukebox -> "No playable Jukebox tracks installed for in-game Free Roam playback."
             else -> null
         }
 
         return RouteValidationReport(
-            canPlay = reason == null,
+            canPlay = cause == null && !missingGameFreeRoamJukebox,
             invalidTopologyEdges = emptyList(),
             unplayableStops = unplayable,
             incompletePoolEdges = incompletePools,
             missingSubstituteEdges = emptyList(),
             legs = legs,
             blockingReason = reason,
+            blockingCause = cause,
         )
     }
 
@@ -652,6 +999,11 @@ internal object RoadJukeboxCatalog {
                             ?: return EdgeMusicResolution.SubstituteMissing(edge, selectedRef)
                         return EdgeMusicResolution.CustomSubstitute(edge, sub)
                     }
+                    val originBiome = if (effectiveRuleMode == EffectiveRuleMode.VS_DAY) {
+                        wikiCatalog.originBiomeKey(from)
+                    } else {
+                        null
+                    }
                     return EdgeMusicResolution.KnownPoolComplete(
                         edge = edge,
                         candidates = matchedItems,
@@ -659,6 +1011,7 @@ internal object RoadJukeboxCatalog {
                         candidateTiers = matchedTiers,
                         candidateWeights = matchedWeights,
                         ruleModeUsed = effectiveRuleMode,
+                        originBiomeKey = originBiome,
                     )
                 }
             }

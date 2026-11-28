@@ -34,9 +34,9 @@ android {
         applicationId = "com.mylittleblover.mkwplayer"
         minSdk = 26
         targetSdk = 35
-        // Beta 05: Seamless background/screen-off loop & track transitions + deep-buffer AudioTrack for TWS Bluetooth stability.
-        versionCode = 30
-        versionName = "0.1.0-beta05"
+        // Beta 0.1.6 (new Beta X.Y.Z version format): unified release combining MKW v1.8.0 transitions & 202 connections, 13-playlist + in-game Free Roam engine, pure Free Roam routes, unlock quiz, 7 character theme drawer, track markers, Flow Editor presets & WAV/FLAC export, seek-silence & beta01 5.1 loudness fixes, Koopa B / Cinema / SnowMountain alignment, Rainbow melody switch removal, UI/motion alignment, and Staff Credits dynamic course-themed / split-dual / flowing Rainbow Road progress bar.
+        versionCode = 34
+        versionName = "Beta 0.1.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

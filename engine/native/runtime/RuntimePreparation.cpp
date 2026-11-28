@@ -66,11 +66,13 @@ EngineStatus EngineRuntime::prepareTransitionPages(TransitionRun& run) noexcept 
     std::size_t bridgeInputs=0;
     if(run.rule->bridge>=0 && !run.bridgeStarted) {
         const auto* bridge=find(graph_->segments,run.rule->bridge);
-        if(!collectPreparationPages(bridge->index,(run.rule->timeline || run.rule->preEntry) ? 0 : bridge->entry,required,count))return EngineStatus::ResourceLimit;
+        const Frame bridgePosition=run.rule->timeline ? 0 : (run.rule->preEntry ? 0 : bridge->entry);
+        if(!collectPreparationPages(bridge->index,bridgePosition,required,count))return EngineStatus::ResourceLimit;
         bridgeInputs=count;
     }
     if(!run.destinationStarted) {
-        if(!collectPreparationPages(run.segment,run.rule->preEntry ? 0 : run.position,required,count))return EngineStatus::ResourceLimit;
+        const Frame destinationPosition=run.rule->timeline ? run.rule->timeline->destinationSource : (run.rule->preEntry ? 0 : run.position);
+        if(!collectPreparationPages(run.segment,destinationPosition,required,count))return EngineStatus::ResourceLimit;
     }
     run.bridgePreparationInputCount=bridgeInputs;
     if(!transitionPreparation_->configure(required.data(),count)) return EngineStatus::ResourceLimit;

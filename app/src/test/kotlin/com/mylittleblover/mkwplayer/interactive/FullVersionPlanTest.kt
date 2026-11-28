@@ -29,7 +29,9 @@ class FullVersionPlanTest {
                 val rule=p.spec.transitions.single { it.sources==listOf(a) && it.destinations==listOf(b) }
                 assertEquals(G.EntryMode.SameTime,rule.entry)
                 assertEquals(G.SyncPoint.Immediate,rule.sync)
-                assertEquals(48000.0,rule.fadeIn.beats*60/p.spec.bpm*p.spec.transportSampleRate,0.0001)
+                val exitingSnowP2 = stage == "SnowMountain" && (a == altMain || a == altFast)
+                val expectedFrames = if (exitingSnowP2) 96000.0 else 24000.0
+                assertEquals(expectedFrames,rule.fadeIn.beats*60/p.spec.bpm*p.spec.transportSampleRate,0.0001)
                 assertEquals(rule.fadeIn,rule.fadeOut)
                 assertTrue(rule.postExit)
                 assertNull(rule.timeline,"A fixed destinationSource would defeat SameTime")

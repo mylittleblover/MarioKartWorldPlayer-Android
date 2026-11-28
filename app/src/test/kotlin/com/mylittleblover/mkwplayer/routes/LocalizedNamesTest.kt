@@ -6,9 +6,9 @@ import kotlin.test.*
 
 class LocalizedNamesTest {
     private val source get() = File("src/main/assets/localized_names.json").readText()
-    @Test fun allFiftySourceBackedNamesCoverAllFourLanguages() {
+    @Test fun allFiftyTwoSourceBackedNamesCoverAllFourLanguages() {
         val rows = JSONObject(source).getJSONArray("entries")
-        assertEquals(50, rows.length())
+        assertEquals(52, rows.length())
         for (index in 0 until rows.length()) {
             val entry = rows.getJSONObject(index)
             for (language in listOf("en", "zh-Hans", "zh-Hant", "ja")) assertTrue(entry.getJSONObject("names").getString(language).isNotBlank())

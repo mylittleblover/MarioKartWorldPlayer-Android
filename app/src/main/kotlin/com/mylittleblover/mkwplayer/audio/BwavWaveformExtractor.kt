@@ -24,22 +24,28 @@ internal object BwavWaveformExtractor {
         val bucketCount: Int get() = minPeaks.size
     }
 
+    const val DEFAULT_BUCKETS = 1200
+
     private const val MAX_CACHE_ENTRIES = 48
     private val cache = object : LinkedHashMap<String, WaveformPeaks>(MAX_CACHE_ENTRIES, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, WaveformPeaks>?): Boolean =
             size > MAX_CACHE_ENTRIES
     }
 
-    fun getCached(digest: String): WaveformPeaks? = synchronized(cache) { cache[digest] }
+    private fun cacheKey(digest: String, bucketCount: Int): String = "$digest:$bucketCount"
+
+    fun getCached(digest: String, bucketCount: Int = DEFAULT_BUCKETS): WaveformPeaks? =
+        synchronized(cache) { cache[cacheKey(digest, bucketCount)] }
 
     fun extract(
         file: File,
         digest: String,
-        bucketCount: Int = 1200,
+        bucketCount: Int = DEFAULT_BUCKETS,
     ): WaveformPeaks? {
-        val key = "$digest:$bucketCount"
+        if (bucketCount <= 0) return null
+        val key = cacheKey(digest, bucketCount)
         synchronized(cache) { cache[key] }?.let { return it }
-        if (!file.isFile || bucketCount <= 0) return null
+        if (!file.isFile) return null
         val extracted = runCatching { decodeFromFile(file, digest, bucketCount) }.getOrNull() ?: return null
         synchronized(cache) { cache[key] = extracted }
         return extracted

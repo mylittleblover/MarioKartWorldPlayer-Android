@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Schedule
@@ -32,6 +33,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -118,16 +120,21 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwIconButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwIconButtonTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwInsetBox
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
+import com.mylittleblover.mkwplayer.ui.kit.MkwMotion
 import com.mylittleblover.mkwplayer.ui.kit.MkwNavDestination
+import com.mylittleblover.mkwplayer.ui.kit.mkwPressScale
 import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwRoseButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSecondaryButton
+import com.mylittleblover.mkwplayer.ui.kit.MkwSegmentedBar
 import com.mylittleblover.mkwplayer.ui.kit.MkwSlider
 import com.mylittleblover.mkwplayer.ui.kit.MkwSliderMarker
 import com.mylittleblover.mkwplayer.ui.kit.MkwSurfaceTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwSwitch
+import com.mylittleblover.mkwplayer.ui.kit.MkwTextField
 import com.mylittleblover.mkwplayer.ui.kit.MkwUtilityDock
 import com.mylittleblover.mkwplayer.ui.kit.MkwUtilityTile
+import com.mylittleblover.mkwplayer.ui.markers.toSliderMarkers
 import com.mylittleblover.mkwplayer.ui.tabIconVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -374,8 +381,38 @@ internal fun MkwApp(
     }
     val coroutineScope = rememberCoroutineScope()
     var showSleepTimerSheet by rememberSaveable { mutableStateOf(false) }
+    var showLockedMysteryDialog by rememberSaveable { mutableStateOf(false) }
     var backupStatusMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBackupPayload by remember { mutableStateOf<com.mylittleblover.mkwplayer.library.UserBackupPayload?>(null) }
+    val exportFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) model.setExportFolderUri(uri)
+    }
+    val allTrackMarkers by model.trackMarkers.collectAsStateWithLifecycle()
+    val staffCreditsUnlocked = ui.staffCreditsUnlocked ||
+        ui.unlockTestMode == com.mylittleblover.mkwplayer.unlock.UnlockTestMode.FORCE_UNLOCKED
+    var shownStaffCreditsToastEvent by rememberSaveable { mutableStateOf(0L) }
+    LaunchedEffect(ui.staffCreditsToastEvent) {
+        if (ui.staffCreditsToastEvent > shownStaffCreditsToastEvent) {
+            shownStaffCreditsToastEvent = ui.staffCreditsToastEvent
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.staff_credits_unlocked_toast),
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+    val inInteractiveDetail = nav.detail is NavState.Detail.Interactive || nav.detail == NavState.Detail.Flow
+    var wasInInteractiveDetail by remember { mutableStateOf(inInteractiveDetail) }
+    LaunchedEffect(inInteractiveDetail) {
+        if (wasInInteractiveDetail && !inInteractiveDetail) {
+            if (model.onExitedInteractiveMode(languageTag)) {
+                nav = nav.open(NavState.Detail.Track)
+            }
+        }
+        wasInInteractiveDetail = inInteractiveDetail
+    }
     val backupExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
@@ -387,12 +424,12 @@ internal fun MkwApp(
                         .exportAllFromContext(context, BuildConfig.VERSION_NAME).getOrThrow()
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         out.write(json.toByteArray(Charsets.UTF_8))
-                    } ?: error("Cannot open output stream")
+                    } ?: error(context.getString(R.string.settings_backup_err_open_output))
                 }
             }
             backupStatusMessage = result.fold(
                 onSuccess = { context.getString(R.string.settings_backup_export_ok) },
-                onFailure = { context.getString(R.string.settings_backup_failed, it.message ?: "Error") },
+                onFailure = { context.getString(R.string.settings_backup_failed, it.message ?: context.getString(R.string.settings_backup_err_unknown)) },
             )
         }
     }
@@ -404,14 +441,14 @@ internal fun MkwApp(
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val raw = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                        ?: error("Cannot read selected file")
+                        ?: error(context.getString(R.string.settings_backup_err_read_input))
                     com.mylittleblover.mkwplayer.library.UserBackupManager.parseBackupJson(raw).getOrThrow()
                 }
             }
             result.onSuccess { payload ->
                 pendingBackupPayload = payload
             }.onFailure { err ->
-                backupStatusMessage = context.getString(R.string.settings_backup_failed, err.message ?: "Error")
+                backupStatusMessage = context.getString(R.string.settings_backup_failed, err.message ?: context.getString(R.string.settings_backup_err_unknown))
             }
         }
     }
@@ -439,7 +476,7 @@ internal fun MkwApp(
                             is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Jukebox -> {
                                 val item = ui.jukebox.itemsByKey[ref.trackKey]
                                 val sec = item?.durationMs?.div(1000L)?.toInt() ?: -1
-                                (item?.localizedDisplayName(languageTag) ?: ref.trackKey) to sec
+                                (item?.displayTitle(languageTag) ?: ref.trackKey) to sec
                             }
                             is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> {
                                 val tr = model.extraCatalog.sfcCourses.firstOrNull { it.id == ref.trackId }
@@ -457,12 +494,12 @@ internal fun MkwApp(
                     }
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         out.write(m3u.toByteArray(Charsets.UTF_8))
-                    } ?: error("Cannot open output stream")
+                    } ?: error(context.getString(R.string.settings_backup_err_open_output))
                 }
             }
             backupStatusMessage = result.fold(
                 onSuccess = { context.getString(R.string.settings_backup_m3u_ok) },
-                onFailure = { context.getString(R.string.settings_backup_failed, it.message ?: "Error") },
+                onFailure = { context.getString(R.string.settings_backup_failed, it.message ?: context.getString(R.string.settings_backup_err_unknown)) },
             )
         }
     }
@@ -476,6 +513,7 @@ internal fun MkwApp(
                 res.onSuccess { summary ->
                     discovery.reloadAllAfterBackup()
                     model.syncPreferencesAfterBackupRestore()
+                    model.reloadTrackMarkers()
                     outputTrim = com.mylittleblover.mkwplayer.audio.OutputTrimSettings.current(context)
                     playbackBehavior = com.mylittleblover.mkwplayer.audio.PlaybackBehaviorSettings.current(context)
                     backupStatusMessage = context.getString(
@@ -486,7 +524,7 @@ internal fun MkwApp(
                         summary.routesCount,
                     )
                 }.onFailure { err ->
-                    backupStatusMessage = context.getString(R.string.settings_backup_failed, err.message ?: "Error")
+                    backupStatusMessage = context.getString(R.string.settings_backup_failed, err.message ?: context.getString(R.string.settings_backup_err_unknown))
                 }
             }
         }
@@ -547,7 +585,7 @@ internal fun MkwApp(
     }
     val browse = model.browseCatalog.collectAsStateWithLifecycle().value
     val unlocked = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(ui.unlock)
-    LaunchedEffect(browse, unlocked, ui.pack, ui.jukebox, ui.libraryGeneration) {
+    LaunchedEffect(browse, unlocked, staffCreditsUnlocked, ui.pack, ui.jukebox, ui.libraryGeneration) {
         val computed = withContext(Dispatchers.Default) {
             val extra = model.extraCatalog
             buildList {
@@ -562,7 +600,7 @@ internal fun MkwApp(
                 }
                 val packPresent = ui.pack != null
                 extra.sfcCourses.filter {
-                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked)
+                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked)
                 }.forEach { track ->
                     add(
                         com.mylittleblover.mkwplayer.library.RecommendationCandidate(
@@ -573,7 +611,7 @@ internal fun MkwApp(
                     )
                 }
                 extra.battleTracks.filter {
-                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked)
+                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked)
                 }.forEach { track ->
                     add(
                         com.mylittleblover.mkwplayer.library.RecommendationCandidate(
@@ -584,7 +622,7 @@ internal fun MkwApp(
                     )
                 }
                 extra.otherMusic.filter {
-                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked)
+                    com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(it.id, unlocked, staffCreditsUnlocked)
                 }.forEach { item ->
                     add(
                         com.mylittleblover.mkwplayer.library.RecommendationCandidate(
@@ -714,9 +752,13 @@ internal fun MkwApp(
                     sleepAfterCurrentTrack = ui.sleepTimer.mode == com.mylittleblover.mkwplayer.player.SleepTimerMode.AFTER_CURRENT_TRACK,
                     onSleepTimer = { showSleepTimerSheet = true },
                 )
-                val naturalUnlockBanner = ui.unlock?.let { it.canEnter && !it.ceremonyCompleted } == true
+                val persistentUnlockBanner = !ceremonyPlaying && ui.unlock?.shouldShowPersistentBanner == true
+                com.mylittleblover.mkwplayer.ui.unlock.PersistentUnlockCeremonyBanner(
+                    visible = persistentUnlockBanner,
+                    onEnterCeremony = { model.enterUnlockFromBanner() },
+                )
                 AnimatedVisibility(
-                    visible = !ceremonyPlaying && (ui.debugUnlockBannerVisible || naturalUnlockBanner),
+                    visible = !ceremonyPlaying && ui.debugUnlockBannerVisible && !persistentUnlockBanner,
                     enter = navChromeEnter,
                     exit = navChromeExit,
                 ) {
@@ -741,7 +783,7 @@ internal fun MkwApp(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(R.string.unlock_banner_title),
+                                    text = androidx.compose.ui.res.stringResource(R.string.unlock_mystery_banner_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MkwKitTokens.Palette.crimsonDeep,
@@ -750,20 +792,18 @@ internal fun MkwApp(
                                     modifier = Modifier.weight(1f),
                                 )
                                 MkwPrimaryButton(
-                                    text = androidx.compose.ui.res.stringResource(R.string.unlock_banner_enter),
+                                    text = androidx.compose.ui.res.stringResource(R.string.unlock_mystery_banner_action),
                                     onClick = { model.enterUnlockFromBanner() },
                                     size = MkwButtonSize.Compact,
                                 )
-                                if (ui.debugUnlockBannerVisible && !naturalUnlockBanner) {
-                                    MkwIconButton(
-                                        icon = Icons.Filled.Clear,
-                                        contentDescription = androidx.compose.ui.res.stringResource(R.string.discovery_cancel),
-                                        onClick = { model.dismissDebugUnlockBanner() },
-                                        visualSize = 32.dp,
-                                        iconSize = 18.dp,
-                                        tintOverride = MkwKitTokens.Palette.crimsonDeep,
-                                    )
-                                }
+                                MkwIconButton(
+                                    icon = Icons.Filled.Clear,
+                                    contentDescription = androidx.compose.ui.res.stringResource(R.string.discovery_cancel),
+                                    onClick = { model.dismissDebugUnlockBanner() },
+                                    visualSize = 32.dp,
+                                    iconSize = 18.dp,
+                                    tintOverride = MkwKitTokens.Palette.crimsonDeep,
+                                )
                             }
                             MkwDivider(color = MkwKitTokens.Palette.crimson.copy(alpha = 0.18f))
                         }
@@ -787,7 +827,13 @@ internal fun MkwApp(
                     val canToggleTransport = flow != null && !ui.busy && (ui.canPause || ui.canResume || !flow.performing)
                     com.mylittleblover.mkwplayer.ui.interactive.InteractiveStopBar(
                         canStop = ui.canStop, canFade = !ui.busy && model.canFadeStop, fading = ui.flow?.fading == true,
-                        onStop = model::stop, onFade = model::fadeStopPerformance,
+                        onStop = {
+                            model.stop()
+                            if (model.onExitedInteractiveMode(languageTag)) {
+                                nav = nav.open(NavState.Detail.Track)
+                            }
+                        },
+                        onFade = model::fadeStopPerformance,
                         paused = ui.canResume,
                         fadeRemainingFrames = ui.flow?.fadeRemainingFrames,
                         transportRate = ui.flow?.transportRate ?: 48000,
@@ -850,10 +896,23 @@ internal fun MkwApp(
                     .asPaddingValues()
                     .calculateBottomPadding()
             } else 0.dp
+            val markerBridge = remember(allTrackMarkers, model) {
+                com.mylittleblover.mkwplayer.ui.home.TrackMarkerMenuBridge(
+                    markersByTrackId = allTrackMarkers,
+                    onPlayFromMarker = { trackId, posMs, playTrack ->
+                        model.scheduleMarkerSeek(posMs, trackId)
+                        playTrack()
+                    },
+                    onDeleteMarker = model::deleteTrackMarker,
+                )
+            }
             androidx.compose.runtime.CompositionLocalProvider(
                 com.mylittleblover.mkwplayer.ui.LocalMiniPlayerOverlayPadding provides (
                     if (showMiniPlayer) 78.dp + extraNavBottom else 0.dp
                 ),
+                com.mylittleblover.mkwplayer.ui.home.LocalTrackMarkerBridge provides markerBridge,
+                com.mylittleblover.mkwplayer.ui.home.LocalStaffCreditsUnlocked provides staffCreditsUnlocked,
+                com.mylittleblover.mkwplayer.ui.home.LocalNonInteractiveLoopConfig provides ui.nonInteractiveLoopConfig,
             ) {
             AnimatedContent(
                 targetState = nav.snapshot(),
@@ -934,6 +993,8 @@ internal fun MkwApp(
                     onResumeImport = model::resumePackImport,
                     onRepickImport = openRepickPack,
                     onDismissChangelog = model::dismissImportChangelog,
+                    exportLocationLabel = ui.exportFolderDisplay,
+                    onPickExportLocation = { exportFolderLauncher.launch(null) },
                 )
                 detail == NavState.Detail.Equalizer -> com.mylittleblover.mkwplayer.ui.components.EqualizerScreen(
                     config = ui.dspConfig,
@@ -941,7 +1002,34 @@ internal fun MkwApp(
                     onBack = { nav = nav.back() ?: nav },
                 )
                 detail is NavState.Detail.Course -> {
-                    if (browse == null || detail.code.removeSuffix("_00") !in browse.courses(unlocked)) {
+                    if (detail.code.startsWith("extra:")) {
+                        val extraId = detail.code.removePrefix("extra:")
+                        ExtraInteractiveDetailPage(
+                            model = model,
+                            ui = ui,
+                            extraId = extraId,
+                            presets = discoveryState.presets,
+                            playlistsReferencingPreset = discovery::playlistsReferencingPreset,
+                            onOpenFlowEditor = { editorCode, presetId ->
+                                nav = nav.open(NavState.Detail.FlowEditor(editorCode, presetId))
+                            },
+                            onPlayCustomPreset = { preset, trackTitle, suiteLabel ->
+                                if (model.previewCustomPreset(preset, trackTitle, suiteLabel)) {
+                                    nav = nav.open(NavState.Detail.Track)
+                                }
+                            },
+                            onDuplicatePreset = { preset ->
+                                discovery.duplicatePreset(preset.id, context.getString(R.string.preset_copy_name_fmt, preset.name))
+                            },
+                            onDeletePreset = { preset -> discovery.deletePreset(preset.id) },
+                            onPlayExtraMedley = { medleyId, medleyTitle, medleySubtitle, artworkName ->
+                                if (model.playExtraMedley(medleyId, medleyTitle, medleySubtitle, artworkName)) {
+                                    nav = nav.open(NavState.Detail.Track)
+                                }
+                            },
+                            onInteractive = { nav = nav.open(NavState.Detail.Flow) },
+                        )
+                    } else if (browse == null || detail.code.removeSuffix("_00") !in browse.courses(unlocked)) {
                         Text(androidx.compose.ui.res.stringResource(R.string.discovery_empty), Modifier.padding(24.dp))
                     } else CoursePage(
                         model = model,
@@ -958,7 +1046,7 @@ internal fun MkwApp(
                             }
                         },
                         onDuplicatePreset = { preset ->
-                            discovery.duplicatePreset(preset.id, "${preset.name} Copy")
+                            discovery.duplicatePreset(preset.id, context.getString(R.string.preset_copy_name_fmt, preset.name))
                         },
                         onDeletePreset = { preset -> discovery.deletePreset(preset.id) },
                         onPlayMedley = { medleyId, suiteLabel, rallyLabel ->
@@ -1015,6 +1103,16 @@ internal fun MkwApp(
                             onCompileExport = { draft ->
                                 model.compileAndExportPreset(draft)?.second
                             },
+                            isRenderingAudio = ui.isRenderingAudio,
+                            renderAudioProgress = ui.renderAudioProgress,
+                            renderAudioStatus = ui.renderAudioStatus,
+                            renderAudioError = ui.renderAudioError,
+                            renderAudioOutputPath = ui.renderAudioOutputPath,
+                            outputTrimEnabled = ui.outputTrimEnabled,
+                            exportFolderDisplay = ui.exportFolderDisplay,
+                            onRenderAudio = { draft -> model.renderFlowPresetToAudio(draft, languageTag) },
+                            onCancelRenderAudio = model::cancelRenderFlowAudio,
+                            onDismissRenderDialog = model::dismissRenderFlowDialog,
                         )
                     }
                 }
@@ -1119,6 +1217,12 @@ internal fun MkwApp(
                         onUpdateSuiteMode = { mode ->
                             discovery.setCustomRouteSuiteMode(detail.id, mode)
                         },
+                        onUpdatePureFreeRoamConfig = { cfg ->
+                            discovery.setCustomRoutePureFreeRoamConfig(detail.id, cfg)
+                        },
+                        onUpdateEdgeFreeRoamOverride = { edgeIdx, ov ->
+                            discovery.setCustomRouteEdgeFreeRoamOverride(detail.id, edgeIdx, ov)
+                        },
                         resolveAutoStopPresetRef = { courseCode, stopIndex, stopCount, mode ->
                             model.effectiveStopPresetRef(
                                 stageCode = courseCode,
@@ -1128,6 +1232,7 @@ internal fun MkwApp(
                                 officialKind = null,
                                 suiteMode = mode,
                                 userPresets = discoveryState.presets,
+                                roadRuleMode = activeRoute?.roadRuleMode,
                             )
                         },
                     )
@@ -1332,6 +1437,8 @@ internal fun MkwApp(
                     val suiteLabel = androidx.compose.ui.res.stringResource(R.string.discovery_suite)
                     val rallyLabel = androidx.compose.ui.res.stringResource(R.string.discovery_rally)
                     val roadPrefix = androidx.compose.ui.res.stringResource(R.string.route_road_prefix)
+                    val cupFreeRoamEntry = cupRoute?.let { discoveryState.officialRouteFreeRoam[it.id] }
+                        ?: com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry()
                     com.mylittleblover.mkwplayer.ui.home.DiscoveryCup(
                         route = cupRoute,
                         catalog = browse,
@@ -1339,7 +1446,15 @@ internal fun MkwApp(
                         installedJukebox = model.allInstalledJukeboxItems(),
                         packDirectory = model.packDirectory,
                         extraCatalog = model.extraCatalog,
-                        inspectOfficialRoute = model::inspectOfficialRoute,
+                        inspectOfficialRoute = { route, overrides, ruleMode ->
+                            model.inspectOfficialRoute(
+                                route = route,
+                                sessionOverrides = overrides,
+                                ruleMode = ruleMode,
+                                pureFreeRoamEnabled = cupFreeRoamEntry.config.enabled,
+                                pureFreeRoamTrackPool = cupFreeRoamEntry.config.trackPool,
+                            )
+                        },
                         resolveStopPresetRef = { stageCode, stopIndex, stopCount, mode ->
                             model.effectiveStopPresetRef(
                                 stageCode = stageCode,
@@ -1350,6 +1465,13 @@ internal fun MkwApp(
                                 suiteMode = mode,
                                 userPresets = discoveryState.presets,
                             )
+                        },
+                        pureFreeRoamEntry = cupFreeRoamEntry,
+                        onPureFreeRoamConfigChange = { cfg ->
+                            cupRoute?.let { discovery.setOfficialRouteFreeRoamConfig(it.id, cfg) }
+                        },
+                        onPureFreeRoamEdgeOverrideChange = { edgeIdx, ov ->
+                            cupRoute?.let { discovery.setOfficialRouteFreeRoamEdgeOverride(it.id, edgeIdx, ov) }
                         },
                         onPlayRoute = { route, loop, overrides, ruleMode, suiteMode ->
                             if (model.playOfficialRoute(
@@ -1363,6 +1485,27 @@ internal fun MkwApp(
                                     roadPrefix = roadPrefix,
                                     ruleMode = ruleMode,
                                     suiteMode = suiteMode,
+                                    pureFreeRoamConfig = cupFreeRoamEntry.config,
+                                    pureFreeRoamEdgeOverrides = cupFreeRoamEntry.edgeOverrides,
+                                ) is PlayerViewModel.RoutePlayResult.Started
+                            ) {
+                                nav = nav.open(NavState.Detail.Track)
+                            }
+                        },
+                        onPlayRouteWithFreeRoam = { route, loop, overrides, ruleMode, suiteMode, pfrCfg, pfrOverrides ->
+                            if (model.playOfficialRoute(
+                                    route = route,
+                                    userPresets = discoveryState.presets,
+                                    loopRoute = loop,
+                                    sessionOverrides = overrides,
+                                    languageTag = languageTag,
+                                    suiteLabel = suiteLabel,
+                                    rallyLabel = rallyLabel,
+                                    roadPrefix = roadPrefix,
+                                    ruleMode = ruleMode,
+                                    suiteMode = suiteMode,
+                                    pureFreeRoamConfig = pfrCfg,
+                                    pureFreeRoamEdgeOverrides = pfrOverrides,
                                 ) is PlayerViewModel.RoutePlayResult.Started
                             ) {
                                 nav = nav.open(NavState.Detail.Track)
@@ -1438,23 +1581,16 @@ internal fun MkwApp(
                         fun handleDailyPick(rawId: String, quickPlay: Boolean) {
                             when (val ref = com.mylittleblover.mkwplayer.library.PlaylistItemRef.parse(rawId)) {
                                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Course -> {
-                                    if (quickPlay) {
-                                        model.startStagePerformance(ref.logicalCode)
-                                        nav = nav.open(NavState.Detail.Flow)
-                                    } else {
-                                        nav = nav.open(NavState.Detail.Course(ref.logicalCode))
-                                    }
+                                    nav = nav.open(NavState.Detail.Course(ref.logicalCode))
                                 }
                                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack -> {
                                     model.extraCatalog.sfcCourses.firstOrNull { it.id == ref.trackId }?.let { track ->
-                                        model.openInteractiveTwoState(track, isBattle = false, languageTag = languageTag, autoStart = quickPlay)
-                                        nav = nav.open(NavState.Detail.Flow)
+                                        nav = nav.open(NavState.Detail.Course("extra:${track.id}"))
                                     }
                                 }
                                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack -> {
                                     model.extraCatalog.battleTracks.firstOrNull { it.id == ref.trackId }?.let { track ->
-                                        model.openInteractiveTwoState(track, isBattle = true, languageTag = languageTag, autoStart = quickPlay)
-                                        nav = nav.open(NavState.Detail.Flow)
+                                        nav = nav.open(NavState.Detail.Course("extra:${track.id}"))
                                     }
                                 }
                                 is com.mylittleblover.mkwplayer.library.PlaylistItemRef.Jukebox -> {
@@ -1465,8 +1601,7 @@ internal fun MkwApp(
                                     val item = model.extraCatalog.otherMusic.firstOrNull { it.id == ref.extraId }
                                     when (item) {
                                         is com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.InteractiveTitle -> {
-                                            model.openInteractiveTitle(languageTag = languageTag, autoStart = quickPlay)
-                                            nav = nav.open(NavState.Detail.Flow)
+                                            nav = nav.open(NavState.Detail.Course("extra:${item.id}"))
                                         }
                                         is com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.LinearAsset -> {
                                             val entry = LinearQueue.Entry(
@@ -1481,8 +1616,7 @@ internal fun MkwApp(
                                                 loopStart = item.asset.loopStart,
                                                 loopEnd = item.asset.loopEnd,
                                             )
-                                            val mode = if (item.asset.loop) LinearQueue.RepeatMode.SINGLE else LinearQueue.RepeatMode.OFF
-                                            model.playExtraLinearQueue(listOf(entry), 0, mode, false)
+                                            model.playExtraLinearQueue(listOf(entry), 0, LinearQueue.RepeatMode.OFF, false)
                                             nav = nav.open(NavState.Detail.Track)
                                         }
                                         is com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.OverlaidOpening -> {
@@ -1533,8 +1667,7 @@ internal fun MkwApp(
                                                     loopStart = simple.asset.loopStart,
                                                     loopEnd = simple.asset.loopEnd,
                                                 )
-                                                val mode = if (simple.asset.loop) LinearQueue.RepeatMode.SINGLE else LinearQueue.RepeatMode.OFF
-                                                model.playExtraLinearQueue(listOf(entry), 0, mode, false)
+                                                model.playExtraLinearQueue(listOf(entry), 0, LinearQueue.RepeatMode.OFF, false)
                                                 nav = nav.open(NavState.Detail.Track)
                                             }
                                         }
@@ -1595,9 +1728,23 @@ internal fun MkwApp(
                                 model.playJukeboxQueue(game, index, languageTag, shuffle = false)
                                 nav = nav.open(NavState.Detail.Track)
                             },
+                            onPlayJukeboxGenre = { genre, index, shuffle ->
+                                model.playJukeboxGenre(genre, index, shuffle, languageTag)
+                                nav = nav.open(NavState.Detail.Track)
+                            },
                             onPlayAllJukebox = { shuffle ->
                                 model.playAllJukebox(languageTag, shuffle = shuffle)
                                 nav = nav.open(NavState.Detail.Track)
+                            },
+                            freeRoamMode = ui.freeRoamMode,
+                            freeRoamCatalog = model.freeRoamJukeboxCatalog,
+                            onSelectFreeRoamMode = { mode, contextTitle ->
+                                model.selectFreeRoamMode(mode, languageTag, contextTitle)
+                            },
+                            onPlayFreeRoamRadio = { mode, contextTitle ->
+                                if (model.playFreeRoamRadio(mode, languageTag, contextTitle)) {
+                                    nav = nav.open(NavState.Detail.Track)
+                                }
                             },
                             onPlayJukeboxNext = { item, game ->
                                 model.playJukeboxNext(item, game, languageTag)
@@ -1610,16 +1757,16 @@ internal fun MkwApp(
                                 nav = nav.open(NavState.Detail.Track)
                             },
                             onSfcCourse = { track ->
-                                model.openInteractiveTwoState(track, isBattle = false, languageTag = languageTag, autoStart = true)
-                                nav = nav.open(NavState.Detail.Flow)
+                                nav = nav.open(NavState.Detail.Course("extra:${track.id}"))
                             },
                             onBattleTrack = { track ->
-                                model.openInteractiveTwoState(track, isBattle = true, languageTag = languageTag, autoStart = true)
-                                nav = nav.open(NavState.Detail.Flow)
+                                nav = nav.open(NavState.Detail.Course("extra:${track.id}"))
                             },
                             onOpenTitle = {
-                                model.openInteractiveTitle(languageTag = languageTag, autoStart = false)
-                                nav = nav.open(NavState.Detail.Flow)
+                                val titleId = model.extraCatalog.otherMusic
+                                    .filterIsInstance<com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.InteractiveTitle>()
+                                    .firstOrNull()?.id ?: "title_theme"
+                                nav = nav.open(NavState.Detail.Course("extra:$titleId"))
                             },
                             onPlayExtraQueue = { entries, startIndex, repeatMode, shuffle ->
                                 model.playExtraLinearQueue(entries, startIndex, repeatMode, shuffle)
@@ -1669,6 +1816,7 @@ internal fun MkwApp(
                             onOpenCourseFlowEditor = { courseCode ->
                                 nav = nav.open(NavState.Detail.FlowEditor(courseCode, null))
                             },
+                            onLockedMysteryCourseClick = { showLockedMysteryDialog = true },
                             playStats = ui.playStats,
                         )
                     }
@@ -1678,6 +1826,7 @@ internal fun MkwApp(
                         state = mapState,
                         discovery = discovery,
                         presets = discoveryState.presets,
+                        officialRouteFreeRoam = discoveryState.officialRouteFreeRoam,
                         onOpenCourse = { code -> nav = nav.open(NavState.Detail.Course(code)) },
                         onOpenCustomRoute = { routeId -> nav = nav.open(NavState.Detail.CustomRoute(routeId)) },
                         onPlayStarted = { nav = nav.open(NavState.Detail.Track) },
@@ -1751,6 +1900,19 @@ internal fun MkwApp(
                         ?: ui.title
                 }
                 val miniCode = if (ui.trackLoading) ui.loadingTrackCode else model.currentStageCode
+                val miniStaffVariant = remember(ui.linearTrack, ui.selectedKey) {
+                    com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.detectVariant(
+                        canonicalTrackId = model.markerTrackIdFor(ui.linearTrack),
+                        selectedKey = ui.selectedKey,
+                        assetSha256 = ui.linearTrack?.assetSha256,
+                    )
+                }
+                val nmStaffOffsetMs by model.nmStaffCreditsOffsetMs.collectAsStateWithLifecycle()
+                LaunchedEffect(miniStaffVariant, model.packDirectory) {
+                    if (miniStaffVariant == com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.Variant.NINTENDO_MUSIC) {
+                        model.ensureNmStaffCreditsOffsetCalibrated()
+                    }
+                }
                 MiniPlayer(
                     miniTitle,
                     miniCode,
@@ -1758,6 +1920,8 @@ internal fun MkwApp(
                     playbackArtworkNames(model, ui),
                     ui,
                     progressFlow = model.progressUi,
+                    staffCreditsVariant = miniStaffVariant,
+                    nmStaffCreditsOffsetMs = nmStaffOffsetMs,
                     onOpen = {
                         nav = nav.open(
                             if (ui.trackLoading || ui.flow != null) NavState.Detail.Flow else NavState.Detail.Track,
@@ -1814,6 +1978,36 @@ internal fun MkwApp(
             nav = NavState(Tab.PLAYLISTS, NavState.Detail.Cup("special_cup"))
         },
         onDismiss = model::dismissCongratulations,
+    )
+    val unlockState = ui.unlock
+    val remainingMysteryCourses = remember(unlockState?.remainingStages, unlockState?.stageSeconds, browse, languageTag) {
+        unlockState?.remainingStages.orEmpty().map { code ->
+            com.mylittleblover.mkwplayer.ui.unlock.RemainingCourseItem(
+                stageCode = code,
+                displayName = browse?.displayName(code, languageTag) ?: code,
+                listenedSeconds = unlockState?.stageSeconds?.get(code) ?: 0,
+            )
+        }
+    }
+    com.mylittleblover.mkwplayer.ui.unlock.LockedMysteryCourseDialog(
+        visible = showLockedMysteryDialog && !unlocked && !ceremonyPlaying,
+        completedCount = unlockState?.completedCount ?: 0,
+        totalCount = unlockState?.eligibleCount ?: 0,
+        remainingCourses = remainingMysteryCourses,
+        ceremonyReady = unlockState?.ceremonyReady == true,
+        onDismiss = { showLockedMysteryDialog = false },
+        onCourseClick = { stageCode ->
+            showLockedMysteryDialog = false
+            nav = nav.open(NavState.Detail.Course(stageCode))
+        },
+        onQuizPassedAndStartCeremony = {
+            showLockedMysteryDialog = false
+            if (unlockState?.ceremonyReady == true) {
+                model.startSpecialCupUnlockCeremony()
+            } else {
+                model.passUnlockQuizAndStartCeremony()
+            }
+        },
     )
     }
 }
@@ -1947,6 +2141,7 @@ private fun InteractiveEntryBottomSheet(
                         selected = entryNames.indexOf(effectiveEntry).takeIf { it >= 0 },
                         enabled = !ui.busy && ui.flow?.fading != true,
                         onSelect = { index -> selectedEntry = entryNames.getOrNull(index) },
+                        courseCode = code,
                     )
                     Spacer(Modifier.height(4.dp))
                     MkwPrimaryButton(
@@ -2274,6 +2469,465 @@ private fun CoursePage(
     }
 }
 
+/** Detail page for extra interactive music (SFC retro courses, Battle tracks, and Title Theme). */
+@Composable
+private fun ExtraInteractiveDetailPage(
+    model: PlayerViewModel,
+    ui: PlayerViewModel.Ui,
+    extraId: String,
+    presets: List<com.mylittleblover.mkwplayer.library.CoursePreset> = emptyList(),
+    playlistsReferencingPreset: (String) -> List<com.mylittleblover.mkwplayer.library.UserPlaylist> = { emptyList() },
+    onOpenFlowEditor: (editorCode: String, presetId: String?) -> Unit = { _, _ -> },
+    onPlayCustomPreset: (com.mylittleblover.mkwplayer.library.CoursePreset, trackTitle: String, suiteLabel: String) -> Unit = { _, _, _ -> },
+    onDuplicatePreset: (com.mylittleblover.mkwplayer.library.CoursePreset) -> Unit = {},
+    onDeletePreset: (com.mylittleblover.mkwplayer.library.CoursePreset) -> Unit = {},
+    onPlayExtraMedley: (medleyId: String, medleyTitle: String, medleySubtitle: String, artworkName: String?) -> Unit = { _, _, _, _ -> },
+    onInteractive: () -> Unit,
+) {
+    val languageTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    val discovery: com.mylittleblover.mkwplayer.ui.home.DiscoveryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val saved by discovery.state.collectAsStateWithLifecycle()
+
+    val sfcTrack = remember(extraId, model.extraCatalog) {
+        model.extraCatalog.sfcCourses.firstOrNull { it.id == extraId }
+    }
+    val battleTrack = remember(extraId, model.extraCatalog) {
+        model.extraCatalog.battleTracks.firstOrNull { it.id == extraId }
+    }
+    val titleTrack = remember(extraId, model.extraCatalog) {
+        model.extraCatalog.otherMusic
+            .filterIsInstance<com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.InteractiveTitle>()
+            .firstOrNull { it.id == extraId }
+    }
+
+    val title = sfcTrack?.localizedName(languageTag)
+        ?: battleTrack?.localizedName(languageTag)
+        ?: titleTrack?.localizedName(languageTag)
+        ?: extraId
+    val artworkName = sfcTrack?.artwork ?: battleTrack?.artwork ?: titleTrack?.artwork
+    val favoriteRef = when {
+        sfcTrack != null -> com.mylittleblover.mkwplayer.library.PlaylistItemRef.SfcTrack(sfcTrack.id).raw
+        battleTrack != null -> com.mylittleblover.mkwplayer.library.PlaylistItemRef.BattleTrack(battleTrack.id).raw
+        else -> com.mylittleblover.mkwplayer.library.PlaylistItemRef.ExtraTrack(extraId).raw
+    }
+    val editorCode = "extra:$extraId"
+    val extraPresets = remember(presets, editorCode) {
+        presets.filter { it.courseCode.equals(editorCode, ignoreCase = true) }
+    }
+    val builtInMedleys = remember(extraId, model.extraMedleyCatalog) {
+        model.extraMedleyCatalog.forTarget(extraId)
+    }
+    var pendingDeletePreset by remember { mutableStateOf<com.mylittleblover.mkwplayer.library.CoursePreset?>(null) }
+
+    if (sfcTrack == null && battleTrack == null && titleTrack == null) {
+        Text(androidx.compose.ui.res.stringResource(R.string.discovery_empty), Modifier.padding(24.dp))
+        return
+    }
+
+    pendingDeletePreset?.let { preset ->
+        val refs = remember(preset.id, saved.playlists) { playlistsReferencingPreset(preset.id) }
+        MkwDialog(
+            onDismissRequest = { pendingDeletePreset = null },
+            title = androidx.compose.ui.res.stringResource(R.string.preset_delete_warning_title),
+            confirmButton = {
+                MkwDangerButton(
+                    text = androidx.compose.ui.res.stringResource(R.string.preset_delete),
+                    onClick = {
+                        onDeletePreset(preset)
+                        pendingDeletePreset = null
+                    },
+                    size = MkwButtonSize.Compact,
+                )
+            },
+            dismissButton = {
+                MkwGhostButton(
+                    text = androidx.compose.ui.res.stringResource(R.string.discovery_cancel),
+                    onClick = { pendingDeletePreset = null },
+                )
+            },
+        ) {
+            Text(
+                if (refs.isEmpty()) preset.name
+                else androidx.compose.ui.res.stringResource(
+                    R.string.preset_delete_warning_body,
+                    refs.joinToString(", ") { it.name },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MkwKitTokens.Palette.inkSecondary,
+            )
+        }
+    }
+
+    val suiteLabel = androidx.compose.ui.res.stringResource(R.string.discovery_suite)
+    val categoryLabel = when {
+        sfcTrack != null -> androidx.compose.ui.res.stringResource(R.string.discovery_vs_sfc)
+        battleTrack != null -> androidx.compose.ui.res.stringResource(R.string.discovery_battle)
+        else -> androidx.compose.ui.res.stringResource(R.string.discovery_other)
+    }
+    val canOpenEditor = remember(editorCode, ui.pack) { model.inspectCourseForEditor(editorCode) != null }
+    val favorite = favoriteRef in saved.favorites
+    val favoriteLabel = androidx.compose.ui.res.stringResource(
+        if (favorite) R.string.discovery_favorite_remove else R.string.discovery_favorite_add,
+    )
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 12.dp,
+            end = 16.dp,
+            bottom = com.mylittleblover.mkwplayer.ui.rememberMiniPlayerBottomClearance(20.dp),
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item(key = "extra-hero-$editorCode") {
+            MkwCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = MkwSurfaceTone.White,
+                contentPadding = PaddingValues(0.dp),
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    val artNames = listOfNotNull(artworkName)
+                    ArtworkSlot(Modifier.fillMaxWidth()) { edge ->
+                        val packed = PackArtwork.rememberArtwork(model.packDirectory, artNames, edge)
+                        val frame = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(rememberArtworkRatio(editorCode, packed, 16f / 9f))
+                        if (packed != null) {
+                            FadingArtwork(packed.bitmap, frame)
+                        } else {
+                            Box(
+                                frame.background(MkwKitTokens.Palette.rose),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.GraphicEq,
+                                    contentDescription = null,
+                                    tint = MkwKitTokens.Palette.crimsonDeep,
+                                    modifier = Modifier.size(56.dp),
+                                )
+                            }
+                        }
+                    }
+                    // Subtle top scrim & frosted category pill
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopStart)
+                            .padding(12.dp),
+                    ) {
+                        Surface(
+                            color = MkwKitTokens.Palette.ground.copy(alpha = 0.92f),
+                            shape = MkwKitTokens.Shape.pill,
+                            border = BorderStroke(MkwKitTokens.Stroke.hairline, MkwKitTokens.Palette.hairline),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.GraphicEq,
+                                    contentDescription = null,
+                                    tint = MkwKitTokens.Palette.crimson,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    text = categoryLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MkwKitTokens.Palette.ink,
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 18.dp, top = 14.dp, end = 10.dp, bottom = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MkwKitTokens.Palette.ink,
+                        )
+                        if (builtInMedleys.isNotEmpty()) {
+                            val totalSec = (builtInMedleys.first().medley.durationMs / 1000L).coerceAtLeast(0L)
+                            val dur = "%d:%02d".format(java.util.Locale.ROOT, totalSec / 60L, totalSec % 60L)
+                            Text(
+                                text = "$suiteLabel · $dur",
+                                style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
+                                color = MkwKitTokens.Palette.inkSecondary,
+                            )
+                        }
+                    }
+                    MkwIconButton(
+                        icon = if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = favoriteLabel,
+                        onClick = { discovery.toggleFavorite(favoriteRef) },
+                        tintOverride = if (favorite) MkwKitTokens.Palette.crimson else MkwKitTokens.Palette.inkSecondary,
+                    )
+                }
+            }
+        }
+
+        item(key = "extra-interactive-$editorCode") {
+            MkwCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = MkwSurfaceTone.Porcelain,
+                contentPadding = PaddingValues(18.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MkwKitTokens.Palette.rose),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Outlined.GraphicEq,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MkwKitTokens.Palette.crimson,
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            androidx.compose.ui.res.stringResource(R.string.discovery_interactive),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MkwKitTokens.Palette.ink,
+                        )
+                        Text(
+                            androidx.compose.ui.res.stringResource(R.string.discovery_interactive_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MkwKitTokens.Palette.inkSecondary,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                MkwPrimaryButton(
+                    text = androidx.compose.ui.res.stringResource(R.string.discovery_open_player),
+                    onClick = {
+                        discovery.recordRecent(favoriteRef)
+                        when {
+                            sfcTrack != null -> model.openInteractiveTwoState(sfcTrack, isBattle = false, languageTag = languageTag, autoStart = true)
+                            battleTrack != null -> model.openInteractiveTwoState(battleTrack, isBattle = true, languageTag = languageTag, autoStart = true)
+                            titleTrack != null -> model.openInteractiveTitle(languageTag = languageTag, autoStart = false)
+                        }
+                        onInteractive()
+                    },
+                    size = MkwButtonSize.Hero,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        item(key = "extra-normal-$editorCode") {
+            MkwCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(tween(180, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut)),
+                tone = MkwSurfaceTone.Porcelain,
+                contentPadding = PaddingValues(18.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Headphones,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MkwKitTokens.Palette.inkSecondary,
+                    )
+                    Text(
+                        androidx.compose.ui.res.stringResource(R.string.discovery_normal_playback),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MkwKitTokens.Palette.ink,
+                    )
+                }
+                if (builtInMedleys.isEmpty()) {
+                    Text(
+                        suiteLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MkwKitTokens.Palette.crimson,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        androidx.compose.ui.res.stringResource(R.string.discovery_suite_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MkwKitTokens.Palette.inkSecondary,
+                    )
+                } else {
+                    Spacer(Modifier.height(4.dp))
+                    builtInMedleys.forEach { entry ->
+                        val label = entry.localizedLabel(languageTag, title)
+                        val totalSec = (entry.medley.durationMs / 1000L).coerceAtLeast(0L)
+                        val dur = "%d:%02d".format(java.util.Locale.ROOT, totalSec / 60L, totalSec % 60L)
+                        val interaction = remember(entry.medley.id) { MutableInteractionSource() }
+                        Surface(
+                            onClick = {
+                                discovery.recordRecent(favoriteRef)
+                                onPlayExtraMedley(entry.medley.id, label, suiteLabel, entry.artwork ?: artworkName)
+                            },
+                            enabled = ui.pack != null,
+                            interactionSource = interaction,
+                            color = if (ui.pack != null) MkwKitTokens.Palette.rose else MkwKitTokens.Palette.inset,
+                            shape = MkwKitTokens.Shape.control,
+                            border = BorderStroke(
+                                MkwKitTokens.Stroke.border,
+                                if (ui.pack != null) MkwKitTokens.Palette.crimson.copy(alpha = 0.22f) else MkwKitTokens.Palette.hairline,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = MkwKitTokens.Size.optionRowMin)
+                                .mkwPressScale(interaction, enabled = ui.pack != null),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (ui.pack != null) MkwKitTokens.Palette.crimson else MkwKitTokens.Palette.trackStrong,
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Filled.PlayArrow,
+                                        contentDescription = null,
+                                        tint = MkwKitTokens.Palette.ground,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (ui.pack != null) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.inkSecondary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    text = dur,
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelMedium),
+                                    color = if (ui.pack != null) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.inkSecondary,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                MkwDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    androidx.compose.ui.res.stringResource(R.string.preset_user_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MkwKitTokens.Palette.ink,
+                )
+                extraPresets.forEach { preset ->
+                    val presetInteraction = remember(preset.id) { MutableInteractionSource() }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Surface(
+                            onClick = {
+                                discovery.recordRecent(favoriteRef)
+                                onPlayCustomPreset(preset, title, suiteLabel)
+                            },
+                            enabled = canOpenEditor,
+                            interactionSource = presetInteraction,
+                            color = MkwKitTokens.Palette.ground,
+                            shape = MkwKitTokens.Shape.control,
+                            border = BorderStroke(MkwKitTokens.Stroke.border, MkwKitTokens.Palette.hairline),
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = MkwKitTokens.Size.touchMin)
+                                .mkwPressScale(presetInteraction, enabled = canOpenEditor),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    Icons.Filled.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MkwKitTokens.Palette.crimson,
+                                )
+                                Text(
+                                    preset.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MkwKitTokens.Palette.ink,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                        MkwIconButton(
+                            icon = Icons.Filled.Edit,
+                            contentDescription = androidx.compose.ui.res.stringResource(R.string.preset_edit),
+                            onClick = { onOpenFlowEditor(editorCode, preset.id) },
+                            visualSize = 36.dp,
+                            iconSize = 18.dp,
+                        )
+                        MkwIconButton(
+                            icon = Icons.Filled.ContentCopy,
+                            contentDescription = androidx.compose.ui.res.stringResource(R.string.preset_duplicate),
+                            onClick = { onDuplicatePreset(preset) },
+                            visualSize = 36.dp,
+                            iconSize = 18.dp,
+                        )
+                        MkwIconButton(
+                            icon = Icons.Filled.DeleteOutline,
+                            contentDescription = androidx.compose.ui.res.stringResource(R.string.preset_delete),
+                            onClick = { pendingDeletePreset = preset },
+                            visualSize = 36.dp,
+                            iconSize = 18.dp,
+                            tintOverride = MkwKitTokens.Palette.danger,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                MkwSecondaryButton(
+                    text = androidx.compose.ui.res.stringResource(R.string.preset_new),
+                    onClick = { onOpenFlowEditor(editorCode, null) },
+                    enabled = canOpenEditor,
+                    leadingIcon = Icons.Filled.Add,
+                    size = MkwButtonSize.Hero,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
 /**
  * The world map: the shipped artwork, full screen, draggable and zoomable.
  *
@@ -2288,6 +2942,7 @@ private fun MapPage(
     state: WorldMapState,
     discovery: com.mylittleblover.mkwplayer.ui.home.DiscoveryViewModel,
     presets: List<com.mylittleblover.mkwplayer.library.CoursePreset>,
+    officialRouteFreeRoam: Map<String, com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry>,
     onOpenCourse: (String) -> Unit,
     onOpenCustomRoute: (String) -> Unit,
     onPlayStarted: () -> Unit,
@@ -2341,7 +2996,17 @@ private fun MapPage(
         connections = data.connections,
         installedJukebox = remember(ui.jukebox) { model.allInstalledJukeboxItems() },
         packDirectory = model.packDirectory,
-        inspectOfficialRoute = model::inspectOfficialRoute,
+        inspectOfficialRoute = { route, overrides, ruleMode ->
+            val pfrCfg = officialRouteFreeRoam[route.id]?.config
+            model.inspectOfficialRoute(
+                route = route,
+                sessionOverrides = overrides,
+                ruleMode = ruleMode,
+                pureFreeRoamEnabled = pfrCfg?.enabled == true,
+                pureFreeRoamTrackPool = pfrCfg?.trackPool
+                    ?: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamTrackPool.ROUTE_RULES,
+            )
+        },
         inspectDraftRoute = { pairs, edgeCfgs, ruleMode ->
             val stopCodes = if (pairs.isEmpty()) emptyList() else listOf(pairs.first().first) + pairs.map { it.second }
             val synthetic = com.mylittleblover.mkwplayer.routes.CustomRoute(
@@ -2359,10 +3024,13 @@ private fun MapPage(
                 loopWholeRoute = state.draftLoopWholeRoute,
                 roadRuleMode = ruleMode,
                 routeSuiteMode = state.draftRouteSuiteMode,
+                pureFreeRoamConfig = state.draftPureFreeRoamConfig,
             )
             model.inspectCustomRoute(synthetic)
         },
         onPlayOfficialRoute = { route, loop, overrides, ruleMode, suiteMode ->
+            val entry = officialRouteFreeRoam[route.id]
+                ?: com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry()
             if (model.playOfficialRoute(
                     route = route,
                     userPresets = presets,
@@ -2374,13 +3042,15 @@ private fun MapPage(
                     roadPrefix = roadPrefix,
                     ruleMode = ruleMode,
                     suiteMode = suiteMode,
+                    pureFreeRoamConfig = entry.config,
+                    pureFreeRoamEdgeOverrides = entry.edgeOverrides,
                 ) is PlayerViewModel.RoutePlayResult.Started
             ) {
                 onPlayStarted()
             }
         },
         onSaveCustomRoute = { routeId, routeName, stops, edges, loop, ruleMode, routeSuiteMode ->
-            discovery.saveCustomRoute(routeId, routeName, stops, edges, loop, ruleMode, routeSuiteMode) { res ->
+            discovery.saveCustomRoute(routeId, routeName, stops, edges, loop, ruleMode, routeSuiteMode, state.draftPureFreeRoamConfig) { res ->
                 res.onSuccess { saved ->
                     state.exitEdit()
                     onOpenCustomRoute(saved.id)
@@ -2396,6 +3066,68 @@ private fun MapPage(
                 loopWholeRoute = loop,
                 roadRuleMode = ruleMode,
                 routeSuiteMode = routeSuiteMode,
+                pureFreeRoamConfig = state.draftPureFreeRoamConfig,
+            )
+            if (model.playCustomRoute(
+                    route = draftRoute,
+                    userPresets = presets,
+                    languageTag = languageTag,
+                    suiteLabel = suiteLabel,
+                    rallyLabel = rallyLabel,
+                    roadPrefix = roadPrefix,
+                    customSubstituteTag = subTag,
+                ) is PlayerViewModel.RoutePlayResult.Started
+            ) {
+                onPlayStarted()
+            }
+        },
+        officialFreeRoamEntryFor = { routeId ->
+            officialRouteFreeRoam[routeId]
+                ?: com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry()
+        },
+        onOfficialFreeRoamConfigChange = { routeId, cfg ->
+            discovery.setOfficialRouteFreeRoamConfig(routeId, cfg)
+        },
+        onOfficialFreeRoamEdgeOverrideChange = { routeId, edgeIdx, ov ->
+            discovery.setOfficialRouteFreeRoamEdgeOverride(routeId, edgeIdx, ov)
+        },
+        onPlayOfficialRouteWithFreeRoam = { route, loop, overrides, ruleMode, suiteMode, pfrCfg, pfrOverrides ->
+            if (model.playOfficialRoute(
+                    route = route,
+                    userPresets = presets,
+                    loopRoute = loop,
+                    sessionOverrides = overrides,
+                    languageTag = languageTag,
+                    suiteLabel = suiteLabel,
+                    rallyLabel = rallyLabel,
+                    roadPrefix = roadPrefix,
+                    ruleMode = ruleMode,
+                    suiteMode = suiteMode,
+                    pureFreeRoamConfig = pfrCfg,
+                    pureFreeRoamEdgeOverrides = pfrOverrides,
+                ) is PlayerViewModel.RoutePlayResult.Started
+            ) {
+                onPlayStarted()
+            }
+        },
+        onSaveCustomRouteWithFreeRoam = { routeId, routeName, stops, edges, loop, ruleMode, routeSuiteMode, pfrCfg ->
+            discovery.saveCustomRoute(routeId, routeName, stops, edges, loop, ruleMode, routeSuiteMode, pfrCfg) { res ->
+                res.onSuccess { saved ->
+                    state.exitEdit()
+                    onOpenCustomRoute(saved.id)
+                }
+            }
+        },
+        onPlayCustomDraftWithFreeRoam = { routeName, stops, edges, loop, ruleMode, routeSuiteMode, pfrCfg ->
+            val draftRoute = com.mylittleblover.mkwplayer.routes.CustomRoute(
+                id = state.editingRouteId ?: "draft",
+                name = routeName,
+                stops = stops,
+                edges = edges,
+                loopWholeRoute = loop,
+                roadRuleMode = ruleMode,
+                routeSuiteMode = routeSuiteMode,
+                pureFreeRoamConfig = pfrCfg,
             )
             if (model.playCustomRoute(
                     route = draftRoute,
@@ -2583,6 +3315,7 @@ private fun ConsolePage(
         )
     }
 
+    val reducedMotion = MkwMotion.rememberPrefersReducedMotion()
     Column(Modifier.fillMaxSize()) {
         AnimatedVisibility(visible = isLoading) {
             com.mylittleblover.mkwplayer.ui.MkwLinearIndeterminateBar(
@@ -2681,27 +3414,37 @@ private fun ConsolePage(
                                 onCancel = model::cancelPendingPerformance,
                                 onEnd = model::takeOutro,
                                 progressFlow = model.progressUi,
+                                courseCode = activeStageCode,
+                                pendingCountdownFramesProvider = model::estimatedFramesUntilPendingSwitch,
                             )
                         }
                     }
                 }
 
                 val showEntryCard = !ui.canStop && model.initialEntryChoices.isNotEmpty()
+                val showSpeakerToggle = flow.hasSpeakerOverlay && !flow.isRainbowMelodyOverlay
                 val showExtraControls = flow.performanceBlocker == null &&
-                    ((flow.outros.size > 1 && flow.canEnd) || flow.versionNumbers.isNotEmpty() || flow.hasSpeakerOverlay)
+                    ((flow.outros.size > 1 && flow.canEnd) || flow.versionNumbers.isNotEmpty() || showSpeakerToggle)
                 if (showEntryCard || showExtraControls) {
                     item(key = "interactive-arrangement-card") {
                         MkwCard(
-                            modifier = Modifier.fillMaxWidth().animateContentSize(tween(200, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateContentSize(tween(180, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut)),
                             tone = MkwSurfaceTone.White,
                             contentPadding = PaddingValues(14.dp),
                         ) {
-                            AnimatedVisibility(visible = showEntryCard) {
+                            AnimatedVisibility(
+                                visible = showEntryCard,
+                                enter = MkwMotion.panelEnter(reducedMotion),
+                                exit = MkwMotion.panelExit(reducedMotion),
+                            ) {
                                 com.mylittleblover.mkwplayer.ui.interactive.InteractiveEntryChooser(
                                     choices = model.initialEntryChoices,
                                     selected = model.selectedEntrySegment,
                                     enabled = !ui.canStop && !ui.busy,
                                     onSelect = model::selectInitialEntry,
+                                    courseCode = activeStageCode,
                                 )
                             }
                             if (flow.performanceBlocker == null) {
@@ -2718,27 +3461,35 @@ private fun ConsolePage(
                                         selectedVersion = flow.selectedVersion,
                                         availableVersions = flow.availableVersions,
                                         onSelect = { number -> model.selectRecordingVersion(number) },
+                                        courseCode = activeStageCode,
                                     )
                                 }
-                                if (flow.hasSpeakerOverlay) {
+                                AnimatedVisibility(
+                                    visible = showSpeakerToggle,
+                                    enter = MkwMotion.panelEnter(reducedMotion),
+                                    exit = MkwMotion.panelExit(reducedMotion),
+                                ) {
                                     Row(
                                         Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
-                                        Text(
-                                            text = androidx.compose.ui.res.stringResource(
-                                                if (flow.isRainbowMelodyOverlay) {
-                                                    R.string.discovery_rainbow_melody_overlay
-                                                } else {
-                                                    R.string.discovery_speaker_overlay
-                                                },
-                                            ),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MkwKitTokens.Palette.ink,
+                                        Column(
                                             modifier = Modifier.weight(1f).padding(end = 12.dp),
-                                        )
+                                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        ) {
+                                            Text(
+                                                text = androidx.compose.ui.res.stringResource(R.string.discovery_speaker_overlay),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MkwKitTokens.Palette.ink,
+                                            )
+                                            Text(
+                                                text = androidx.compose.ui.res.stringResource(R.string.discovery_speaker_overlay_hint),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MkwKitTokens.Palette.inkSecondary,
+                                            )
+                                        }
                                         MkwSwitch(
                                             checked = flow.speakerEnabled,
                                             onCheckedChange = { model.toggleSpeakerOverlay() },
@@ -3054,16 +3805,31 @@ private fun MiniPlayerProgressBar(
     flow: PlayerViewModel.FlowUi?,
     fallbackProgress: Float,
     progressFlow: StateFlow<PlayerViewModel.ProgressUi>?,
+    selectedKey: String? = null,
+    staffCreditsVariant: com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.Variant? = null,
+    nmStaffCreditsOffsetMs: Long = com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.DEFAULT_NM_SPECIAL_119_OFFSET_MS,
 ) {
     val live = progressFlow?.collectAsStateWithLifecycle()?.value
     val frame = live?.sourceFrame ?: flow?.sourceFrame
     val length = flow?.sourceFrames
     val progress = if (frame != null && frame >= 0 && length != null && length > 0)
         (frame.toDouble() / length).toFloat().coerceIn(0f, 1f) else (live?.progress ?: fallbackProgress).coerceIn(0f, 1f)
+    val specialStyle = staffCreditsVariant?.let { variant ->
+        val posMs = live?.positionMs?.takeIf { it > 0L }
+            ?: live?.durationMs?.takeIf { it > 0L }?.let { (progress.toDouble() * it).toLong() }
+            ?: 0L
+        com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.resolveStyle(
+            variant = variant,
+            positionMs = posMs,
+            nmOffsetMs = nmStaffCreditsOffsetMs,
+        )
+    }
     com.mylittleblover.mkwplayer.ui.SmoothProgressIndicator(
         progress = progress,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 5.dp),
         barHeight = 3.dp,
+        specialStyle = specialStyle,
+        resetKey = selectedKey,
     )
 }
 
@@ -3075,6 +3841,8 @@ private fun MiniPlayer(
     artworkNames: List<String>,
     ui: PlayerViewModel.Ui,
     progressFlow: StateFlow<PlayerViewModel.ProgressUi>? = null,
+    staffCreditsVariant: com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.Variant? = null,
+    nmStaffCreditsOffsetMs: Long = com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.DEFAULT_NM_SPECIAL_119_OFFSET_MS,
     onOpen: () -> Unit,
     onToggle: () -> Unit,
     onNext: (() -> Unit)? = null,
@@ -3082,7 +3850,7 @@ private fun MiniPlayer(
     val flow = ui.flow
     val label = androidx.compose.ui.res.stringResource(if (ui.canPause) R.string.interactive_pause else R.string.interactive_resume)
     val stateLabel = androidx.compose.ui.res.stringResource(if (ui.canResume) R.string.discovery_paused else R.string.discovery_playing)
-    val subtitle = flow?.let { com.mylittleblover.mkwplayer.ui.interactive.performanceStageText(it) }
+    val subtitle = flow?.let { com.mylittleblover.mkwplayer.ui.interactive.performanceStageText(it, courseCode) }
         ?: ui.linearTrack?.subtitle?.takeIf { it.isNotBlank() }?.let { "$it · $stateLabel" }
         ?: stateLabel
     val density = LocalDensity.current
@@ -3179,7 +3947,14 @@ private fun MiniPlayer(
                         )
                     }
                 }
-                MiniPlayerProgressBar(flow = flow, fallbackProgress = ui.progress, progressFlow = progressFlow)
+                MiniPlayerProgressBar(
+                    flow = flow,
+                    fallbackProgress = ui.progress,
+                    progressFlow = progressFlow,
+                    selectedKey = ui.selectedKey,
+                    staffCreditsVariant = staffCreditsVariant,
+                    nmStaffCreditsOffsetMs = nmStaffCreditsOffsetMs,
+                )
             }
         }
     }
@@ -3196,9 +3971,26 @@ private fun SingleTrackPlayer(
     val stageCode = model.currentStageCode
     val linearTrack = ui.linearTrack
     val hasLinearTrack = ui.linearMode && linearTrack != null
+    val languageTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    val allTrackMarkers by model.trackMarkers.collectAsStateWithLifecycle()
+    val activeMarkerTrackId = remember(linearTrack) { model.markerTrackIdFor(linearTrack) }
+    val activeTrackMarkers = remember(activeMarkerTrackId, allTrackMarkers) {
+        activeMarkerTrackId?.let { allTrackMarkers[it] }.orEmpty()
+    }
+    val activeGenre = remember(linearTrack, ui.jukebox) { model.genreForLinearEntry(linearTrack) }
+    val currentDurationMs = remember(ui.totalFrames, ui.sampleRate, linearTrack?.durationMs) {
+        if (ui.totalFrames > 0L && ui.sampleRate > 0) {
+            (ui.totalFrames * 1000L) / ui.sampleRate.toLong()
+        } else {
+            linearTrack?.durationMs ?: 0L
+        }
+    }
     var showQueueSheet by rememberSaveable { mutableStateOf(false) }
     var showSpeedSheet by rememberSaveable { mutableStateOf(false) }
     var showEqSheet by rememberSaveable { mutableStateOf(false) }
+    var showLoopConfigDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingAddMarkerPosMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var markerSheetTarget by remember { mutableStateOf<Pair<LinearQueue.Entry, () -> Unit>?>(null) }
     var abPanelOpen by rememberSaveable { mutableStateOf(false) }
     val reduceMotion = com.mylittleblover.mkwplayer.ui.rememberReducedMotion()
 
@@ -3217,6 +4009,50 @@ private fun SingleTrackPlayer(
             onDismiss = { showEqSheet = false },
         )
     }
+    if (showLoopConfigDialog) {
+        LoopDurationConfigDialog(
+            initialConfig = ui.nonInteractiveLoopConfig,
+            onDismiss = { showLoopConfigDialog = false },
+            onApply = { cfg ->
+                model.setNonInteractiveLoopConfig(cfg)
+                showLoopConfigDialog = false
+            },
+        )
+    }
+    val addMarkerPos = pendingAddMarkerPosMs
+    if (addMarkerPos != null && activeMarkerTrackId != null) {
+        com.mylittleblover.mkwplayer.ui.markers.AddTrackMarkerDialog(
+            positionMs = addMarkerPos,
+            suggestedIndex = activeTrackMarkers.size + 1,
+            onDismiss = { pendingAddMarkerPosMs = null },
+            onConfirm = { label, colorArgb ->
+                model.addTrackMarker(activeMarkerTrackId, addMarkerPos, label, colorArgb)
+                pendingAddMarkerPosMs = null
+            },
+        )
+    }
+    val queueMarkerTarget = markerSheetTarget
+    if (queueMarkerTarget != null) {
+        val (entry, jumpAction) = queueMarkerTarget
+        val targetId = model.markerTrackIdFor(entry)
+        val targetMarkers = targetId?.let { allTrackMarkers[it] }.orEmpty()
+        com.mylittleblover.mkwplayer.ui.markers.PlayFromMarkerSheet(
+            trackTitle = entry.title,
+            markers = targetMarkers,
+            onSelectMarker = { marker ->
+                markerSheetTarget = null
+                showQueueSheet = false
+                if (entry.key == linearTrack?.key) {
+                    model.seekToPositionMs(marker.positionMs)
+                } else {
+                    model.scheduleMarkerSeek(marker.positionMs, targetId)
+                    jumpAction()
+                }
+            },
+            onDeleteMarker = { marker -> model.deleteTrackMarker(marker.id) },
+            onDismiss = { markerSheetTarget = null },
+        )
+    }
 
     val playing = ui.canPause
     val artScale by animateFloatAsState(
@@ -3232,41 +4068,56 @@ private fun SingleTrackPlayer(
 
     val artworkBlock: @Composable (Modifier) -> Unit = { artworkModifier ->
         Box(
-            artworkModifier.fillMaxWidth(),
+            artworkModifier.fillMaxWidth().height(248.dp),
             contentAlignment = Alignment.Center,
         ) {
             ArtworkSlot(
-                Modifier.fillMaxWidth()
+                Modifier.fillMaxWidth().height(248.dp)
                     .graphicsLayer { scaleX = artScale; scaleY = artScale },
             ) { edge ->
-                val artLookup = PackArtwork.rememberArtworkState(model.packDirectory, playbackArtworkNames(model, ui), edge)
-                val art = artLookup.loaded
+                val artNames = playbackArtworkNames(model, ui)
+                val artLookup = PackArtwork.rememberArtworkState(model.packDirectory, artNames, edge)
                 val coverCode = stageCode ?: linearTrack?.courseCode ?: linearTrack?.courseMedley?.medley?.courseCode
-                val coverKey = linearTrack?.key ?: ui.selectedKey ?: stageCode ?: coverCode ?: "none"
-                val rawRatio = rememberArtworkRatio(coverKey, art, if (coverCode != null) 16f / 9f else 1f)
-                    .coerceIn(0.65f, 2.2f)
+                val hasPackCandidate = remember(model.packDirectory, artNames) {
+                    PackArtwork.hasAnyCandidate(model.packDirectory, artNames)
+                }
+                var retainedArt by remember { mutableStateOf<PackArtwork.Loaded?>(null) }
+                if (artLookup.loaded != null) {
+                    retainedArt = artLookup.loaded
+                } else if (!hasPackCandidate) {
+                    retainedArt = null
+                }
+                val art = artLookup.loaded ?: retainedArt
+                val targetRatio = when {
+                    art != null && art.bitmap.height > 0 ->
+                        (art.bitmap.width.toFloat() / art.bitmap.height.toFloat()).coerceIn(0.85f, 1.85f)
+                    coverCode != null -> 16f / 9f
+                    else -> 1f
+                }
                 val animatedRatio by animateFloatAsState(
-                    targetValue = rawRatio,
-                    animationSpec = if (reduceMotion) androidx.compose.animation.core.snap() else tween(220, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut),
+                    targetValue = targetRatio,
+                    animationSpec = if (reduceMotion) androidx.compose.animation.core.snap() else tween(200, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut),
                     label = "single-track-art-ratio",
                 )
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val boxHeight = 236.dp
+                val boxWidth = (boxHeight * animatedRatio).coerceAtMost(320.dp)
+                val finalHeight = (boxWidth / animatedRatio).coerceAtMost(boxHeight)
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Surface(
-                        Modifier.widthIn(max = 320.dp).heightIn(max = 264.dp).aspectRatio(animatedRatio),
+                        Modifier.width(boxWidth).height(finalHeight),
                         shape = MkwKitTokens.Shape.dialog,
                         shadowElevation = artElevation,
                         color = MkwKitTokens.Palette.card,
                         border = BorderStroke(MkwKitTokens.Stroke.border, MkwKitTokens.Palette.hairline),
                     ) {
-                        val artNames = playbackArtworkNames(model, ui)
                         when {
-                            art != null -> FadingArtwork(art.bitmap, Modifier.fillMaxSize(), animate = !artLookup.fromCache)
-                            coverCode != null && !PackArtwork.hasAnyCandidate(model.packDirectory, artNames) -> {
+                            art != null -> FadingArtwork(art.bitmap, Modifier.fillMaxSize(), animate = false)
+                            coverCode != null && !hasPackCandidate -> {
                                 val coverRes = com.mylittleblover.mkwplayer.ui.art.courseCoverDrawable(coverCode)
                                 if (coverRes != null) {
                                     val coverLookup = com.mylittleblover.mkwplayer.ui.art.rememberResourceArtworkState(coverRes, edge)
                                     coverLookup.loaded?.let {
-                                        FadingArtwork(it.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = !coverLookup.fromCache)
+                                        FadingArtwork(it.bitmap, Modifier.fillMaxSize(), ContentScale.Crop, animate = false)
                                     }
                                 } else {
                                     com.mylittleblover.mkwplayer.ui.art.CoursePlaceholderContent(coverCode, edge = edge, showIcon = false)
@@ -3326,24 +4177,42 @@ private fun SingleTrackPlayer(
                     }
                 }
                 if (linearTrack != null) {
+                    val genreLabel = activeGenre?.localizedName(languageTag)
                     val metaParts = buildList {
                         if (linearTrack.subtitle.isNotBlank()) add(linearTrack.subtitle)
                         linearTrack.arrangement
                             ?.takeIf { arr ->
                                 arr.isNotBlank() &&
                                     !linearTrack.title.contains(arr, ignoreCase = true) &&
-                                    !linearTrack.subtitle.contains(arr, ignoreCase = true)
+                                    !linearTrack.subtitle.contains(arr, ignoreCase = true) &&
+                                    (genreLabel == null || !arr.equals(genreLabel, ignoreCase = true))
                             }
                             ?.let { add(it) }
                     }
-                    if (metaParts.isNotEmpty()) {
-                        Text(
-                            metaParts.joinToString(" · "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MkwKitTokens.Palette.inkSecondary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                    if (activeGenre != null || metaParts.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (activeGenre != null) {
+                                com.mylittleblover.mkwplayer.ui.home.JukeboxGenrePill(
+                                    genre = activeGenre,
+                                    language = languageTag,
+                                    compact = false,
+                                )
+                            }
+                            if (metaParts.isNotEmpty()) {
+                                Text(
+                                    metaParts.joinToString(" · "),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.align(Alignment.CenterVertically),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -3373,6 +4242,22 @@ private fun SingleTrackPlayer(
                 }
             }
 
+            val sliderTrackMarkers = remember(activeTrackMarkers, currentDurationMs) {
+                activeTrackMarkers.toSliderMarkers(currentDurationMs)
+            }
+            val staffCreditsVariant = remember(activeMarkerTrackId, ui.selectedKey, linearTrack?.assetSha256) {
+                com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.detectVariant(
+                    canonicalTrackId = activeMarkerTrackId,
+                    selectedKey = ui.selectedKey,
+                    assetSha256 = linearTrack?.assetSha256,
+                )
+            }
+            val nmStaffCreditsOffsetMs by model.nmStaffCreditsOffsetMs.collectAsStateWithLifecycle()
+            LaunchedEffect(staffCreditsVariant, model.packDirectory) {
+                if (staffCreditsVariant == com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.Variant.NINTENDO_MUSIC) {
+                    model.ensureNmStaffCreditsOffsetCalibrated()
+                }
+            }
             SingleTrackProgressSection(
                 selectedKey = ui.selectedKey,
                 canSeek = ui.canSeek,
@@ -3386,6 +4271,9 @@ private fun SingleTrackPlayer(
                 onSeekTo = model::seekTo,
                 abLoopStartFrame = ui.abLoopStartFrame,
                 abLoopEndFrame = ui.abLoopEndFrame,
+                extraMarkers = sliderTrackMarkers,
+                staffCreditsVariant = staffCreditsVariant,
+                nmStaffCreditsOffsetMs = nmStaffCreditsOffsetMs,
             )
 
             // Primary Hero Transport directly below scrubber for immediate thumb reach
@@ -3430,6 +4318,18 @@ private fun SingleTrackPlayer(
                         iconSize = 24.dp,
                     )
                 }
+            }
+
+            if (hasLinearTrack && activeMarkerTrackId != null) {
+                com.mylittleblover.mkwplayer.ui.markers.PlayScreenMarkerStrip(
+                    markers = activeTrackMarkers,
+                    durationMs = currentDurationMs,
+                    onAddMarker = {
+                        pendingAddMarkerPosMs = model.progressUi.value.positionMs.coerceAtLeast(0L)
+                    },
+                    onJumpToMarker = { marker -> model.seekToPositionMs(marker.positionMs) },
+                    onDeleteMarker = { marker -> model.deleteTrackMarker(marker.id) },
+                )
             }
 
             AnimatedVisibility(visible = hasLinearTrack && (abPanelOpen || ui.abLoopStartFrame != null || ui.abLoopEndFrame != null)) {
@@ -3535,6 +4435,7 @@ private fun SingleTrackPlayer(
                             active = ui.queue.repeatMode != LinearQueue.RepeatMode.OFF,
                             enabled = ui.allowRepeatToggle,
                             onClick = model::cycleRepeatMode,
+                            onLongClick = { showLoopConfigDialog = true },
                             modifier = Modifier.weight(1f),
                         )
                         SingleTrackUtilityButton(
@@ -3599,6 +4500,14 @@ private fun SingleTrackPlayer(
     if (showQueueSheet && hasLinearTrack) {
         LinearQueueBottomSheet(
             queue = ui.queue,
+            languageTag = languageTag,
+            genreForEntry = model::genreForLinearEntry,
+            markerCountForEntry = { entry ->
+                model.markerTrackIdFor(entry)?.let { allTrackMarkers[it]?.size } ?: 0
+            },
+            onOpenMarkersForEntry = { entry, jump ->
+                markerSheetTarget = entry to jump
+            },
             onDismiss = { showQueueSheet = false },
             onJumpToTemp = { index ->
                 model.jumpToTempQueueItem(index)
@@ -3671,6 +4580,10 @@ private fun JukeboxArtworkCard(entry: LinearQueue.Entry?) {
 @Composable
 private fun LinearQueueBottomSheet(
     queue: LinearQueue.Snapshot,
+    languageTag: String = "",
+    genreForEntry: (LinearQueue.Entry) -> com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.GenreInfo? = { null },
+    markerCountForEntry: (LinearQueue.Entry) -> Int = { 0 },
+    onOpenMarkersForEntry: ((LinearQueue.Entry, () -> Unit) -> Unit)? = null,
     onDismiss: () -> Unit,
     onJumpToTemp: (Int) -> Unit,
     onRemoveTemp: (Int) -> Unit,
@@ -3743,7 +4656,18 @@ private fun LinearQueueBottomSheet(
                     QueueSectionHeader(androidx.compose.ui.res.stringResource(R.string.jukebox_now_playing))
                 }
                 item(key = "now-item") {
-                    QueueEntryRow(entry = now, highlight = true, onClick = onDismiss)
+                    val mCount = markerCountForEntry(now)
+                    QueueEntryRow(
+                        entry = now,
+                        highlight = true,
+                        genre = genreForEntry(now),
+                        languageTag = languageTag,
+                        markerCount = mCount,
+                        onClick = onDismiss,
+                        onLongClick = if (mCount > 0 && onOpenMarkersForEntry != null) {
+                            { onOpenMarkersForEntry(now, onDismiss) }
+                        } else null,
+                    )
                 }
             }
             if (queue.tempQueue.isNotEmpty()) {
@@ -3757,10 +4681,17 @@ private fun LinearQueueBottomSheet(
                     } else {
                         Modifier
                     }
+                    val mCount = markerCountForEntry(item)
                     QueueEntryRow(
                         entry = item,
                         highlight = false,
+                        genre = genreForEntry(item),
+                        languageTag = languageTag,
+                        markerCount = mCount,
                         onClick = { onJumpToTemp(idx) },
+                        onLongClick = if (mCount > 0 && onOpenMarkersForEntry != null) {
+                            { onOpenMarkersForEntry(item) { onJumpToTemp(idx) } }
+                        } else null,
                         onRemove = { onRemoveTemp(idx) },
                         dragHandle = if (queue.tempQueue.size > 1) {
                             { com.mylittleblover.mkwplayer.ui.components.DragHandleButton(idx, tempDrag) }
@@ -3791,10 +4722,17 @@ private fun LinearQueueBottomSheet(
                     } else {
                         Modifier
                     }
+                    val mCount = markerCountForEntry(item)
                     QueueEntryRow(
                         entry = item,
                         highlight = false,
+                        genre = genreForEntry(item),
+                        languageTag = languageTag,
+                        markerCount = mCount,
                         onClick = { onJumpToUpcoming(idx) },
+                        onLongClick = if (mCount > 0 && onOpenMarkersForEntry != null) {
+                            { onOpenMarkersForEntry(item) { onJumpToUpcoming(idx) } }
+                        } else null,
                         onRemove = { onRemoveUpcoming(idx) },
                         dragHandle = if (queue.upNext.size > 1) {
                             { com.mylittleblover.mkwplayer.ui.components.DragHandleButton(idx, upNextDrag) }
@@ -3837,6 +4775,7 @@ private fun SingleTrackUtilityButton(
     enabled: Boolean = true,
     badgeCount: Int = 0,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     MkwUtilityTile(
@@ -3844,34 +4783,69 @@ private fun SingleTrackUtilityButton(
         label = label,
         active = active,
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
         enabled = enabled,
         badgeCount = badgeCount,
     )
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun QueueEntryRow(
     entry: LinearQueue.Entry,
     highlight: Boolean,
     onClick: () -> Unit,
+    genre: com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.GenreInfo? = null,
+    languageTag: String = "",
+    markerCount: Int = 0,
+    onLongClick: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null,
     dragHandle: (@Composable () -> Unit)? = null,
     isDragging: Boolean = false,
     rowModifier: Modifier = Modifier,
 ) {
+    val genreName = genre?.localizedName(languageTag)
     val sub = buildList {
-        if (entry.subtitle.isNotBlank()) add(entry.subtitle)
-        entry.arrangement?.takeIf { it.isNotBlank() }?.let { add(it) }
+        val seen = LinkedHashSet<String>()
+        fun addSegments(raw: String?) {
+            raw?.split("·")?.forEach { piece ->
+                val clean = piece.trim()
+                if (clean.isNotEmpty() &&
+                    (genreName == null || !clean.equals(genreName, ignoreCase = true)) &&
+                    seen.add(clean.lowercase())
+                ) {
+                    add(clean)
+                }
+            }
+        }
+        addSegments(entry.subtitle)
+        addSegments(entry.arrangement)
         if (entry.durationMs > 0L) add(EngineSnapshot.formatPosition(entry.durationMs / 1000L, 1))
     }.joinToString(" · ")
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val cardModifier = if (onLongClick != null) {
+        rowModifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 3.dp)
+            .clip(MkwKitTokens.Shape.control)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
+    } else {
+        rowModifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 3.dp)
+    }
     MkwCard(
-        onClick = onClick,
+        onClick = if (onLongClick == null) onClick else null,
         selected = highlight || isDragging,
         tone = MkwSurfaceTone.White,
         shape = MkwKitTokens.Shape.control,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        modifier = rowModifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 3.dp),
+        modifier = cardModifier,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -3879,7 +4853,7 @@ private fun QueueEntryRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (dragHandle != null) dragHandle()
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = entry.title,
                     maxLines = 1,
@@ -3888,14 +4862,44 @@ private fun QueueEntryRow(
                     fontWeight = if (highlight) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (highlight) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.ink,
                 )
-                if (sub.isNotEmpty()) {
-                    Text(
-                        text = sub,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MkwKitTokens.tabular(MaterialTheme.typography.labelSmall),
-                        color = MkwKitTokens.Palette.inkSecondary,
-                    )
+                if (genre != null || sub.isNotEmpty() || markerCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        if (genre != null) {
+                            com.mylittleblover.mkwplayer.ui.home.JukeboxGenrePill(
+                                genre = genre,
+                                language = languageTag,
+                                compact = true,
+                            )
+                        }
+                        if (sub.isNotEmpty()) {
+                            Text(
+                                text = sub,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MkwKitTokens.tabular(MaterialTheme.typography.labelSmall),
+                                color = MkwKitTokens.Palette.inkSecondary,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                        if (markerCount > 0) {
+                            Surface(
+                                shape = MkwKitTokens.Shape.pill,
+                                color = MkwKitTokens.Palette.rose,
+                                border = BorderStroke(MkwKitTokens.Stroke.hairline, MkwKitTokens.Palette.crimson.copy(alpha = 0.25f)),
+                            ) {
+                                Text(
+                                    text = markerCount.toString(),
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelSmall),
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MkwKitTokens.Palette.crimsonDeep,
+                                )
+                            }
+                        }
+                    }
                 }
             }
             if (onRemove != null) {
@@ -3926,6 +4930,9 @@ private fun SingleTrackProgressSection(
     onSeekTo: (Float) -> Unit,
     abLoopStartFrame: Long? = null,
     abLoopEndFrame: Long? = null,
+    extraMarkers: List<MkwSliderMarker> = emptyList(),
+    staffCreditsVariant: com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.Variant? = null,
+    nmStaffCreditsOffsetMs: Long = com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.DEFAULT_NM_SPECIAL_119_OFFSET_MS,
 ) {
     val live by progressFlow.collectAsStateWithLifecycle()
     val liveProgress = live.progress
@@ -3960,13 +4967,31 @@ private fun SingleTrackProgressSection(
         if (livePosition != "--:--") livePosition else fallbackPosition
     }
     val activeScrub = scrubbing || pendingSeek != null
+    val totalDurationMs = if (totalFrames > 0L && sampleRate > 0) {
+        (totalFrames * 1000L) / sampleRate.toLong()
+    } else {
+        live.durationMs
+    }
+    val effectivePositionMs = when {
+        activeScrub && totalDurationMs > 0L -> (displayedProgress.toDouble() * totalDurationMs).toLong()
+        live.positionMs > 0L -> live.positionMs
+        totalDurationMs > 0L -> (displayedProgress.toDouble() * totalDurationMs).toLong()
+        else -> 0L
+    }
+    val specialSliderStyle = staffCreditsVariant?.let { variant ->
+        com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.resolveStyle(
+            variant = variant,
+            positionMs = effectivePositionMs,
+            nmOffsetMs = nmStaffCreditsOffsetMs,
+        )
+    }
 
     Column(Modifier.fillMaxWidth()) {
         if (canSeek && totalFrames > 0L) {
             val aFraction = abLoopStartFrame?.let { (it.toFloat() / totalFrames.toFloat()).coerceIn(0f, 1f) }
             val bFraction = abLoopEndFrame?.let { (it.toFloat() / totalFrames.toFloat()).coerceIn(0f, 1f) }
-            val markers = remember(aFraction, bFraction) {
-                when {
+            val markers = remember(aFraction, bFraction, extraMarkers) {
+                val ab = when {
                     aFraction != null && bFraction != null ->
                         listOf(MkwSliderMarker(aFraction, bFraction, MkwKitTokens.Palette.crimsonDeep))
                     aFraction != null ->
@@ -3975,6 +5000,7 @@ private fun SingleTrackProgressSection(
                         listOf(MkwSliderMarker(bFraction, null, MkwKitTokens.Palette.crimsonDeep))
                     else -> emptyList()
                 }
+                if (extraMarkers.isEmpty()) ab else ab + extraMarkers
             }
             MkwSlider(
                 value = displayedProgress,
@@ -3994,11 +5020,14 @@ private fun SingleTrackProgressSection(
                 smoothProgress = true,
                 snapImmediate = scrubbing || pendingSeek != null,
                 resetKey = selectedKey,
+                specialStyle = specialSliderStyle,
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
             com.mylittleblover.mkwplayer.ui.SmoothProgressIndicator(
                 progress = liveProgress.coerceIn(0f, 1f).let { if (it > 0f) it else fallbackProgress },
+                specialStyle = specialSliderStyle,
+                resetKey = selectedKey,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -4010,7 +5039,264 @@ private fun SingleTrackProgressSection(
                 fontWeight = if (activeScrub) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (activeScrub) MkwKitTokens.Palette.ink else MkwKitTokens.Palette.inkSecondary,
             )
-            Text(liveTotal, style = timeStyle, color = MkwKitTokens.Palette.inkSecondary)
+            AnimatedContent(
+                targetState = liveTotal,
+                transitionSpec = { MkwMotion.viewSwap(reduceMotion) },
+                label = "single-track-total-duration",
+            ) { totalText ->
+                Text(totalText, style = timeStyle, color = MkwKitTokens.Palette.inkSecondary)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LoopDurationConfigDialog(
+    initialConfig: com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig,
+    onDismiss: () -> Unit,
+    onApply: (com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig) -> Unit,
+) {
+    val reducedMotion = MkwMotion.rememberPrefersReducedMotion()
+    var mode by rememberSaveable { mutableStateOf(initialConfig.mode) }
+    var loopCount by rememberSaveable {
+        mutableIntStateOf(
+            initialConfig.loopCount.coerceIn(1, com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.MAX_LOOP_COUNT),
+        )
+    }
+    var loopInput by rememberSaveable { mutableStateOf(loopCount.toString()) }
+    var durationSec by rememberSaveable {
+        mutableIntStateOf((initialConfig.targetDurationMs / 1000L).toInt().coerceIn(10, 14_400))
+    }
+    var durationInput by rememberSaveable { mutableStateOf(durationSec.toString()) }
+
+    val loopCountPresets = remember { listOf(1, 2, 3, 5, 10) }
+    val durationPresetsSec = remember { listOf(60, 120, 180, 300, 600, 900, 1800) }
+    val countModeLabel = androidx.compose.ui.res.stringResource(R.string.loop_config_mode_count)
+    val durationModeLabel = androidx.compose.ui.res.stringResource(R.string.loop_config_mode_duration)
+
+    MkwDialog(
+        onDismissRequest = onDismiss,
+        title = androidx.compose.ui.res.stringResource(R.string.loop_config_dialog_title),
+        confirmButton = {
+            MkwPrimaryButton(
+                text = androidx.compose.ui.res.stringResource(R.string.loop_config_apply),
+                onClick = {
+                    val result = when (mode) {
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.LOOP_COUNT -> {
+                            val parsed = loopInput.trim().toIntOrNull()?.coerceIn(1, com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.MAX_LOOP_COUNT)
+                                ?: loopCount
+                            com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.byLoopCount(parsed)
+                        }
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.TARGET_DURATION -> {
+                            val parsedSec = durationInput.trim().toIntOrNull()?.coerceIn(10, 14_400) ?: durationSec
+                            com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.byTargetDurationMs(parsedSec.toLong() * 1000L)
+                        }
+                    }
+                    onApply(result)
+                },
+                size = MkwButtonSize.Compact,
+            )
+        },
+        dismissButton = {
+            MkwGhostButton(
+                text = androidx.compose.ui.res.stringResource(R.string.discovery_cancel),
+                onClick = onDismiss,
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(tween(180, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut)),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = androidx.compose.ui.res.stringResource(R.string.loop_config_dialog_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MkwKitTokens.Palette.inkSecondary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MkwBadge(
+                    text = androidx.compose.ui.res.stringResource(R.string.loop_config_fade_badge),
+                    tone = MkwBadgeTone.Rose,
+                    tabular = false,
+                )
+            }
+
+            MkwSegmentedBar(
+                items = listOf(
+                    com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.LOOP_COUNT,
+                    com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.TARGET_DURATION,
+                ),
+                selected = mode,
+                labelOf = { item ->
+                    when (item) {
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.LOOP_COUNT -> countModeLabel
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.TARGET_DURATION -> durationModeLabel
+                    }
+                },
+                onSelect = { mode = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            AnimatedContent(
+                targetState = mode,
+                transitionSpec = { MkwMotion.viewSwap(reducedMotion) },
+                label = "loop-config-mode-pane",
+            ) { currentMode ->
+                MkwCard(
+                    tone = MkwSurfaceTone.Recessed,
+                    contentPadding = PaddingValues(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    when (currentMode) {
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.LOOP_COUNT -> {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(R.string.loop_config_count_label),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MkwKitTokens.Palette.inkSecondary,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                MkwIconButton(
+                                    icon = androidx.compose.material.icons.Icons.Filled.Remove,
+                                    contentDescription = "−",
+                                    onClick = {
+                                        val next = (loopCount - 1).coerceAtLeast(1)
+                                        loopCount = next
+                                        loopInput = next.toString()
+                                    },
+                                    enabled = loopCount > 1,
+                                    tone = MkwIconButtonTone.Bordered,
+                                    visualSize = 40.dp,
+                                    iconSize = 20.dp,
+                                )
+                                MkwTextField(
+                                    value = loopInput,
+                                    onValueChange = { raw ->
+                                        val digits = raw.filter { it.isDigit() }.take(2)
+                                        loopInput = digits
+                                        digits.toIntOrNull()?.let { v ->
+                                            loopCount = v.coerceIn(1, com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.MAX_LOOP_COUNT)
+                                        }
+                                    },
+                                    singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                MkwIconButton(
+                                    icon = Icons.Filled.Add,
+                                    contentDescription = "+",
+                                    onClick = {
+                                        val next = (loopCount + 1).coerceAtMost(com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.MAX_LOOP_COUNT)
+                                        loopCount = next
+                                        loopInput = next.toString()
+                                    },
+                                    enabled = loopCount < com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.MAX_LOOP_COUNT,
+                                    tone = MkwIconButtonTone.Bordered,
+                                    visualSize = 40.dp,
+                                    iconSize = 20.dp,
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                loopCountPresets.forEach { preset ->
+                                    MkwFilterPill(
+                                        label = "${preset}×",
+                                        selected = loopCount == preset,
+                                        onClick = {
+                                            loopCount = preset
+                                            loopInput = preset.toString()
+                                        },
+                                    )
+                                }
+                            }
+                        }
+
+                        com.mylittleblover.mkwplayer.audio.NonInteractiveLoopMode.TARGET_DURATION -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(R.string.loop_config_duration_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    text = EngineSnapshot.formatPosition(durationSec.toLong(), 1),
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MkwKitTokens.Palette.crimsonDeep,
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            MkwTextField(
+                                value = durationInput,
+                                onValueChange = { raw ->
+                                    val digits = raw.filter { it.isDigit() }.take(5)
+                                    durationInput = digits
+                                    digits.toIntOrNull()?.let { v ->
+                                        durationSec = v.coerceIn(10, 14_400)
+                                    }
+                                },
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                durationPresetsSec.forEach { presetSec ->
+                                    MkwFilterPill(
+                                        label = EngineSnapshot.formatPosition(presetSec.toLong(), 1),
+                                        selected = durationSec == presetSec,
+                                        onClick = {
+                                            durationSec = presetSec
+                                            durationInput = presetSec.toString()
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            MkwGhostButton(
+                text = androidx.compose.ui.res.stringResource(R.string.loop_config_reset_default),
+                onClick = {
+                    val def = com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.Default
+                    mode = def.mode
+                    loopCount = def.loopCount
+                    loopInput = def.loopCount.toString()
+                    durationSec = (def.targetDurationMs / 1000L).toInt()
+                    durationInput = durationSec.toString()
+                },
+                modifier = Modifier.align(Alignment.Start),
+            )
         }
     }
 }
@@ -4024,7 +5310,7 @@ private fun SpecialCupCongratsDialog(
     if (!visible) return
     MkwDialog(
         onDismissRequest = onDismiss,
-        title = androidx.compose.ui.res.stringResource(R.string.unlock_congrats_title),
+        title = androidx.compose.ui.res.stringResource(R.string.unlock_ceremony_congrats_title),
         icon = {
             ResourceArtwork(
                 resourceId = CupArt.special.drawable,
@@ -4034,20 +5320,20 @@ private fun SpecialCupCongratsDialog(
         },
         confirmButton = {
             MkwPrimaryButton(
-                text = androidx.compose.ui.res.stringResource(R.string.unlock_congrats_enter),
+                text = androidx.compose.ui.res.stringResource(R.string.unlock_ceremony_congrats_enter),
                 onClick = onEnterCup,
                 size = MkwButtonSize.Compact,
             )
         },
         dismissButton = {
             MkwGhostButton(
-                text = androidx.compose.ui.res.stringResource(R.string.unlock_congrats_close),
+                text = androidx.compose.ui.res.stringResource(R.string.unlock_ceremony_congrats_close),
                 onClick = onDismiss,
             )
         },
     ) {
         Text(
-            text = androidx.compose.ui.res.stringResource(R.string.unlock_congrats_body),
+            text = androidx.compose.ui.res.stringResource(R.string.unlock_ceremony_congrats_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MkwKitTokens.Palette.ink,
         )

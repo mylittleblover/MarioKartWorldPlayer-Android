@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceUrl": "https://www.mariowiki.com/Route",
+  "sourceUrl": "Mario Kart World v1.8.0 romfs (Sound/Bgm/Game/SoundJukeBoxPlaylist & SoundJukeBoxBgm)",
   "themes": {
     "beach": [
       "KoopaTroopaBeach",
@@ -268,6 +268,8 @@
       "jukeboxCode": "M463",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -277,6 +279,8 @@
       "jukeboxCode": "M328",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -286,6 +290,8 @@
       "jukeboxCode": "M489",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -295,6 +301,8 @@
       "jukeboxCode": "M006B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -304,6 +312,8 @@
       "jukeboxCode": "M483",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -315,6 +325,8 @@
       "jukeboxCode": "M593",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 2,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -326,6 +338,8 @@
       "jukeboxCode": "M597",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -337,6 +351,8 @@
       "jukeboxCode": "M320",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -348,17 +364,21 @@
       "jukeboxCode": "M001B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M005B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -368,17 +388,21 @@
       "jukeboxCode": "M015B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M441",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -388,6 +412,8 @@
       "jukeboxCode": "M031",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -399,6 +425,8 @@
       "jukeboxCode": "M027",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -412,6 +440,8 @@
       "jukeboxCode": "M529",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil",
         "mesa"
@@ -426,6 +456,8 @@
       "jukeboxCode": "M494",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -437,6 +469,8 @@
       "jukeboxCode": "M469",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -446,17 +480,21 @@
       "jukeboxCode": "M007B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [],
-      "likelyDayCourses": [
+      "dayCourses": [
         "RaftingRiver"
-      ]
+      ],
+      "likelyDayThemes": [],
+      "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M546",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -468,6 +506,8 @@
       "jukeboxCode": "M541",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -479,6 +519,8 @@
       "jukeboxCode": "M004B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -488,28 +530,34 @@
       "jukeboxCode": "M017B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M337",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M009B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -519,6 +567,8 @@
       "jukeboxCode": "M024E",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil",
         "mesa"
@@ -531,17 +581,21 @@
       "jukeboxCode": "M013B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "wooded"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M594",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -553,17 +607,21 @@
       "jukeboxCode": "M315",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "ice"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M016B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -575,6 +633,8 @@
       "jukeboxCode": "M534",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -586,6 +646,8 @@
       "jukeboxCode": "M334",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -595,17 +657,21 @@
       "jukeboxCode": "M019B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M539",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -617,6 +683,8 @@
       "jukeboxCode": "M018B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert",
         "mesa"
@@ -629,6 +697,8 @@
       "jukeboxCode": "M435",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -638,6 +708,8 @@
       "jukeboxCode": "M014B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -649,6 +721,8 @@
       "jukeboxCode": "M548",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -660,6 +734,8 @@
       "jukeboxCode": "M402",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -669,6 +745,8 @@
       "jukeboxCode": "M540",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -680,6 +758,8 @@
       "jukeboxCode": "M591",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -691,28 +771,34 @@
       "jukeboxCode": "M335",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "desert"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M022B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M547",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -724,6 +810,8 @@
       "jukeboxCode": "M339",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -733,6 +821,8 @@
       "jukeboxCode": "M574",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach",
         "mesa"
@@ -745,6 +835,8 @@
       "jukeboxCode": "M008B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -754,6 +846,8 @@
       "jukeboxCode": "M032",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -763,6 +857,8 @@
       "jukeboxCode": "M037",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -772,6 +868,8 @@
       "jukeboxCode": "M431",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -781,6 +879,8 @@
       "jukeboxCode": "M436",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -792,6 +892,8 @@
       "jukeboxCode": "M318",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -803,6 +905,8 @@
       "jukeboxCode": "M331",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -812,6 +916,8 @@
       "jukeboxCode": "M561",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -823,6 +929,8 @@
       "jukeboxCode": "M319",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -834,6 +942,8 @@
       "jukeboxCode": "M011C",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -843,17 +953,21 @@
       "jukeboxCode": "M336",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [],
-      "likelyDayCourses": [
+      "dayCourses": [
         "Cinema"
-      ]
+      ],
+      "likelyDayThemes": [],
+      "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M440",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -863,6 +977,8 @@
       "jukeboxCode": "M314",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -872,6 +988,8 @@
       "jukeboxCode": "M003B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -885,6 +1003,8 @@
       "jukeboxCode": "M495",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -894,6 +1014,8 @@
       "jukeboxCode": "M532",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -907,6 +1029,8 @@
       "jukeboxCode": "M528",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -916,6 +1040,8 @@
       "jukeboxCode": "M477",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -925,6 +1051,8 @@
       "jukeboxCode": "M313",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -936,6 +1064,8 @@
       "jukeboxCode": "M542",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -947,17 +1077,21 @@
       "jukeboxCode": "M571",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M556",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -969,6 +1103,8 @@
       "jukeboxCode": "M522",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -980,17 +1116,21 @@
       "jukeboxCode": "M572",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M432",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1000,6 +1140,8 @@
       "jukeboxCode": "M523",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1011,6 +1153,8 @@
       "jukeboxCode": "M467",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1020,6 +1164,8 @@
       "jukeboxCode": "M527",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1029,6 +1175,8 @@
       "jukeboxCode": "M543",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1043,6 +1191,8 @@
       "jukeboxCode": "M472",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1054,6 +1204,8 @@
       "jukeboxCode": "M442",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -1065,6 +1217,8 @@
       "jukeboxCode": "M535",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1076,6 +1230,8 @@
       "jukeboxCode": "M002B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1085,17 +1241,21 @@
       "jukeboxCode": "M482",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [],
-      "likelyDayCourses": [
+      "dayCourses": [
         "RaftingRiver"
-      ]
+      ],
+      "likelyDayThemes": [],
+      "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M340",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1107,6 +1267,8 @@
       "jukeboxCode": "M549",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1116,6 +1278,8 @@
       "jukeboxCode": "M550",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1127,6 +1291,8 @@
       "jukeboxCode": "M497",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1138,6 +1304,8 @@
       "jukeboxCode": "M026B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -1149,6 +1317,8 @@
       "jukeboxCode": "M479",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1158,6 +1328,8 @@
       "jukeboxCode": "M325",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -1169,6 +1341,8 @@
       "jukeboxCode": "M537",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1178,6 +1352,8 @@
       "jukeboxCode": "M470",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1187,6 +1363,8 @@
       "jukeboxCode": "M464",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -1198,6 +1376,8 @@
       "jukeboxCode": "M488",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -1209,6 +1389,8 @@
       "jukeboxCode": "M492",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1218,6 +1400,8 @@
       "jukeboxCode": "M036",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -1229,6 +1413,8 @@
       "jukeboxCode": "M484",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1238,6 +1424,8 @@
       "jukeboxCode": "M012B",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1247,6 +1435,8 @@
       "jukeboxCode": "M478",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1258,6 +1448,8 @@
       "jukeboxCode": "M010B",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1267,6 +1459,8 @@
       "jukeboxCode": "M487",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1276,6 +1470,8 @@
       "jukeboxCode": "M439",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "RaftingRiver"
@@ -1287,6 +1483,8 @@
       "jukeboxCode": "M035",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -1298,6 +1496,8 @@
       "jukeboxCode": "M465",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1307,6 +1507,8 @@
       "jukeboxCode": "M559",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -1318,17 +1520,21 @@
       "jukeboxCode": "M525",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "wooded"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M461",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1338,6 +1544,8 @@
       "jukeboxCode": "M310",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -1349,6 +1557,8 @@
       "jukeboxCode": "M438",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "Cinema"
@@ -1360,28 +1570,34 @@
       "jukeboxCode": "M573",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "mesa"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M476",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "beach"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M306",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "beach"
       ],
@@ -1393,6 +1609,8 @@
       "jukeboxCode": "M433",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1402,6 +1620,8 @@
       "jukeboxCode": "M533",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -1413,6 +1633,8 @@
       "jukeboxCode": "M530",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1422,6 +1644,8 @@
       "jukeboxCode": "M526",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1433,6 +1657,8 @@
       "jukeboxCode": "M410",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 2,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1444,6 +1670,8 @@
       "jukeboxCode": "M486",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": false,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1453,6 +1681,8 @@
       "jukeboxCode": "M474",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "RaftingRiver"
@@ -1464,6 +1694,8 @@
       "jukeboxCode": "M521",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -1475,6 +1707,8 @@
       "jukeboxCode": "M020B",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -1486,6 +1720,8 @@
       "jukeboxCode": "M321",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "desert"
       ],
@@ -1497,17 +1733,21 @@
       "jukeboxCode": "M025B",
       "anyOriginDay": true,
       "anyOriginNight": false,
-      "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [
+      "nightWeight": 0,
+      "inRacePool": true,
+      "dayThemes": [
         "wooded"
       ],
+      "dayCourses": [],
+      "likelyDayThemes": [],
       "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M411",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1517,6 +1757,8 @@
       "jukeboxCode": "M490",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -1528,6 +1770,8 @@
       "jukeboxCode": "M496",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1537,6 +1781,8 @@
       "jukeboxCode": "M531",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "RaftingRiver"
@@ -1548,6 +1794,8 @@
       "jukeboxCode": "M595",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1557,17 +1805,21 @@
       "jukeboxCode": "M471",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
-      "dayCourses": [],
-      "likelyDayThemes": [],
-      "likelyDayCourses": [
+      "dayCourses": [
         "RaftingRiver"
-      ]
+      ],
+      "likelyDayThemes": [],
+      "likelyDayCourses": []
     },
     {
       "jukeboxCode": "M473",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 2,
+      "inRacePool": true,
       "dayThemes": [
         "ice"
       ],
@@ -1579,6 +1831,8 @@
       "jukeboxCode": "M592",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [
         "RaftingRiver"
@@ -1590,6 +1844,8 @@
       "jukeboxCode": "M468",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1599,6 +1855,8 @@
       "jukeboxCode": "M493",
       "anyOriginDay": false,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [
         "wooded"
       ],
@@ -1610,6 +1868,8 @@
       "jukeboxCode": "M021B",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1619,6 +1879,8 @@
       "jukeboxCode": "M596",
       "anyOriginDay": false,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [
         "evil"
       ],
@@ -1630,6 +1892,8 @@
       "jukeboxCode": "M481",
       "anyOriginDay": true,
       "anyOriginNight": false,
+      "nightWeight": 0,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],
@@ -1639,6 +1903,8 @@
       "jukeboxCode": "M538",
       "anyOriginDay": true,
       "anyOriginNight": true,
+      "nightWeight": 3,
+      "inRacePool": true,
       "dayThemes": [],
       "dayCourses": [],
       "likelyDayThemes": [],

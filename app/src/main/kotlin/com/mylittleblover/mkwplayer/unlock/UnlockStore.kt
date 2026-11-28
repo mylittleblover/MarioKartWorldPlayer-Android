@@ -45,6 +45,8 @@ internal class UnlockStore(private val file: File) {
         private const val ENTITLED = "entitled"
         private const val CEREMONY = "ceremony"
         private const val CONGRATULATED = "congratulated"
+        private const val QUIZ_PASSED = "quizPassed"
+        private const val SPECIAL_UNLOCKED = "specialUnlocked"
     }
 
     /**
@@ -102,11 +104,22 @@ internal class UnlockStore(private val file: File) {
         val repaired = storedPhase == SpecialCupUnlock.CeremonyPhase.PLAYING
         val phase = if (repaired) SpecialCupUnlock.CeremonyPhase.PENDING else storedPhase
 
+        val entitled = root.optBoolean(ENTITLED, false)
+        val quizPassed = root.optBoolean(QUIZ_PASSED, false)
+        val specialUnlocked = if (root.has(SPECIAL_UNLOCKED)) {
+            root.optBoolean(SPECIAL_UNLOCKED, false) || phase == SpecialCupUnlock.CeremonyPhase.COMPLETED
+        } else {
+            // Backward compatibility: older versions wrote `entitled = true` without a separate
+            // `specialUnlocked` flag. Preserve existing unlocked users so upgrading never re-locks
+            // Special Cup for them.
+            entitled || phase == SpecialCupUnlock.CeremonyPhase.COMPLETED
+        }
+
         return Loaded(
             state = SpecialCupUnlock.UnlockState(
                 listenedFrames = listened,
                 completedStages = completed,
-                entitled = root.optBoolean(ENTITLED, false),
+                entitled = entitled || quizPassed,
                 ceremony = phase,
                 congratulated = root.optBoolean(CONGRATULATED, false),
                 // Not restored: see the class comment.
@@ -114,6 +127,8 @@ internal class UnlockStore(private val file: File) {
                 lastReportedFrames = -1,
                 currentTrackFrames = 0,
                 currentSampleRate = 0,
+                quizPassed = quizPassed,
+                specialUnlocked = specialUnlocked,
             ),
             repairedCeremony = repaired,
         )
@@ -132,6 +147,8 @@ internal class UnlockStore(private val file: File) {
                 put(ENTITLED, state.entitled)
                 put(CEREMONY, state.ceremony.name)
                 put(CONGRATULATED, state.congratulated)
+                put(QUIZ_PASSED, state.quizPassed)
+                put(SPECIAL_UNLOCKED, state.specialUnlocked)
                 put(LISTENED, JSONObject().apply {
                     state.listenedFrames.forEach { (stage, frames) -> put(stage, frames) }
                 })

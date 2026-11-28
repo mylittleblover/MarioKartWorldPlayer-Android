@@ -36,4 +36,23 @@
 
 ## 交付文件清单
 - 完整 Excel 工作簿：`马车世界_Jukebox_OST与BWAV实际对照表.xlsx`（4 个工作表：`OST_BWAV_对照总表`、`按游戏系列汇总`、`同名与特殊差异核验`、`非Jukebox与总览说明`）
-- 结构化数据：`MKW-Player/docs/research/2026-11-15-jukebox-ost-bwav-mapping.json` & `.csv`（含 `ost_index`, `ost_game_order`, `ost_game_series`, `ost_display_name`, `bwav_filename`, `pack_track_key`, `bwav_sha256`, `pack_asset_sha256`, 音频相关性指标与 BPM/BARS 信息）
+- 结构化数据：`docs/research/2026-11-15-jukebox-ost-bwav-mapping.json` & `.csv`（含 `ost_index`, `ost_game_order`, `ost_game_series`, `ost_display_name`, `bwav_filename`, `pack_track_key`, `bwav_sha256`, `pack_asset_sha256`, 音频相关性指标与 BPM/BARS 信息）
+
+## MKW v1.8.0 游戏内提取播放列表与运行时规则对齐（2026-11-28）
+
+经 `SoundJukeBoxPlaylist` 全部 13 张配置表、`Default.game__SoundBgmSetting.bgyml` 与 `main.bin`（`0x003d3030`、`0x007cd400`、`0x0243e6e0`、`0x0243f300`）逆向核实（已全量接入 `app/src/main/assets/jukebox_playlists.json` 与 `FreeRoamJukeboxEngine.kt`）：
+
+- **13 张官方有序槽位表（共 `1,102` 槽位 / `227` 首唯一曲目，0 孤儿曲目、0 坏引用）**：
+  - `Default`（单人自由行驶白天，581 槽 / 172 曲，权重 `4×/3×/1×`，最小同曲间距 22 槽）
+  - `Night`（单人自由行驶夜晚，137 槽 / 39 曲，权重 `4×/2×/1×`）
+  - `Race`（连接赛道白天第 2+ 首 & 联网自由行驶白天，127 槽 / 127 曲）
+  - `24040117_J25YUWHR`（`レース夜`，连接赛道 & 联网自由行驶夜晚，111 槽 / 38 曲，`3×`:35 + `2×`:3，覆盖白天生态表）
+  - 8 张白天生态群系首曲表（`TypeOcean` 11、`TypeDesertVolcano` 10、`ボス` 19、`森ジャングル` 11、`TypeSnow` 10、`荒野` 13、`和風` 10、`お化け屋敷` 10，覆盖 19 条主赛道）+ `TypeAll`（通用首曲，52 槽 / 52 曲，覆盖其余 11 条赛道并按 `JukeBox_SelectListInterval = 4` 与生态表 4:1 交替）。
+- **227 首曲目在自由行驶与赛事歌单间的精确分布**：
+  - **94 首单人自由行驶独占**：62 仅 `Default` + 28 仅 `Night`（含 27 首 `IsFreerunOnly=true` 与全库唯一例外 **`M344`** Mario Kart 64《彩虹之路》，其 `IsFreerunOnly=false` 但仅编入 `Night` 4 槽）+ 4 首 `Default+Night` 共享；其中 `IsFreerunOnly = true` 恰好 **93** 首，在全部 11 张赛事/生态列表中出现次数为 **0**。
+  - **25 首仅赛事/连接赛道可听**（`Default` 与 `Night` 均不收录）：含高烈度酷霸/城堡/鬼屋曲目及 **4 首仅限 `レース夜` 的历代彩虹之路**（`M331` MKDD、`M339` MKSC、`M440` MKDS、`M527` MKWii）。
+  - **108 首共享曲目**：101 首 `Default`+赛事 + 2 首 `Night`+赛事 + 5 首三者全覆盖。
+- **运行时游标、时钟与去重常量**：
+  - `IsFreerunOnly` 与 `EntryPoints` 在运行时均不被代码读取（离线构建期元数据）；游标首次加载由 XorShift128 均匀随机初始化并顺序步进 `(cursor + 1) % size`。
+  - 24 小时时钟：`03:00–19:00` 为白天桶（Morning `03–05` + Noon `05–19`），`19:00–03:00` 为夜晚桶（Evening `19–21` + Night `21–03`）。
+  - `JukeBox_HistoryCount = 9`（最多顺延重试 22 次，生态表耗尽后回退 `TypeAll` 再试 22 次）、`JukeBox_FreeRunInterval = 1.5 s`、`JukeBox_FreeRunVolume = 0.70`（`-3.1 dB`，大音量开关 `0.7854`）。

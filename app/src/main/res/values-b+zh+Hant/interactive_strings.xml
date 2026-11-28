@@ -42,6 +42,7 @@
     <string name="interactive_sync_next_beat">下一拍</string>
     <string name="interactive_sync_next_bar">下一小節</string>
     <string name="interactive_sync_next_grid">下一 4 拍網格</string>
+    <string name="interactive_sync_next_grid_beats">下一 %1$d 拍網格</string>
     <string name="interactive_sync_exit_cue">下一個合法退出點</string>
     <string name="interactive_sync_next_cue">下一 Cue 標記點</string>
     <string name="interactive_sync_custom_cue">下一自訂標記點</string>
@@ -51,4 +52,9 @@
     <string name="interactive_stop_hold_hint">輕觸立即停止 · 長按選擇淡出</string>
     <string name="interactive_loading_title">正在載入曲目…</string>
     <string name="interactive_loading_hint">正在準備互動音訊圖與音樂段落…</string>
+    <string name="player_detail_no_stage_files">暫無 %1$s 的音訊檔案。請匯入資源包或開啟賽道資料夾。</string>
+    <string name="interactive_err_start_unavailable">所選起始階段不可用</string>
+    <string name="interactive_err_no_source">%1$s 暫無可播放音訊，請先匯入音訊。</string>
+    <string name="interactive_err_no_transition">目前段落無法過渡至該段落。</string>
+    <string name="interactive_pending_countdown">待切換：%1$s · 約 %2$d 秒後切換</string>
 </resources>

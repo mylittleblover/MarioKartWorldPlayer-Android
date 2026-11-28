@@ -399,8 +399,20 @@ internal object ExtraMusicCatalog {
         "nm_special_119",
     )
 
-    fun isVisible(id: String, specialUnlocked: Boolean): Boolean =
-        specialUnlocked || id !in HIDDEN_UNTIL_SPECIAL_UNLOCKED_IDS
+    /** Staff Credits tracks require completing all 30 MKW courses (#25). */
+    val STAFF_CREDITS_TRACK_IDS: Set<String> = setOf(
+        "staff_credits",
+        "nm_special_119",
+    )
+
+    fun isVisible(
+        id: String,
+        specialUnlocked: Boolean,
+        staffCreditsUnlocked: Boolean = false,
+    ): Boolean {
+        if (id in STAFF_CREDITS_TRACK_IDS) return staffCreditsUnlocked
+        return specialUnlocked || id !in HIDDEN_UNTIL_SPECIAL_UNLOCKED_IDS
+    }
 
     fun extraIdFromEntryKey(key: String): String? {
         if (key.startsWith("extra:")) return key.removePrefix("extra:")

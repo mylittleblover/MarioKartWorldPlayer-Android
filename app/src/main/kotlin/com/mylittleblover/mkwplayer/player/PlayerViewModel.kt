@@ -21,6 +21,7 @@ import com.mylittleblover.mkwplayer.interactive.InteractivePlaybackPlan
 import com.mylittleblover.mkwplayer.interactive.NativeInteractiveDriver
 import com.mylittleblover.mkwplayer.interactive.InteractiveAudioIdentities
 import com.mylittleblover.mkwplayer.interactive.PackInteractiveSources
+import com.mylittleblover.mkwplayer.interactive.RainbowInteractiveCompiler
 import com.mylittleblover.mkwplayer.library.CoursePreset
 import com.mylittleblover.mkwplayer.library.CoursePresetStore
 import com.mylittleblover.mkwplayer.library.PlaylistEntryConfig
@@ -58,6 +59,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
@@ -155,6 +157,20 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val sleepTimer: SleepTimerState = SleepTimerState(),
         val interactiveTimer: InteractiveTimerState = InteractiveTimerState(),
         val libraryReady: Boolean = false,
+        val freeRoamMode: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode =
+            com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+        val staffCreditsUnlocked: Boolean = false,
+        val staffCreditsToastEvent: Long = 0L,
+        val isLoopingTrack: Boolean = false,
+        val nonInteractiveLoopConfig: com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig =
+            com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig.Default,
+        val isRenderingAudio: Boolean = false,
+        val renderAudioProgress: Float = 0f,
+        val renderAudioStatus: String? = null,
+        val renderAudioError: String? = null,
+        val renderAudioOutputPath: String? = null,
+        val exportFolderDisplay: String = com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH,
+        val outputTrimEnabled: Boolean = true,
     )
 
     /** Fast-ticking playback position/source clock separated from discrete [Ui] to prevent 200ms root recompositions. */
@@ -335,7 +351,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }
         if (match == null) {
             _ui.value = _ui.value.copy(
-                detail = "No files for $code yet. Import a soundtrack pack or open the stage folder.",
+                detail = str(com.mylittleblover.mkwplayer.R.string.player_detail_no_stage_files, code),
             )
             return
         }
@@ -443,7 +459,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             .mapNotNull { interactiveIdentities.identityForDigest(it.asset.sha256) }
             .filter { it.belongsToCourse(logical) }
         if (logical.equals("Rainbow", true)) {
-            return listOf("Area1_Pre", "Area1_Bridge", "Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre", "Final")
+            return listOf("Area1_Pre", "Area1_Bridge", "Area1", "Area2", "Area3_Pre", "Area3")
                 .filter { label -> identities.any { it.fileName == "BGM_Rainbow_${label}.bwav" ||
                     label in listOf("Area1", "Area2", "Area3") && it.fileName == "BGM_Rainbow_${label}_Inst.bwav" } }
         }
@@ -472,7 +488,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if(interactivePlan?.name?.removePrefix("BGM_Stage_")?.equals(logical,true)==true) {
             if (startingStage != null && !_ui.value.canStop) {
                 val candidate = interactivePlan?.initialSegments?.singleOrNull { interactivePlan?.labels?.get(it) == startingStage }
-                if (candidate == null) { _ui.value = _ui.value.copy(detail = "Selected starting stage is unavailable"); return }
+                if (candidate == null) { _ui.value = _ui.value.copy(detail = str(com.mylittleblover.mkwplayer.R.string.interactive_err_start_unavailable)); return }
                 selectInitialEntry(candidate)
             }
             packPlaybackRequest++;startPerformance();return
@@ -480,11 +496,54 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val installed=pack
         val stage=installed?.manifest?.stages?.singleOrNull { it.code.removeSuffix("_00").equals(logical,true) }
         val track=stage?.tracks?.firstNotNullOfOrNull { installed?.manifest?.track(it) }
-        if(track==null) { _ui.value=_ui.value.copy(detail="No playable source for $code. Import its audio first.");return }
+        if(track==null) { _ui.value=_ui.value.copy(detail=str(com.mylittleblover.mkwplayer.R.string.interactive_err_no_source, code));return }
         openPackTrack(track,perform=true,startingStage=startingStage)
     }
 
-    private val _ui = MutableStateFlow(Ui())
+    private fun localizedAppContext(): android.content.Context =
+        com.mylittleblover.mkwplayer.i18n.AppLanguageSettings.wrapLegacy(getApplication())
+
+    private fun str(@androidx.annotation.StringRes resId: Int, vararg args: Any): String {
+        val ctx = localizedAppContext()
+        return if (args.isEmpty()) ctx.getString(resId) else ctx.getString(resId, *args)
+    }
+
+    private fun localizedBlockingReason(
+        report: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteValidationReport,
+        @androidx.annotation.StringRes fallbackResId: Int,
+        languageTag: String,
+    ): String {
+        fun stageTitle(code: String): String = localizedNames?.name(code, languageTag) ?: code
+        return when (val cause = report.blockingCause) {
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.TooFewStops ->
+                str(com.mylittleblover.mkwplayer.R.string.route_block_min_stops)
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.NoStops ->
+                str(com.mylittleblover.mkwplayer.R.string.route_block_no_stops)
+            is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.InvalidEdges ->
+                str(
+                    com.mylittleblover.mkwplayer.R.string.route_block_invalid_edges,
+                    cause.edges.joinToString(", ") { "${stageTitle(it.from)} → ${stageTitle(it.to)}" },
+                )
+            is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.IncompletePools ->
+                str(
+                    com.mylittleblover.mkwplayer.R.string.route_block_incomplete_pool,
+                    cause.edges.joinToString(", ") { "${stageTitle(it.from)} → ${stageTitle(it.to)}" },
+                )
+            is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.MissingSubstitutes ->
+                str(
+                    com.mylittleblover.mkwplayer.R.string.route_block_missing_substitute,
+                    cause.edges.joinToString(", ") { "${stageTitle(it.from)} → ${stageTitle(it.to)}" },
+                )
+            is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.BlockingCause.UnplayableStages ->
+                str(
+                    com.mylittleblover.mkwplayer.R.string.route_block_unplayable_stages,
+                    cause.stageCodes.joinToString(", ") { stageTitle(it) },
+                )
+            null -> report.blockingReason ?: str(fallbackResId)
+        }
+    }
+
+    private val _ui = MutableStateFlow(Ui(status = str(com.mylittleblover.mkwplayer.R.string.player_status_no_track)))
     val ui: StateFlow<Ui> = _ui.asStateFlow()
 
     private val _progressUi = MutableStateFlow(ProgressUi())
@@ -685,6 +744,20 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }.getOrNull()
     }
 
+    val freeRoamJukeboxCatalog: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.Data? by lazy {
+        runCatching {
+            getApplication<Application>().assets.open("jukebox_playlists.json").bufferedReader().use {
+                com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.parse(it.readText())
+            }
+        }.getOrNull()
+    }
+
+    private val freeRoamEngine: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxEngine? by lazy {
+        freeRoamJukeboxCatalog?.let {
+            com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxEngine(it)
+        }
+    }
+
     @Volatile
     var roadJukeboxPool: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.CandidatePool =
         com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.CandidatePool()
@@ -696,6 +769,29 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
     val packDirectory: java.io.File?
         get() = pack?.directory
+
+    private val _nmStaffCreditsOffsetMs = MutableStateFlow(
+        com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.DEFAULT_NM_SPECIAL_119_OFFSET_MS,
+    )
+    val nmStaffCreditsOffsetMs: StateFlow<Long> = _nmStaffCreditsOffsetMs.asStateFlow()
+
+    @Volatile
+    private var lastCalibratedNmStaffPath: String? = null
+
+    fun ensureNmStaffCreditsOffsetCalibrated() {
+        val dir = packDirectory ?: return
+        val sha = com.mylittleblover.mkwplayer.ui.components.StaffCreditsProgressTheme.NM_SPECIAL_SHA256
+        val file = java.io.File(dir, "audio/$sha")
+        if (!file.isFile) return
+        val signature = "${file.absolutePath}:${file.length()}:${file.lastModified()}"
+        if (lastCalibratedNmStaffPath == signature) return
+        lastCalibratedNmStaffPath = signature
+        viewModelScope.launch(Dispatchers.IO) {
+            val offset = com.mylittleblover.mkwplayer.ui.components.StaffCreditsOffsetCalibrator
+                .calibrateFromPackFile(file, sha)
+            _nmStaffCreditsOffsetMs.value = offset
+        }
+    }
 
     private var speakerEnabled: Boolean = false
 
@@ -732,15 +828,15 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val catalog = jukebox
         if (!catalog.tracksByKey.containsKey(key)) {
             _ui.value = _ui.value.copy(
-                status = "Cannot open this track",
-                detail = "No installed pack carries this track.",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_track),
+                detail = str(com.mylittleblover.mkwplayer.R.string.player_err_no_pack_track),
             )
             return
         }
         val game = catalog.gameForTrack(key) ?: run {
             _ui.value = _ui.value.copy(
-                status = "Cannot open this track",
-                detail = "No installed pack carries this track.",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_track),
+                detail = str(com.mylittleblover.mkwplayer.R.string.player_err_no_pack_track),
             )
             return
         }
@@ -759,6 +855,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (nativePerformance?.isFading == true) return
         val entries = game.items.map { item -> LinearPlaybackCoordinator.entryFor(item, game, languageTag) }
         if (entries.isEmpty()) return
+        game.items.getOrNull(startIndex)?.jukeboxCode?.let { freeRoamEngine?.recordPlayed(it) }
         prepareForLinearPlayback()
         linearCoordinator.startQueue(
             entries = entries,
@@ -773,13 +870,247 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         )
     }
 
-    /** Plays all installed Jukebox arrangements chronologically across all games. */
-    fun playAllJukebox(languageTag: String, shuffle: Boolean = false) {
+    private fun installedJukeboxByCode(): Map<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>> {
+        val out = LinkedHashMap<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>()
+        for (game in jukebox.games) {
+            for (item in game.items) {
+                val code = item.jukeboxCode?.trim().orEmpty()
+                if (code.isNotEmpty() && code !in out) {
+                    out[code] = item to game
+                }
+            }
+        }
+        return out
+    }
+
+    /** Selects the active v1.8.0 Free Roam Jukebox mode and live-updates upcoming tracks if Free Roam radio is playing. */
+    fun selectFreeRoamMode(
+        mode: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode,
+        languageTag: String = java.util.Locale.getDefault().toLanguageTag(),
+        contextTitle: String? = null,
+    ) {
+        if (_ui.value.freeRoamMode == mode) return
+        _ui.value = _ui.value.copy(freeRoamMode = mode)
+        val lin = linearCoordinator.state.value
+        val engine = freeRoamEngine ?: return
+        if (lin.active && lin.contextKind == LinearSessionStore.ContextKind.JUKEBOX_ALL && lin.contextId == FREE_ROAM_CONTEXT_ID) {
+            val byCode = installedJukeboxByCode()
+            val availableCodes = byCode.keys
+            if (availableCodes.isNotEmpty()) {
+                val supplier: () -> LinearQueue.Entry? = {
+                    val nextCode = engine.pickNextFreeRoam(mode = mode, availableCodes = availableCodes)
+                    nextCode?.let { byCode[it] }?.let { (item, game) ->
+                        LinearPlaybackCoordinator.entryFor(item, game, languageTag)
+                    }
+                }
+                linearCoordinator.updateDynamicSession(
+                    contextTitle = contextTitle ?: lin.contextTitle,
+                    supplier = supplier,
+                    interTrackGapMs = engine.data.settings.freeRunIntervalMs,
+                )
+            }
+        }
+    }
+
+    /**
+     * Launches authentic MKW v1.8.0 Free Roam radio using `SoundJukeBoxPlaylist` ordered slot
+     * tables, sequential cursor stepping, 9-track history anti-repeat, and 1.5 s inter-track gap.
+     */
+    fun playFreeRoamRadio(
+        mode: com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog.FreeRoamMode = _ui.value.freeRoamMode,
+        languageTag: String = java.util.Locale.getDefault().toLanguageTag(),
+        contextTitle: String? = null,
+    ): Boolean {
+        if (isCeremonyLocked) return false
+        if (nativePerformance?.isFading == true) return false
+        _ui.value = _ui.value.copy(freeRoamMode = mode)
+        val engine = freeRoamEngine ?: return false
+        val byCode = installedJukeboxByCode()
+        val availableCodes = byCode.keys
+        if (availableCodes.isEmpty()) return false
+        val initialCodes = engine.drawFreeRoamSequence(
+            mode = mode,
+            count = 12,
+            availableCodes = availableCodes,
+        )
+        val initialEntries = initialCodes.mapNotNull { code ->
+            byCode[code]?.let { (item, game) -> LinearPlaybackCoordinator.entryFor(item, game, languageTag) }
+        }
+        if (initialEntries.isEmpty()) return false
+        val supplier: () -> LinearQueue.Entry? = {
+            val activeMode = _ui.value.freeRoamMode
+            val currentByCode = installedJukeboxByCode()
+            val nextCode = engine.pickNextFreeRoam(mode = activeMode, availableCodes = currentByCode.keys)
+            nextCode?.let { currentByCode[it] }?.let { (item, game) ->
+                LinearPlaybackCoordinator.entryFor(item, game, languageTag)
+            }
+        }
+        prepareForLinearPlayback()
+        linearCoordinator.startQueue(
+            entries = initialEntries,
+            startIndex = 0,
+            shuffleOverride = false,
+            context = LinearPlaybackCoordinator.SessionContext(
+                contextKind = LinearSessionStore.ContextKind.JUKEBOX_ALL,
+                contextId = FREE_ROAM_CONTEXT_ID,
+                contextTitle = contextTitle,
+                packFingerprints = currentPackFingerprints(),
+                allowShuffle = false,
+                interTrackGapMs = engine.data.settings.freeRunIntervalMs,
+                dynamicNextSupplier = supplier,
+                dynamicTargetBuffer = 12,
+            ),
+        )
+        requestNotificationPermissionIfNeeded()
+        return true
+    }
+
+    /** Plays all tracks belonging to a Free Roam musical genre (#9). */
+    fun playJukeboxGenre(
+        genre: com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.GenreInfo,
+        startIndex: Int,
+        shuffle: Boolean,
+        languageTag: String,
+    ) {
         if (isCeremonyLocked) return
         if (nativePerformance?.isFading == true) return
+        val pairs = jukebox.itemsWithGamesByGenre(genre.id)
+        if (pairs.isEmpty()) return
+        val entries = pairs.map { (item, game) ->
+            LinearPlaybackCoordinator.entryFor(item, game, languageTag).copy(
+                title = item.displayTitle(languageTag),
+                arrangement = item.displayArrangement(languageTag),
+            )
+        }
+        val clampedStart = startIndex.coerceIn(0, entries.lastIndex)
+        prepareForLinearPlayback()
+        linearCoordinator.startQueue(
+            entries = entries,
+            startIndex = clampedStart,
+            shuffleOverride = shuffle,
+            context = LinearPlaybackCoordinator.SessionContext(
+                contextKind = LinearSessionStore.ContextKind.JUKEBOX_ALL,
+                contextId = "genre:${genre.id}",
+                contextTitle = genre.displayName(languageTag),
+                packFingerprints = currentPackFingerprints(),
+            ),
+        )
+        requestNotificationPermissionIfNeeded()
+    }
+
+    /** Resolves the canonical Free Roam genre metadata for a queued/playing track, if any (#9). */
+    fun genreForLinearEntry(entry: LinearQueue.Entry?): com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.GenreInfo? {
+        entry ?: return null
+        if (entry.sourceType != LinearSessionStore.SourceType.JUKEBOX) return null
+        val key = (entry.sourceTrackKey ?: entry.key).removePrefix(PlaylistItemRef.PREFIX_JUKEBOX)
+        val item = jukebox.itemsByKey[key]
+            ?: jukebox.allItems.firstOrNull { it.first.track.primary.sha256 == entry.assetSha256 }?.first
+            ?: return null
+        return item.genre
+    }
+
+    // ---- Track Markers (#16) ----
+    private val trackMarkerStore by lazy {
+        com.mylittleblover.mkwplayer.library.TrackMarkerStore.fromContext(getApplication())
+    }
+    private val _trackMarkers = MutableStateFlow<Map<String, List<com.mylittleblover.mkwplayer.library.TrackMarker>>>(emptyMap())
+    val trackMarkers: StateFlow<Map<String, List<com.mylittleblover.mkwplayer.library.TrackMarker>>> = _trackMarkers.asStateFlow()
+
+    @Volatile private var pendingMarkerSeekMs: Long? = null
+    @Volatile private var pendingMarkerSeekAtMs: Long = 0L
+
+    fun reloadTrackMarkers() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val grouped = trackMarkerStore.allMarkers()
+                .groupBy { it.trackId }
+                .mapValues { (_, list) -> list.sortedBy { it.positionMs } }
+            _trackMarkers.value = grouped
+        }
+    }
+
+    fun markerTrackIdFor(entry: LinearQueue.Entry?): String? = canonicalFavoriteRef(entry)
+
+    fun currentPositionMs(): Long {
+        val sr = rate.coerceAtLeast(1)
+        val frames = session.state.value.positionFrames.takeIf { it > 0L }
+            ?: (_progressUi.value.progress.toDouble() * totalFrames.coerceAtLeast(0L)).toLong()
+        return ((frames.coerceAtLeast(0L) * 1000L) / sr).coerceAtLeast(0L)
+    }
+
+    fun addTrackMarker(trackId: String, positionMs: Long, label: String, colorArgb: Long) {
+        if (trackId.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            trackMarkerStore.add(
+                trackId = trackId,
+                positionMs = positionMs.coerceAtLeast(0L),
+                label = label,
+                colorArgb = colorArgb,
+            )
+            val grouped = trackMarkerStore.allMarkers()
+                .groupBy { it.trackId }
+                .mapValues { (_, list) -> list.sortedBy { it.positionMs } }
+            _trackMarkers.value = grouped
+        }
+    }
+
+    fun deleteTrackMarker(markerId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            trackMarkerStore.delete(markerId)
+            val grouped = trackMarkerStore.allMarkers()
+                .groupBy { it.trackId }
+                .mapValues { (_, list) -> list.sortedBy { it.positionMs } }
+            _trackMarkers.value = grouped
+        }
+    }
+
+    fun seekToPositionMs(positionMs: Long) {
+        if (isCeremonyLocked) return
+        val sr = rate.coerceAtLeast(1)
+        if (totalFrames <= 0L) return
+        val targetFrame = ((positionMs.coerceAtLeast(0L).toDouble() / 1000.0) * sr).toLong()
+            .coerceIn(0L, (totalFrames - 1L).coerceAtLeast(0L))
+        if (_ui.value.linearMode) {
+            linearCoordinator.seekToFrame(targetFrame)
+        } else {
+            viewModelScope.launch {
+                publish(session.seekAsync(targetFrame))
+            }
+        }
+    }
+
+    /** Schedules a seek to [positionMs] once the next linear track finishes loading (or immediately if [trackId] is already active). */
+    fun scheduleMarkerSeek(positionMs: Long, trackId: String? = null) {
+        val clamped = positionMs.coerceAtLeast(0L)
+        if (trackId != null && _ui.value.linearMode && canonicalFavoriteRef(_ui.value.linearTrack) == trackId && totalFrames > 0L) {
+            seekToPositionMs(clamped)
+            return
+        }
+        pendingMarkerSeekMs = clamped
+        pendingMarkerSeekAtMs = System.currentTimeMillis()
+    }
+
+    private fun consumePendingMarkerSeekMs(): Long? {
+        val ms = pendingMarkerSeekMs ?: return null
+        pendingMarkerSeekMs = null
+        val age = System.currentTimeMillis() - pendingMarkerSeekAtMs
+        return if (age in 0L..12_000L) ms else null
+    }
+
+    /** Plays all installed Jukebox arrangements; when [shuffle] is true, uses authentic MKW v1.8.0 Free Roam selection. */
+    fun playAllJukebox(languageTag: String, shuffle: Boolean = false, contextTitle: String? = null) {
+        if (isCeremonyLocked) return
+        if (nativePerformance?.isFading == true) return
+        if (shuffle && playFreeRoamRadio(_ui.value.freeRoamMode, languageTag, contextTitle)) {
+            return
+        }
         val catalog = jukebox
         val entries = catalog.games.flatMap { game ->
-            game.items.map { item -> LinearPlaybackCoordinator.entryFor(item, game, languageTag) }
+            game.items.map { item ->
+                LinearPlaybackCoordinator.entryFor(item, game, languageTag).copy(
+                    title = item.displayTitle(languageTag),
+                    arrangement = item.displayArrangement(languageTag),
+                )
+            }
         }
         if (entries.isEmpty()) return
         prepareForLinearPlayback()
@@ -790,6 +1121,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             context = LinearPlaybackCoordinator.SessionContext(
                 contextKind = LinearSessionStore.ContextKind.JUKEBOX_ALL,
                 contextId = "all",
+                contextTitle = contextTitle,
                 packFingerprints = currentPackFingerprints(),
             ),
         )
@@ -803,7 +1135,10 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
     ) {
         if (isCeremonyLocked) return
         if (!_ui.value.allowPlayNext) return
-        val entry = LinearPlaybackCoordinator.entryFor(item, game, languageTag)
+        val entry = LinearPlaybackCoordinator.entryFor(item, game, languageTag).copy(
+            title = item.displayTitle(languageTag),
+            arrangement = item.displayArrangement(languageTag),
+        )
         val wasIdle = !_ui.value.canStop && _ui.value.queue.current == null
         if (wasIdle) {
             prepareForLinearPlayback()
@@ -883,6 +1218,37 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
     fun applyOutputTrim(trim: com.mylittleblover.mkwplayer.audio.OutputTrim) {
         PlaybackHolder.get().setOutputTrim(trim)
+        _ui.value = _ui.value.copy(outputTrimEnabled = trim.gainDb > 0.5)
+    }
+
+    fun setNonInteractiveLoopConfig(config: com.mylittleblover.mkwplayer.audio.NonInteractiveLoopConfig) {
+        val normalized = config.normalized()
+        linearCoordinator.setNonInteractiveLoopConfig(normalized)
+        _ui.value = _ui.value.copy(nonInteractiveLoopConfig = normalized)
+    }
+
+    fun setExportFolderUri(uri: android.net.Uri?, displayLabel: String? = null) {
+        val ctx = getApplication<Application>()
+        if (uri == null) {
+            com.mylittleblover.mkwplayer.audio.AudioExportSettings.resetExportLocation(ctx)
+            _ui.value = _ui.value.copy(exportFolderDisplay = com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH)
+            return
+        }
+        runCatching {
+            val flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            ctx.contentResolver.takePersistableUriPermission(uri, flags)
+        }
+        val label = displayLabel?.takeIf { it.isNotBlank() }
+            ?: runCatching {
+                android.provider.DocumentsContract.getTreeDocumentId(uri)
+                    ?.substringAfter(':')
+                    ?.takeIf { it.isNotBlank() }
+            }.getOrNull()
+            ?: uri.lastPathSegment
+            ?: com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH
+        com.mylittleblover.mkwplayer.audio.AudioExportSettings.setExportLocation(ctx, uri.toString(), label)
+        _ui.value = _ui.value.copy(exportFolderDisplay = label)
     }
 
     fun applyPlaybackBehavior(config: com.mylittleblover.mkwplayer.audio.PlaybackBehaviorConfig) {
@@ -921,16 +1287,23 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val behavior = com.mylittleblover.mkwplayer.audio.PlaybackBehaviorSettings.current(ctx)
         val dsp = com.mylittleblover.mkwplayer.audio.AudioEffectSettings.currentDsp(ctx)
         val rateCfg = com.mylittleblover.mkwplayer.audio.AudioEffectSettings.currentRate(ctx)
+        val exportCfg = com.mylittleblover.mkwplayer.audio.AudioExportSettings.current(ctx)
         playbackBehavior = behavior
         session.setOutputTrim(trim)
         session.setMasterDsp(dsp)
         session.setPlaybackRate(rateCfg)
         session.setVisualizerEnabled(behavior.liveVisualizerEnabled)
+        linearCoordinator.setNonInteractiveLoopConfig(behavior.nonInteractiveLoopConfig)
         com.mylittleblover.mkwplayer.library.PlayStatsRepository.reload(ctx)
+        reloadTrackMarkers()
         _ui.value = _ui.value.copy(
             dspConfig = dsp,
             playbackRate = rateCfg,
             liveVisualizerEnabled = behavior.liveVisualizerEnabled,
+            outputTrimEnabled = trim.gainDb > 0.5,
+            nonInteractiveLoopConfig = behavior.nonInteractiveLoopConfig,
+            exportFolderDisplay = exportCfg.exportDisplayPath
+                ?: com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH,
             playStats = com.mylittleblover.mkwplayer.library.PlayStatsRepository.readSnapshot(ctx),
         )
         syncVisualizerPolling(session.state.value.playing)
@@ -1016,21 +1389,24 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         viewModelScope.launch(Dispatchers.Main.immediate) {
             if (isCeremonyLocked || !session.state.value.active) return@launch
             val savedTrim = com.mylittleblover.mkwplayer.audio.OutputTrimSettings.current(getApplication())
-            if (session.state.value.playing) {
-                val steps = listOf(-3.0, -7.0, -12.0, -18.0, -26.0, -38.0)
-                for (delta in steps) {
-                    if (!session.state.value.active || !session.state.value.playing) break
-                    session.setOutputTrim(
-                        com.mylittleblover.mkwplayer.audio.OutputTrim(
-                            gainDb = (savedTrim.gainDb + delta).coerceAtLeast(-54.0),
-                            ceilingDb = savedTrim.ceilingDb,
-                        ),
-                    )
-                    delay(140L)
+            try {
+                if (session.state.value.playing) {
+                    val steps = listOf(-3.0, -7.0, -12.0, -18.0, -26.0, -38.0)
+                    for (delta in steps) {
+                        if (!session.state.value.active || !session.state.value.playing) break
+                        session.setOutputTrim(
+                            com.mylittleblover.mkwplayer.audio.OutputTrim(
+                                gainDb = (savedTrim.gainDb + delta).coerceAtLeast(-54.0),
+                                ceilingDb = savedTrim.ceilingDb,
+                            ),
+                        )
+                        delay(140L)
+                    }
                 }
+                stopTransport(cancelPendingOpen = true)
+            } finally {
+                session.setOutputTrim(savedTrim)
             }
-            stopTransport(cancelPendingOpen = true)
-            session.setOutputTrim(savedTrim)
         }
     }
 
@@ -1154,6 +1530,16 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+    private fun isStaffCreditsEffectivelyUnlocked(): Boolean =
+        _ui.value.staffCreditsUnlocked || _ui.value.unlockTestMode == UnlockTestMode.FORCE_UNLOCKED
+
+    private fun isExtraVisible(id: String, specialUnlocked: Boolean = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)): Boolean =
+        com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(
+            id = id,
+            specialUnlocked = specialUnlocked,
+            staffCreditsUnlocked = isStaffCreditsEffectivelyUnlocked(),
+        )
+
     fun setUnlockTestMode(mode: UnlockTestMode) {
         if (isCeremonyLocked) return
         _ui.value = _ui.value.copy(unlockTestMode = mode)
@@ -1162,11 +1548,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             ?: _ui.value.linearTrack?.courseCode
             ?: _ui.value.linearTrack?.key?.let(com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog::extraIdFromEntryKey)
             ?: ""
-        val activeExtraLocked = activeStage.isNotEmpty() &&
-            !com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(
-                activeStage,
-                com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock),
-            )
+        val activeExtraLocked = activeStage.isNotEmpty() && !isExtraVisible(activeStage)
         val activeSpecialRouteLocked = _ui.value.linearContextId == "special_cup" &&
             !com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)
         if (isSpecialStageLocked(activeStage) || activeExtraLocked || activeSpecialRouteLocked) {
@@ -1219,6 +1601,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         session.setPlaybackRate(initRate)
         session.setMasterDsp(initDsp)
         session.setVisualizerEnabled(initBehavior.liveVisualizerEnabled)
+        val initExportCfg = com.mylittleblover.mkwplayer.audio.AudioExportSettings.current(appCtx)
+        reloadTrackMarkers()
         _ui.value = _ui.value.copy(
             playbackRate = initRate,
             dspConfig = initDsp,
@@ -1226,6 +1610,11 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             playStats = com.mylittleblover.mkwplayer.library.PlayStatsRepository.stats.value,
             sleepTimer = PlaybackTimers.sleepState.value,
             interactiveTimer = PlaybackTimers.interactiveState.value,
+            staffCreditsUnlocked = unlockCoordinator.isStaffCreditsUnlocked(),
+            nonInteractiveLoopConfig = initBehavior.nonInteractiveLoopConfig,
+            outputTrimEnabled = initTrim.gainDb > 0.5,
+            exportFolderDisplay = initExportCfg.exportDisplayPath
+                ?: com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH,
         )
 
         PlaybackTimers.onSleepExpired = {
@@ -1248,6 +1637,37 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 val projected = projectUnlock(natural)
                 if (projected != _ui.value.unlock) {
                     _ui.value = _ui.value.copy(unlock = projected)
+                }
+            }
+        }
+        viewModelScope.launch {
+            unlockCoordinator.staffCreditsUnlocked.collect { unlocked ->
+                if (_ui.value.staffCreditsUnlocked != unlocked) {
+                    _ui.value = _ui.value.copy(staffCreditsUnlocked = unlocked)
+                }
+            }
+        }
+        viewModelScope.launch {
+            var lastSeenEvent = unlockCoordinator.staffCreditsLinearUnlockEvent.value
+            unlockCoordinator.staffCreditsLinearUnlockEvent.collect { eventId ->
+                if (eventId > lastSeenEvent) {
+                    lastSeenEvent = eventId
+                    val lang = getApplication<Application>().resources.configuration.locales[0].toLanguageTag()
+                    val entry = buildStaffCreditsEntry(lang)
+                    if (entry != null) {
+                        linearCoordinator.enqueueNext(entry)
+                    }
+                    _ui.value = _ui.value.copy(
+                        staffCreditsUnlocked = true,
+                        staffCreditsToastEvent = _ui.value.staffCreditsToastEvent + 1L,
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            linearCoordinator.nonInteractiveLoopConfig.collect { cfg ->
+                if (_ui.value.nonInteractiveLoopConfig != cfg) {
+                    _ui.value = _ui.value.copy(nonInteractiveLoopConfig = cfg)
                 }
             }
         }
@@ -1430,18 +1850,18 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             PackImportCoordinator.state.collect { imp ->
                 val importingNow = imp.isActive
                 val progressText = when {
-                    imp.phase == PackImportPhase.COMMITTING -> "Applying library update..."
+                    imp.phase == PackImportPhase.COMMITTING -> str(com.mylittleblover.mkwplayer.R.string.settings_import_applying)
                     imp.totalMembers > 0 -> "${imp.processedMembers}/${imp.totalMembers} · ${imp.currentMember}"
-                    imp.isActive -> "Reading ${imp.displayName}..."
+                    imp.isActive -> str(com.mylittleblover.mkwplayer.R.string.settings_import_reading_fmt, imp.displayName)
                     else -> ""
                 }
                 val currentPack = _ui.value.pack
                 _ui.value = _ui.value.copy(
                     busy = importingNow,
                     status = when (imp.phase) {
-                        PackImportPhase.FAILED -> "This pack was not installed"
-                        PackImportPhase.CANCELLED -> "Import cancelled"
-                        PackImportPhase.COMPLETED -> "Library updated"
+                        PackImportPhase.FAILED -> str(com.mylittleblover.mkwplayer.R.string.settings_import_failed_status)
+                        PackImportPhase.CANCELLED -> str(com.mylittleblover.mkwplayer.R.string.settings_import_cancelled_status)
+                        PackImportPhase.COMPLETED -> str(com.mylittleblover.mkwplayer.R.string.settings_import_updated_status)
                         else -> _ui.value.status
                     },
                     detail = when (imp.phase) {
@@ -1486,7 +1906,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                         loadingTrackTitle = null,
                         activeFavoriteId = canonicalFavoriteRef(linear.current),
                         title = linear.current.title,
-                        status = if (linear.loading) "Loading..." else _ui.value.status,
+                        status = if (linear.loading) str(com.mylittleblover.mkwplayer.R.string.player_status_loading) else _ui.value.status,
                         total = EngineSnapshot.formatPosition(totalFrames, rate),
                         linearMode = true,
                         linearTrack = linear.current,
@@ -1505,10 +1925,18 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                         allowRepeatToggle = linear.allowRepeatToggle,
                         abLoopStartFrame = linear.abLoopStartFrame,
                         abLoopEndFrame = linear.abLoopEndFrame,
+                        isLoopingTrack = linear.isLoopingTrack,
+                        nonInteractiveLoopConfig = linear.nonInteractiveLoopConfig,
                         continueListening = null,
                         detail = linear.error,
                     )
                     if (!linear.loading && linear.error == null) {
+                        val seekMs = consumePendingMarkerSeekMs()
+                        if (seekMs != null && linear.totalFrames > 0L && linear.sampleRate > 0) {
+                            val targetFrame = ((seekMs.toDouble() / 1000.0) * linear.sampleRate).toLong()
+                                .coerceIn(0L, (linear.totalFrames - 1L).coerceAtLeast(0L))
+                            linearCoordinator.seekToFrame(targetFrame)
+                        }
                         requestNotificationPermissionIfNeeded()
                         startPolling()
                     }
@@ -1536,7 +1964,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                         abLoopStartFrame = linear.abLoopStartFrame,
                         abLoopEndFrame = linear.abLoopEndFrame,
                         detail = linear.error ?: _ui.value.detail,
-                        status = if (linear.error != null) "Cannot open this track" else _ui.value.status,
+                        status = if (linear.error != null) str(com.mylittleblover.mkwplayer.R.string.player_err_open_track) else _ui.value.status,
                     )
                 }
             }
@@ -1587,7 +2015,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val dir = pack?.directory
         val audioFile = if (item != null && dir != null) java.io.File(dir, "audio/${item.asset.sha256}") else null
         if (item == null || dir == null || audioFile == null || !audioFile.isFile) {
-            _ui.value = _ui.value.copy(detail = "Special Cup unlock audio is missing from the installed pack.")
+            _ui.value = _ui.value.copy(detail = str(com.mylittleblover.mkwplayer.R.string.unlock_err_audio_missing))
             return false
         }
         _ui.value = _ui.value.copy(debugUnlockBannerVisible = false)
@@ -1668,7 +2096,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val item = findSpecialCupAppearsItem()
         val dir = pack?.directory
         if (item == null || dir == null || !java.io.File(dir, "audio/${item.asset.sha256}").isFile) {
-            _ui.value = _ui.value.copy(detail = "Import a soundtrack pack with track #111 to test the unlock ceremony.")
+            _ui.value = _ui.value.copy(detail = str(com.mylittleblover.mkwplayer.R.string.unlock_test_err_missing_111))
             return
         }
         testingCeremonyPlaying = true
@@ -1724,6 +2152,62 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (unlockCoordinator.snapshot()?.ceremony == SpecialCupUnlock.CeremonyPhase.PLAYING) {
             ceremonyReachedEnd()
         }
+    }
+
+    /** Marks the Special Cup quiz passed and immediately enters the unlock ceremony (#24). */
+    fun passUnlockQuizAndStartCeremony(): Boolean {
+        if (!unlockCoordinator.passQuiz()) return false
+        _ui.value = _ui.value.copy(unlock = projectUnlock(unlockCoordinator.naturalUnlockUi.value))
+        return startSpecialCupUnlockCeremony()
+    }
+
+    private fun buildStaffCreditsEntry(languageTag: String): LinearQueue.Entry? {
+        val item = extraCatalog.otherMusic
+            .filterIsInstance<com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.LinearAsset>()
+            .firstOrNull { it.id == com.mylittleblover.mkwplayer.unlock.StaffCreditsUnlock.STAFF_CREDITS_TRACK_ID }
+            ?: return null
+        val dir = pack?.directory ?: return null
+        if (!java.io.File(dir, "audio/${item.asset.sha256}").isFile) return null
+        return LinearQueue.Entry(
+            key = "${PlaylistItemRef.PREFIX_EXTRA}${item.id}",
+            title = item.localizedName(languageTag),
+            subtitle = str(com.mylittleblover.mkwplayer.R.string.discovery_other),
+            sourceType = LinearSessionStore.SourceType.EXTRA,
+            durationMs = item.durationMs,
+            artworkName = item.artwork,
+            assetSha256 = item.asset.sha256,
+            sourceTrackKey = item.id,
+            loop = item.asset.loop,
+            loopStart = item.asset.loopStart,
+            loopEnd = item.asset.loopEnd,
+        )
+    }
+
+    /**
+     * Called when leaving the interactive player screen. If the 30th main course was completed during
+     * interactive playback, automatically starts Staff Credits and surfaces the unlock toast (#25).
+     */
+    fun onExitedInteractiveMode(languageTag: String): Boolean {
+        if (!unlockCoordinator.consumeDeferredInteractiveStaffCredits()) return false
+        val entry = buildStaffCreditsEntry(languageTag) ?: return false
+        stopTransport(cancelPendingOpen = true)
+        playExtraLinearQueue(
+            entries = listOf(entry),
+            startIndex = 0,
+            repeatMode = LinearQueue.RepeatMode.OFF,
+            shuffle = false,
+            context = LinearPlaybackCoordinator.SessionContext(
+                contextKind = LinearSessionStore.ContextKind.EXTRA,
+                contextId = entry.key,
+                contextTitle = entry.title,
+                packFingerprints = currentPackFingerprints(),
+            ),
+        )
+        _ui.value = _ui.value.copy(
+            staffCreditsUnlocked = true,
+            staffCreditsToastEvent = _ui.value.staffCreditsToastEvent + 1L,
+        )
+        return true
     }
 
     /** Enters the ceremony. Fails loudly rather than pretending when the cup is not open. */
@@ -1800,19 +2284,19 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
      */
     fun add(uri: Uri) {
         if (isCeremonyLocked) return
-        _ui.value = _ui.value.copy(busy = true, status = "Reading file...", detail = null)
+        _ui.value = _ui.value.copy(busy = true, status = str(com.mylittleblover.mkwplayer.R.string.player_status_reading_file), detail = null)
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) { inspect(uri) }
             _ui.value = _ui.value.copy(busy = false)
 
             when (outcome) {
                 is Outcome.Refused -> {
-                    _ui.value = _ui.value.copy(status = "Cannot play this file", detail = outcome.reason)
+                    _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_play_file), detail = outcome.reason)
                 }
                 is Outcome.Added -> {
                     _ui.value = _ui.value.copy(
                         tracks = _ui.value.tracks + outcome.track,
-                        status = if (outcome.track.playable) "Ready to play" else "Unsupported codec",
+                        status = if (outcome.track.playable) str(com.mylittleblover.mkwplayer.R.string.player_status_ready) else str(com.mylittleblover.mkwplayer.R.string.player_status_unsupported_codec),
                         detail = outcome.track.reason,
                     )
                     persist()
@@ -1913,7 +2397,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         _ui.value = _ui.value.copy(
             tracks = _ui.value.tracks.filterNot { it.key == key },
             selectedKey = if (wasSelected) null else _ui.value.selectedKey,
-            status = if (wasSelected) "No track loaded" else _ui.value.status,
+            status = if (wasSelected) str(com.mylittleblover.mkwplayer.R.string.player_status_no_track) else _ui.value.status,
             detail = if (wasSelected) null else _ui.value.detail,
             canPause = if (wasSelected) false else _ui.value.canPause,
             canResume = if (wasSelected) false else _ui.value.canResume,
@@ -1935,7 +2419,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (isCeremonyLocked || nativePerformance?.isFading == true) return
         val request = ++packPlaybackRequest
         if (uris.isEmpty()) return
-        _ui.value = _ui.value.copy(busy = true, status = "Reading files...", detail = null)
+        _ui.value = _ui.value.copy(busy = true, status = str(com.mylittleblover.mkwplayer.R.string.player_status_reading_files), detail = null)
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
                 val bytes = LinkedHashMap<String, ByteArray>()
@@ -1975,8 +2459,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
             if (parts.isEmpty()) {
                 _ui.value = _ui.value.copy(
-                    status = "No usable parts",
-                    detail = rejected.firstOrNull() ?: "None of the chosen files could be read.",
+                    status = str(com.mylittleblover.mkwplayer.R.string.player_err_no_usable_parts),
+                    detail = rejected.firstOrNull() ?: str(com.mylittleblover.mkwplayer.R.string.player_detail_unreadable_files),
                 )
                 return@launch
             }
@@ -1988,14 +2472,14 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             }
             val group = StageFlowDiscovery.dominant(StageFlowDiscovery.group(parts))
             if (group == null) {
-                _ui.value = _ui.value.copy(status = "No usable parts", detail = rejected.firstOrNull())
+                _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_no_usable_parts), detail = rejected.firstOrNull())
                 return@launch
             }
 
             val assembled = StageFlowDiscovery.flowFor(group)
             if (assembled.isFailure) {
                 _ui.value = _ui.value.copy(
-                    status = "Cannot open this flow",
+                    status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_flow),
                     detail = assembled.exceptionOrNull()?.message,
                 )
                 return@launch
@@ -2052,7 +2536,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                     withFf
                 }
             } catch (e: Exception) {
-                return@withContext FlowPrepareOutcome.Failed("Cannot load interactive audio", e.message)
+                return@withContext FlowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_load_interactive), e.message)
             }
 
             val plan = try {
@@ -2079,13 +2563,13 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                     built
                 } else null
             } catch (e: Exception) {
-                return@withContext FlowPrepareOutcome.Failed("Cannot prepare interactive playback", e.message)
+                return@withContext FlowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_prepare_flow), e.message)
             }
 
             val compiled = try {
                 plan?.standard ?: StageFlowCompiler.compileFromBytes(flow, bytes)
             } catch (e: IllegalArgumentException) {
-                return@withContext FlowPrepareOutcome.Failed("Cannot prepare this flow", e.message)
+                return@withContext FlowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_prepare_flow), e.message)
             }
 
             val wantSpeaker = when {
@@ -2119,7 +2603,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 )
             ) {
                 is PlaybackSession.PrepareResult.Failed ->
-                    FlowPrepareOutcome.Failed("Cannot play this flow", prep.reason)
+                    FlowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_play_flow), prep.reason)
                 is PlaybackSession.PrepareResult.Ok ->
                     FlowPrepareOutcome.Ok(PreparedFlowBundle(bytes, plan, compiled, entry, wantSpeaker, prep.prepared))
             }
@@ -2153,7 +2637,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 trackLoading = false,
                 loadingTrackCode = null,
                 loadingTrackTitle = null,
-                status = "Cannot play this flow",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_err_play_flow),
                 detail = state.detail,
             )
             return false
@@ -2181,7 +2665,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             loadingTrackCode = null,
             loadingTrackTitle = null,
             activeFavoriteId = stageId,
-            status = "Playing",
+            status = str(com.mylittleblover.mkwplayer.R.string.discovery_playing),
             total = EngineSnapshot.formatPosition(totalFrames, rate),
             canPause = true,
             canStop = true,
@@ -2209,9 +2693,9 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 speakerEnabled = speakerEnabled,
             ),
             detail = buildList {
-                if (rejected.isNotEmpty()) add("Skipped: " + rejected.joinToString("; "))
+                if (rejected.isNotEmpty()) add(str(com.mylittleblover.mkwplayer.R.string.player_detail_skipped_fmt, rejected.joinToString("; ")))
                 if (!session.hasOutput) {
-                    add("No device output on this system; the engine is running without a speaker.")
+                    add(str(com.mylittleblover.mkwplayer.R.string.player_detail_no_output))
                 }
             }.joinToString(" ").ifEmpty { null },
         )
@@ -2248,7 +2732,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                     options = currentInteractiveOptions(),
                 ).startingAt(startingStage)
             } catch (e: Exception) {
-                return@withContext RainbowPrepareOutcome.Failed("Cannot prepare Rainbow", e.message)
+                return@withContext RainbowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_prepare_flow), e.message)
             }
             val wantSpeaker = when {
                 plan.overlayTrackIndices.isEmpty() -> false
@@ -2278,7 +2762,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 )
             ) {
                 is PlaybackSession.PrepareResult.Failed ->
-                    RainbowPrepareOutcome.Failed("Cannot play Rainbow", prep.reason)
+                    RainbowPrepareOutcome.Failed(str(com.mylittleblover.mkwplayer.R.string.player_err_play_flow), prep.reason)
                 is PlaybackSession.PrepareResult.Ok ->
                     RainbowPrepareOutcome.Ok(plan, frames, prep.prepared)
             }
@@ -2303,7 +2787,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             return false
         }
         val state = session.commitPrepared(prepared)
-        if(state.detail!=null) { _ui.value=_ui.value.copy(trackLoading=false,loadingTrackCode=null,loadingTrackTitle=null,status="Cannot play Rainbow",detail=state.detail);return false }
+        if(state.detail!=null) { _ui.value=_ui.value.copy(trackLoading=false,loadingTrackCode=null,loadingTrackTitle=null,status=str(com.mylittleblover.mkwplayer.R.string.player_err_play_flow),detail=state.detail);return false }
         linearCoordinator.yieldToExternalTransport()
         PlaybackTimers.engine.syncInteractiveContext(true, "Rainbow")
         recordCanonicalPlayStat("Rainbow")
@@ -2311,12 +2795,12 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         interactivePlan=plan;nativePerformance=null;performance=null;flow=null;flowCompiled=null;flowBytes=bytes
         totalFrames=frames;rate=48000
         val sections=plan.spec.segments.map { FlowPresentation.Section(it.index,plan.labels.getValue(it.index),it.exit,48000) }
-        _ui.value=_ui.value.copy(title=displayTitle,trackLoading=false,loadingTrackCode=null,loadingTrackTitle=null,activeFavoriteId="Rainbow",status="Playing",detail=notes.joinToString("; ").ifEmpty { null },
+        _ui.value=_ui.value.copy(title=displayTitle,trackLoading=false,loadingTrackCode=null,loadingTrackTitle=null,activeFavoriteId="Rainbow",status=str(com.mylittleblover.mkwplayer.R.string.discovery_playing),detail=notes.joinToString("; ").ifEmpty { null },
             canPause=true,canStop=true,outputActive=session.hasOutput,
             linearMode=false,linearTrack=null,canSeek=false,totalFrames=frames,sampleRate=48000,artworkName=extraCatalog.courseArtwork["Rainbow"],
             flow=FlowUi(displayTitle,sections,plan.entry,"Area1 → Area2 → Area3 → Final","MINF timing; bar exits confirmed",true,
                 outros=plan.outros.keys.sorted(), hasFast = plan.fast != null, availableStageKeys=sections.map { it.label },
-                hasSpeakerOverlay=plan.overlayTrackIndices.isNotEmpty(),
+                hasSpeakerOverlay=false,
                 speakerEnabled=speakerEnabled,
                 isRainbowMelodyOverlay=true))
         syncSessionArtworkMetadata()
@@ -2335,22 +2819,22 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (isCeremonyLocked || nativePerformance?.isFading == true) return
         val request = ++packPlaybackRequest
         val folder = java.io.File(getApplication<Application>().filesDir, FLOW_FOLDER)
-        _ui.value = _ui.value.copy(busy = true, status = "Scanning folder...", detail = null)
+        _ui.value = _ui.value.copy(busy = true, status = str(com.mylittleblover.mkwplayer.R.string.player_status_scanning), detail = null)
         viewModelScope.launch {
             val scan = withContext(Dispatchers.IO) { FolderAudioSource.scan(folder) }
             _ui.value = _ui.value.copy(busy = false)
 
             if (scan.missingFolder) {
                 _ui.value = _ui.value.copy(
-                    status = "No folder",
-                    detail = "Put the stage files in ${folder.path} and try again.",
+                    status = str(com.mylittleblover.mkwplayer.R.string.player_err_no_folder),
+                    detail = str(com.mylittleblover.mkwplayer.R.string.player_detail_no_folder_fmt, folder.path),
                 )
                 return@launch
             }
             if (scan.found.isEmpty()) {
                 _ui.value = _ui.value.copy(
-                    status = "No usable files",
-                    detail = scan.rejected.firstOrNull() ?: "The folder holds no readable stage parts.",
+                    status = str(com.mylittleblover.mkwplayer.R.string.player_err_no_usable_files),
+                    detail = scan.rejected.firstOrNull() ?: str(com.mylittleblover.mkwplayer.R.string.player_detail_no_readable_parts),
                 )
                 return@launch
             }
@@ -2362,14 +2846,14 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             }
             val group = StageFlowDiscovery.dominant(scan.groups())
             if (group == null) {
-                _ui.value = _ui.value.copy(status = "No usable files", detail = scan.rejected.firstOrNull())
+                _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_no_usable_files), detail = scan.rejected.firstOrNull())
                 return@launch
             }
 
             val assembled = StageFlowDiscovery.flowFor(group)
             if (assembled.isFailure) {
                 _ui.value = _ui.value.copy(
-                    status = "Cannot open this flow",
+                    status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_flow),
                     detail = assembled.exceptionOrNull()?.message,
                 )
                 return@launch
@@ -2535,10 +3019,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val playable = PackPlayback.playableTracks(effectiveManifest)
         val notes = buildList {
             if (installed.coverage.unsupportedCodecs.isNotEmpty()) {
-                add(
-                    "${installed.coverage.unsupportedCodecs.sumOf { it.affectedTracks }} track(s) use a codec this " +
-                        "build cannot decode.",
-                )
+                add(str(com.mylittleblover.mkwplayer.R.string.settings_import_unsupported_codecs, installed.coverage.unsupportedCodecs.sumOf { it.affectedTracks }))
             }
             if (stopDetail != null) add(stopDetail)
         }
@@ -2551,7 +3032,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
         _ui.value = _ui.value.copy(
             busy = false,
-            status = if (playable.isEmpty()) "Pack installed, but nothing in it is playable" else "Library updated",
+            status = if (playable.isEmpty()) str(com.mylittleblover.mkwplayer.R.string.settings_import_none_playable) else str(com.mylittleblover.mkwplayer.R.string.settings_import_updated_status),
             detail = notes.firstOrNull(),
             libraryGeneration = previousGeneration + 1,
             pack = PackUi(
@@ -2564,24 +3045,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             ),
         )
 
-        // Open first stage only on initial empty library import so active playback isn't disrupted (#92).
-        if (hadNothingActiveBefore && !stoppedActivePlayback && !isCeremonyLocked) {
-            val firstStage = installed.manifest.stages
-                .filter { !isSpecialStageLocked(it.code) }
-                .firstNotNullOfOrNull { stage ->
-                    effectiveManifest.tracksOf(stage).firstOrNull { track -> playable.any { it.key == track.key } }
-                } ?: playable.firstOrNull { track ->
-                installed.manifest.tracks.any { it.key == track.key } &&
-                    !isSpecialStageLocked(track.title)
-            }
-            if (firstStage != null) {
-                if (firstStage.kind == com.mylittleblover.mkwplayer.registry.ResourceKind.JUKEBOX) {
-                    openJukeboxTrack(firstStage.key)
-                } else {
-                    openPackTrack(firstStage)
-                }
-            }
-        }
+        // Do not auto-play or auto-open the first stage after importing a pack (#12).
+        // Users choose what to play explicitly from Home, Media Library, or World Map.
 
         return PackImportChangelog(
             packId = installed.manifest.packId,
@@ -2657,11 +3122,11 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (isCeremonyLocked || request != packPlaybackRequest || nativePerformance?.isFading == true) return false
         return when (outcome) {
             is PackOpenOutcome.Refused -> {
-                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = "Cannot open this track", detail = outcome.reason)
+                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_track), detail = outcome.reason)
                 false
             }
             is PackOpenOutcome.IdentityError -> {
-                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = "Cannot identify interactive sources", detail = outcome.reason)
+                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = str(com.mylittleblover.mkwplayer.R.string.player_err_identify_sources), detail = outcome.reason)
                 false
             }
             is PackOpenOutcome.Ready -> {
@@ -2690,8 +3155,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             } ?: playable.firstOrNull { !isSpecialStageLocked(it.title) }
         if (track == null) {
             _ui.value = _ui.value.copy(
-                status = "Nothing to play",
-                detail = "This pack carries no track this build can decode.",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_err_nothing_playable),
+                detail = str(com.mylittleblover.mkwplayer.R.string.player_detail_no_decodable_track),
             )
             return
         }
@@ -2710,7 +3175,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 number!=null -> driver.takeOutro(number)
                 segment==plan.fast -> driver.enterFast()
                 plan.next[driver.current]==segment -> driver.advance()
-                else -> "This section has no transition from the current section"
+                else -> str(com.mylittleblover.mkwplayer.R.string.interactive_err_no_transition)
             }
             publishNativePerformance(error,true)
             return
@@ -2733,7 +3198,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 canEnd = false,
                 fastPlaying = false,
             ),
-            status = "Playing",
+            status = str(com.mylittleblover.mkwplayer.R.string.discovery_playing),
         )
     }
 
@@ -2806,8 +3271,38 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 pendingInteractiveStatId = null
                 recordCanonicalPlayStat(id)
             }
-            if(nativePerformance==null) nativePerformance=NativeInteractiveDriver(plan.spec,plan.entry,plan.next,plan.outros,plan.fast,
-                request={ segment -> session.playSegment(segment).detail },versions=plan.versions,outroVariants=plan.outroVariants,regions=plan.regions,cancelRequest=session::cancelPendingTransition,mandatoryAutomaticSources=plan.entryAutomaticNext.keys,advanceViaOutro=plan.advanceViaOutro)
+            if (nativePerformance == null) {
+                nativePerformance = NativeInteractiveDriver(
+                    spec = plan.spec,
+                    entry = plan.entry,
+                    next = plan.next,
+                    outros = plan.outros,
+                    fast = plan.fast,
+                    request = { segment -> session.playSegment(segment).detail },
+                    versions = plan.versions,
+                    outroVariants = plan.outroVariants,
+                    regions = plan.regions,
+                    cancelRequest = session::cancelPendingTransition,
+                    mandatoryAutomaticSources = plan.entryAutomaticNext.keys,
+                    advanceViaOutro = plan.advanceViaOutro,
+                    onTransitionRequested = { fromSeg, toSeg ->
+                        if (RainbowInteractiveCompiler.isArea1ToArea2(plan, fromSeg, toSeg)) {
+                            RainbowInteractiveCompiler.area1MelodyTrackId(plan.spec)?.let { melodyId ->
+                                session.setLayerGain(melodyId, -96.0, RainbowInteractiveCompiler.AREA1_MELODY_FADE_MS)
+                            }
+                        }
+                    },
+                    onTransitionCancelled = { fromSeg, cancelledSeg ->
+                        if (RainbowInteractiveCompiler.isArea1ToArea2(plan, fromSeg, cancelledSeg) &&
+                            _ui.value.flow?.speakerEnabled == true
+                        ) {
+                            RainbowInteractiveCompiler.area1MelodyTrackId(plan.spec)?.let { melodyId ->
+                                session.setLayerGain(melodyId, 0.0, RainbowInteractiveCompiler.AREA1_MELODY_FADE_MS)
+                            }
+                        }
+                    },
+                )
+            }
             session.interactiveObservation()?.let { nativePerformance!!.observe(it) }
             publishNativePerformance(fromAction=true)
             syncSessionArtworkMetadata()
@@ -2834,6 +3329,10 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         apply(driver.start(), driver)
         if (driver.isRunning) performance = driver else driver.stop()
     }
+
+    /** Estimates frames remaining until a queued interactive transition fires (#11). */
+    fun estimatedFramesUntilPendingSwitch(sourceFrame: Long?): Long? =
+        nativePerformance?.estimatedFramesUntilPendingSwitch(sourceFrame)
 
     /** The next-stage event: leave the looping prelude for the main loop. */
     fun advancePerformance() {
@@ -2872,6 +3371,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (isCeremonyLocked) return
         val plan = interactivePlan ?: return
         if (plan.overlayTrackIndices.isEmpty()) return
+        if (plan.name.equals("Rainbow", ignoreCase = true) || _ui.value.flow?.isRainbowMelodyOverlay == true) return
         speakerEnabled = !speakerEnabled
         val db = if (speakerEnabled) 0.0 else -96.0
         if (session.state.value.loaded) {
@@ -2894,7 +3394,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             .firstOrNull()
         val dir = pack?.directory
         if (item == null || dir == null) {
-            _ui.value = _ui.value.copy(status = "Cannot open Title Theme", detail = "No installed pack carries this track.")
+            _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_track), detail = str(com.mylittleblover.mkwplayer.R.string.player_err_no_pack_track))
             return
         }
         val localizedTitle = item.localizedName(languageTag)
@@ -2926,7 +3426,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             }
             if (request != packPlaybackRequest) return@launch
             val (plan, bytesByPath) = loaded.getOrElse { err ->
-                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = "Cannot prepare Title Theme", detail = err.message)
+                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = str(com.mylittleblover.mkwplayer.R.string.player_err_prepare_track), detail = err.message)
                 return@launch
             }
 
@@ -2949,7 +3449,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 loadingTrackCode = null,
                 loadingTrackTitle = null,
                 activeFavoriteId = "extra:title",
-                status = "Stopped",
+                status = str(com.mylittleblover.mkwplayer.R.string.stage_stopped),
                 total = EngineSnapshot.formatPosition(item.main.frames, item.main.sampleRate),
                 position = "0:00",
                 progress = 0f,
@@ -2991,7 +3491,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (isCeremonyLocked || nativePerformance?.isFading == true) return
         val dir = pack?.directory
         if (dir == null) {
-            _ui.value = _ui.value.copy(status = "Cannot open track", detail = "No installed pack carries this track.")
+            _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_open_track), detail = str(com.mylittleblover.mkwplayer.R.string.player_err_no_pack_track))
             return
         }
         val canonicalTrackId = if (isBattle) "battle:${track.id}" else "sfc:${track.id}"
@@ -3031,7 +3531,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             }
             if (isCeremonyLocked || request != packPlaybackRequest) return@launch
             val (plan, bytesByPath) = loaded.getOrElse { err ->
-                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = "Cannot prepare track", detail = err.message)
+                _ui.value = _ui.value.copy(trackLoading = false, loadingTrackCode = null, loadingTrackTitle = null, status = str(com.mylittleblover.mkwplayer.R.string.player_err_prepare_track), detail = err.message)
                 return@launch
             }
 
@@ -3054,7 +3554,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 loadingTrackCode = null,
                 loadingTrackTitle = null,
                 activeFavoriteId = canonicalTrackId,
-                status = "Stopped",
+                status = str(com.mylittleblover.mkwplayer.R.string.stage_stopped),
                 total = EngineSnapshot.formatPosition(track.main.frames, track.main.sampleRate),
                 position = "0:00",
                 progress = 0f,
@@ -3106,7 +3606,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val requestedEntry = entries.getOrNull(startIndex)
         val visibleEntries = entries.filter { entry ->
             val extraId = com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.extraIdFromEntryKey(entry.key)
-            val hiddenExtra = extraId != null && !com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(extraId, unlocked)
+            val hiddenExtra = extraId != null && !isExtraVisible(extraId, unlocked)
             val hiddenCourse = entry.courseCode != null && isSpecialStageLocked(entry.courseCode)
             !hiddenExtra && !hiddenCourse
         }
@@ -3188,6 +3688,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         officialKind: com.mylittleblover.mkwplayer.routes.OfficialRouteKind?,
         suiteMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode,
         userPresets: List<com.mylittleblover.mkwplayer.library.CoursePreset> = emptyList(),
+        roadRuleMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode? = null,
     ): String {
         val canonical = stageCode.trim().removeSuffix("_00")
         val medleys = courseMedleyCatalog.forCourse(canonical)
@@ -3218,6 +3719,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             stopIndex = stopIndex,
             stopCount = stopCount,
             stageCode = canonical,
+            roadRuleMode = roadRuleMode,
         )
         val actualVariant = medleys.firstOrNull { it.normalizedSuiteVariant == desiredVariant }?.normalizedSuiteVariant
             ?: medleys.firstOrNull { it.normalizedSuiteVariant == "a" }?.normalizedSuiteVariant
@@ -3302,7 +3804,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         return if (code.startsWith("extra:")) {
             val targetId = code.removePrefix("extra:")
             val unlocked = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)
-            !com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(targetId, unlocked)
+            !isExtraVisible(targetId, unlocked)
         } else {
             isSpecialStageLocked(code)
         }
@@ -3481,6 +3983,247 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         return resolved to CourseFlowRecipeBuilder.exportPresetConfigJson(preset, resolved)
     }
 
+    private val flowAudioRenderer = com.mylittleblover.mkwplayer.audio.FlowAudioRenderer()
+    private var renderAudioJob: Job? = null
+
+    fun cancelRenderFlowAudio() {
+        renderAudioJob?.cancel()
+        renderAudioJob = null
+        _ui.value = _ui.value.copy(
+            isRenderingAudio = false,
+            renderAudioStatus = null,
+            renderAudioError = null,
+        )
+    }
+
+    fun dismissRenderFlowDialog() {
+        if (_ui.value.isRenderingAudio) return
+        _ui.value = _ui.value.copy(
+            renderAudioProgress = 0f,
+            renderAudioStatus = null,
+            renderAudioError = null,
+            renderAudioOutputPath = null,
+        )
+    }
+
+    /** Renders a Flow Editor preset offline into a 48 kHz 16-bit stereo WAV honoring OutputTrim & export location (#17). */
+    internal fun renderFlowPresetToAudio(
+        preset: CoursePreset,
+        languageTag: String,
+    ) {
+        if (_ui.value.isRenderingAudio) return
+        val dir = pack?.directory
+        if (dir == null) {
+            _ui.value = _ui.value.copy(renderAudioError = str(com.mylittleblover.mkwplayer.R.string.flow_render_error_title))
+            return
+        }
+        if (isEditorTargetLocked(preset.courseCode)) {
+            _ui.value = _ui.value.copy(renderAudioError = str(com.mylittleblover.mkwplayer.R.string.player_blocked_special_locked))
+            return
+        }
+        val appCtx = getApplication<Application>()
+        val trim = com.mylittleblover.mkwplayer.audio.OutputTrimSettings.current(appCtx)
+        val exportCfg = com.mylittleblover.mkwplayer.audio.AudioExportSettings.current(appCtx)
+        _ui.value = _ui.value.copy(
+            isRenderingAudio = true,
+            renderAudioProgress = 0f,
+            renderAudioStatus = str(com.mylittleblover.mkwplayer.R.string.flow_render_in_progress),
+            renderAudioError = null,
+            renderAudioOutputPath = null,
+            outputTrimEnabled = trim.gainDb > 0.5,
+            exportFolderDisplay = exportCfg.exportDisplayPath
+                ?: com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH,
+        )
+        renderAudioJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resolver = editorSourceResolver(dir)
+                val inventory = inspectTargetForEditor(preset.courseCode, dir, resolver)
+                if (inventory == null) {
+                    withContext(Dispatchers.Main) {
+                        _ui.value = _ui.value.copy(
+                            isRenderingAudio = false,
+                            renderAudioError = str(com.mylittleblover.mkwplayer.R.string.flow_render_error_title),
+                        )
+                    }
+                    return@launch
+                }
+                val resolved = CourseFlowRecipeBuilder.compileUserPreset(
+                    preset = preset,
+                    inventory = inventory,
+                    minf = minfCatalog,
+                    resolver = resolver,
+                    segmentSwitchFadeOutMs = playbackBehavior.segmentSwitchFadeOutMs,
+                )
+                if (resolved == null) {
+                    withContext(Dispatchers.Main) {
+                        _ui.value = _ui.value.copy(
+                            isRenderingAudio = false,
+                            renderAudioError = str(com.mylittleblover.mkwplayer.R.string.flow_render_error_title),
+                        )
+                    }
+                    return@launch
+                }
+                val filesByStem = linkedMapOf<String, java.io.File>()
+                val fallbackBytes = linkedMapOf<String, ByteArray>()
+                for ((stem, sha) in resolved.stemDigests) {
+                    if (stem.equals("BGM_Seq_FinalLapFF", ignoreCase = true)) {
+                        loadFinalLapFanfareBytes()?.let { fallbackBytes[stem] = it }
+                    } else {
+                        val f = java.io.File(dir, "audio/$sha")
+                        if (f.isFile) filesByStem[stem] = f
+                    }
+                }
+                val compiledGraph = com.mylittleblover.mkwplayer.interactive.CourseMedleyCompiler.compileGraphFromFiles(
+                    medley = resolved.medley,
+                    sampleRate = resolved.sampleRate,
+                    filesByStem = filesByStem,
+                    knownDigestsHex = resolved.stemDigests,
+                    fallbackBytesByStem = fallbackBytes,
+                )
+                val spec = com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.CompiledFlowSpec.from(
+                    compiled = compiledGraph,
+                    sampleRate = resolved.sampleRate,
+                )
+                val baseCourse = localizedNames?.name(preset.courseCode.removePrefix("extra:").removeSuffix("_00"), languageTag)
+                    ?: preset.courseCode.removePrefix("extra:").removeSuffix("_00")
+                val safeName = "${baseCourse}_${preset.name}"
+                    .replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_")
+                    .trim('_')
+                    .ifBlank { "JukeKart_Flow" }
+                val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT)
+                    .format(java.util.Date())
+                val fileName = "${safeName}_$stamp.wav"
+
+                withContext(Dispatchers.Main) {
+                    _ui.value = _ui.value.copy(
+                        renderAudioStatus = str(com.mylittleblover.mkwplayer.R.string.flow_render_in_progress),
+                    )
+                }
+
+                var outputDisplayPath = ""
+                var renderResult: com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult =
+                    com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Failed("Export failed")
+                var lastProgressPush = 0L
+                val progressCb: (Float) -> Unit = { p ->
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    if (p >= 0.999f || now - lastProgressPush >= 60L) {
+                        lastProgressPush = now
+                        viewModelScope.launch(Dispatchers.Main) {
+                            if (_ui.value.isRenderingAudio) {
+                                _ui.value = _ui.value.copy(renderAudioProgress = p.coerceIn(0f, 1f))
+                            }
+                        }
+                    }
+                }
+
+                val treeUriRaw = exportCfg.exportTreeUri
+                if (!treeUriRaw.isNullOrBlank()) {
+                    val treeUri = android.net.Uri.parse(treeUriRaw)
+                    val parentDocId = android.provider.DocumentsContract.getTreeDocumentId(treeUri)
+                    val parentDocUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, parentDocId)
+                    val createdUri = android.provider.DocumentsContract.createDocument(
+                        appCtx.contentResolver,
+                        parentDocUri,
+                        "audio/wav",
+                        fileName,
+                    ) ?: error("Unable to create file in selected folder.")
+                    outputDisplayPath = "${exportCfg.exportDisplayPath ?: "Folder"}/$fileName"
+                    appCtx.contentResolver.openOutputStream(createdUri, "w")?.use { out ->
+                        renderResult = flowAudioRenderer.renderFlowToWav(spec, out, trim, progressCb)
+                    } ?: error("Unable to open output stream for selected folder.")
+                    if (renderResult !is com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Success) {
+                        runCatching { android.provider.DocumentsContract.deleteDocument(appCtx.contentResolver, createdUri) }
+                    }
+                } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    val values = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.Audio.Media.DISPLAY_NAME, fileName)
+                        put(android.provider.MediaStore.Audio.Media.MIME_TYPE, "audio/wav")
+                        put(
+                            android.provider.MediaStore.Audio.Media.RELATIVE_PATH,
+                            "${android.os.Environment.DIRECTORY_MUSIC}/JukeKart",
+                        )
+                        put(android.provider.MediaStore.Audio.Media.IS_PENDING, 1)
+                    }
+                    val resolverMedia = appCtx.contentResolver
+                    val uri = resolverMedia.insert(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
+                        ?: error("Unable to create MediaStore audio entry.")
+                    outputDisplayPath = "${com.mylittleblover.mkwplayer.audio.AudioExportSettings.DEFAULT_RELATIVE_PATH}/$fileName"
+                    try {
+                        resolverMedia.openOutputStream(uri, "w")?.use { out ->
+                            renderResult = flowAudioRenderer.renderFlowToWav(spec, out, trim, progressCb)
+                        } ?: error("Unable to open MediaStore output stream.")
+                        if (renderResult is com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Success) {
+                            val done = android.content.ContentValues().apply {
+                                put(android.provider.MediaStore.Audio.Media.IS_PENDING, 0)
+                            }
+                            resolverMedia.update(uri, done, null, null)
+                        } else {
+                            resolverMedia.delete(uri, null, null)
+                        }
+                    } catch (t: Throwable) {
+                        runCatching { resolverMedia.delete(uri, null, null) }
+                        throw t
+                    }
+                } else {
+                    val baseDir = java.io.File(
+                        appCtx.getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC) ?: appCtx.filesDir,
+                        "JukeKart",
+                    )
+                    baseDir.mkdirs()
+                    val destFile = java.io.File(baseDir, fileName)
+                    outputDisplayPath = destFile.absolutePath
+                    renderResult = flowAudioRenderer.renderFlowToFile(spec, destFile, trim, progressCb)
+                }
+
+                withContext(Dispatchers.Main) {
+                    when (val res = renderResult) {
+                        is com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Success -> {
+                            _ui.value = _ui.value.copy(
+                                isRenderingAudio = false,
+                                renderAudioProgress = 1f,
+                                renderAudioStatus = str(com.mylittleblover.mkwplayer.R.string.flow_render_success_title),
+                                renderAudioError = null,
+                                renderAudioOutputPath = outputDisplayPath,
+                            )
+                        }
+                        is com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Cancelled -> {
+                            _ui.value = _ui.value.copy(
+                                isRenderingAudio = false,
+                                renderAudioProgress = 0f,
+                                renderAudioStatus = null,
+                                renderAudioError = null,
+                            )
+                        }
+                        is com.mylittleblover.mkwplayer.audio.FlowAudioRenderer.RenderResult.Failed -> {
+                            _ui.value = _ui.value.copy(
+                                isRenderingAudio = false,
+                                renderAudioStatus = null,
+                                renderAudioError = res.reason,
+                            )
+                        }
+                    }
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                withContext(Dispatchers.Main) {
+                    _ui.value = _ui.value.copy(
+                        isRenderingAudio = false,
+                        renderAudioStatus = null,
+                        renderAudioError = null,
+                    )
+                }
+                throw ce
+            } catch (t: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _ui.value = _ui.value.copy(
+                        isRenderingAudio = false,
+                        renderAudioStatus = null,
+                        renderAudioError = t.message ?: t.javaClass.simpleName,
+                    )
+                }
+            }
+        }
+    }
+
     internal fun previewCourseSeam(
         preset: CoursePreset,
         seamIndex: Int,
@@ -3536,7 +4279,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         targetId: String,
     ): List<com.mylittleblover.mkwplayer.interactive.ExtraMedleyCatalog.ExtraMedleyEntry> {
         val unlocked = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)
-        if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(targetId, unlocked)) {
+        if (!isExtraVisible(targetId, unlocked)) {
             return emptyList()
         }
         return extraMedleyCatalog.forTarget(targetId)
@@ -3574,7 +4317,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val dir = pack?.directory ?: return false
         val item = extraMedleyCatalog.byMedleyId(medleyId) ?: return false
         val unlocked = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)
-        if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(item.targetId, unlocked)) {
+        if (!isExtraVisible(item.targetId, unlocked)) {
             return false
         }
         val resolved = resolveExtraMedleyEntry(item, dir) ?: return false
@@ -3635,7 +4378,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             defaultAsset: com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.AssetRef,
             config: PlaylistEntryConfig,
         ): LinearQueue.Entry? {
-            if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(targetId, unlocked)) return null
+            if (!isExtraVisible(targetId, unlocked)) return null
             val editorCode = "extra:$targetId"
             val userPreset = if (PresetRefs.isUser(config.presetId)) {
                 presets.firstOrNull { it.id == config.presetId && it.courseCode.equals(editorCode, ignoreCase = true) }
@@ -3765,13 +4508,13 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                     val gameTitle = game?.localizedName(languageTag) ?: item.gameId
                     LinearQueue.Entry(
                         key = "pl:${playlist.id}:$idx:${item.key}",
-                        title = item.localizedDisplayName(languageTag),
+                        title = item.displayTitle(languageTag),
                         subtitle = "${playlist.name} · $gameTitle",
                         sourceType = LinearSessionStore.SourceType.JUKEBOX,
                         gameId = item.gameId,
                         gameTitle = gameTitle,
                         yearLabel = game?.yearLabel?.takeIf { it.isNotBlank() },
-                        arrangement = item.localizedArrangement(languageTag),
+                        arrangement = item.displayArrangement(languageTag),
                         durationMs = item.durationMs,
                         artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) },
                         assetSha256 = item.track.primary.sha256,
@@ -3802,7 +4545,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 }
                 is PlaylistItemRef.ExtraTrack -> {
                     val extraId = ref.extraId
-                    if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(extraId, unlocked)) {
+                    if (!isExtraVisible(extraId, unlocked)) {
                         return@mapIndexedNotNull null
                     }
                     val other = extraCatalog.otherMusic.firstOrNull { it.id == extraId }
@@ -3924,7 +4667,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             artwork: String,
             defaultAsset: com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.AssetRef,
         ): LinearQueue.Entry? {
-            if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(targetId, unlocked)) return null
+            if (!isExtraVisible(targetId, unlocked)) return null
             val editorCode = "extra:$targetId"
             val builtInMedley = extraMedleyCatalog.forTarget(targetId).firstOrNull()
             val resolvedExtra = resolveExtraMedleyEntry(builtInMedley, dir)
@@ -4004,13 +4747,13 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                     val gameTitle = game?.localizedName(languageTag) ?: item.gameId
                     LinearQueue.Entry(
                         key = "ref:$idx:${item.key}:${java.util.UUID.randomUUID()}",
-                        title = item.localizedDisplayName(languageTag),
+                        title = item.displayTitle(languageTag),
                         subtitle = gameTitle,
                         sourceType = LinearSessionStore.SourceType.JUKEBOX,
                         gameId = item.gameId,
                         gameTitle = gameTitle,
                         yearLabel = game?.yearLabel?.takeIf { it.isNotBlank() },
-                        arrangement = item.localizedArrangement(languageTag),
+                        arrangement = item.displayArrangement(languageTag),
                         durationMs = item.durationMs,
                         artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) },
                         assetSha256 = item.track.primary.sha256,
@@ -4027,7 +4770,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 }
                 is PlaylistItemRef.ExtraTrack -> {
                     val extraId = ref.extraId
-                    if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(extraId, unlocked)) {
+                    if (!isExtraVisible(extraId, unlocked)) {
                         return@mapIndexedNotNull null
                     }
                     val other = extraCatalog.otherMusic.firstOrNull { it.id == extraId }
@@ -4236,11 +4979,21 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+    private var pureFreeRoamDurationJob: Job? = null
+
+    private fun cancelPureFreeRoamDurationJob() {
+        pureFreeRoamDurationJob?.cancel()
+        pureFreeRoamDurationJob = null
+    }
+
     fun inspectOfficialRoute(
         route: com.mylittleblover.mkwplayer.routes.OfficialRoute,
         sessionOverrides: Map<Int, String> = emptyMap(),
         ruleMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode =
             com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
+        pureFreeRoamEnabled: Boolean = false,
+        pureFreeRoamTrackPool: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamTrackPool =
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamTrackPool.ROUTE_RULES,
     ): com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteValidationReport {
         val dir = pack?.directory
         val items = jukebox.games.flatMap { it.items }
@@ -4258,6 +5011,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             },
             wikiCatalog = routeMusicCatalog,
             ruleMode = ruleMode,
+            pureFreeRoamEnabled = pureFreeRoamEnabled,
+            pureFreeRoamTrackPool = pureFreeRoamTrackPool,
         )
     }
 
@@ -4280,7 +5035,256 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 resolvedDir != null && java.io.File(resolvedDir, "audio/${item.track.primary.sha256}").isFile
             },
             wikiCatalog = routeMusicCatalog,
+            pureFreeRoamEnabled = effectiveRoute.pureFreeRoamConfig.enabled,
         )
+    }
+
+    private fun startPureFreeRoamRoutePlayback(
+        routeId: String,
+        contextKind: LinearSessionStore.ContextKind,
+        contextId: String,
+        routeTitle: String,
+        legPlans: List<com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamLegPlan>,
+        config: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig,
+        loopRoute: Boolean,
+        languageTag: String,
+        roadPrefix: String,
+    ): RoutePlayResult {
+        cancelPureFreeRoamDurationJob()
+        val dir = pack?.directory
+            ?: return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_missing_medley_audio))
+        if (legPlans.isEmpty()) {
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_cannot_play))
+        }
+        val gamesById = jukebox.games.associateBy { it.id }
+        val readableItems = jukebox.allItems.filter { (item, _) ->
+            val resolvedDir = jukebox.packByKey[item.track.key] ?: dir
+            java.io.File(resolvedDir, "audio/${item.track.primary.sha256}").isFile
+        }
+        if (readableItems.isEmpty()) {
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_missing_medley_audio))
+        }
+        val byCode = HashMap<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>(readableItems.size * 2)
+        val exactByCode = LinkedHashMap<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>(readableItems.size * 2)
+        for (pair in readableItems) {
+            val rawCode = pair.first.jukeboxCode?.trim().orEmpty()
+            if (rawCode.isNotEmpty()) {
+                if (!exactByCode.containsKey(rawCode)) {
+                    exactByCode[rawCode] = pair
+                }
+                val upperCode = rawCode.uppercase(java.util.Locale.ROOT)
+                if (!byCode.containsKey(upperCode)) {
+                    byCode[upperCode] = pair
+                }
+            }
+        }
+
+        data class ResolvedLeg(
+            val plan: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamLegPlan,
+            val label: String,
+            val candidates: List<Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>,
+            val weights: List<Int>,
+            val byCodeMap: Map<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>,
+            val orderedCodes: List<String>,
+        )
+
+        val resolvedLegs = legPlans.map { plan ->
+            val fromName = localizedNames?.name(plan.from, languageTag) ?: plan.from
+            val toName = localizedNames?.name(plan.to, languageTag) ?: plan.to
+            val label = "$roadPrefix $fromName → $toName"
+            val matched = mutableListOf<Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>()
+            val weights = mutableListOf<Int>()
+            val seen = HashSet<String>()
+            for (cand in plan.rankedCandidates) {
+                val found = byCode[cand.jukeboxCode.trim().uppercase(java.util.Locale.ROOT)] ?: continue
+                if (seen.add(found.first.key)) {
+                    matched += found
+                    weights += cand.weight.coerceAtLeast(1)
+                }
+            }
+            val finalCandidates = if (matched.isNotEmpty()) matched else readableItems
+            val finalWeights = if (matched.isNotEmpty()) weights else List(finalCandidates.size) { 1 }
+            val legByCode = LinkedHashMap<String, Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>>()
+            val codes = mutableListOf<String>()
+            for (pair in finalCandidates) {
+                val c = pair.first.jukeboxCode?.trim().orEmpty()
+                if (c.isNotEmpty() && !legByCode.containsKey(c)) {
+                    legByCode[c] = pair
+                    codes += c
+                }
+            }
+            ResolvedLeg(plan, label, finalCandidates, finalWeights, legByCode, codes)
+        }
+
+        val recentKeys = ArrayDeque<String>()
+        var seqCounter = 0L
+        val rng = java.util.Random()
+        fun pickEntryForLeg(leg: ResolvedLeg): LinearQueue.Entry {
+            val engine = freeRoamEngine
+            val isGameFreeRoamPool =
+                leg.plan.trackPool == com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM
+            var chosen: Pair<com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.TrackItem, com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog.Game>? = null
+            if (isGameFreeRoamPool && engine != null && exactByCode.isNotEmpty()) {
+                val pickedCode = engine.pickNextFreeRoam(
+                    mode = leg.plan.freeRoamMode,
+                    availableCodes = exactByCode.keys,
+                )
+                chosen = pickedCode?.let { exactByCode[it] ?: byCode[it.uppercase(java.util.Locale.ROOT)] }
+            } else if (engine != null && leg.byCodeMap.isNotEmpty()) {
+                val available = leg.byCodeMap.keys
+                val pickedCode = when (leg.plan.effectiveRule) {
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.VS_DAY ->
+                        engine.pickInterstageFirstSong(leg.plan.from, isNight = false, availableCodes = available)
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.VS_NIGHT ->
+                        engine.pickInterstageFirstSong(leg.plan.from, isNight = true, availableCodes = available)
+                    com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.GRAND_PRIX ->
+                        engine.pickGrandPrixEdgeSong(leg.orderedCodes)
+                    else -> null
+                }
+                chosen = pickedCode?.let { leg.byCodeMap[it] }
+            }
+            if (chosen == null || (!isGameFreeRoamPool && chosen.first.key in recentKeys && leg.candidates.size > 1)) {
+                val eligibleIndices = leg.candidates.indices.filter { leg.candidates[it].first.key !in recentKeys }
+                    .ifEmpty { leg.candidates.indices.toList() }
+                val totalW = eligibleIndices.sumOf { leg.weights.getOrElse(it) { 1 } }.coerceAtLeast(1)
+                var roll = rng.nextInt(totalW)
+                var pickedIdx = eligibleIndices.first()
+                for (i in eligibleIndices) {
+                    roll -= leg.weights.getOrElse(i) { 1 }
+                    if (roll < 0) {
+                        pickedIdx = i
+                        break
+                    }
+                }
+                chosen = leg.candidates[pickedIdx]
+                chosen.first.jukeboxCode?.let { engine?.recordPlayed(it) }
+            }
+            val (item, game) = chosen
+            recentKeys.addLast(item.key)
+            while (recentKeys.size > 6) recentKeys.removeFirst()
+            val gameName = gamesById[item.gameId]?.localizedName(languageTag) ?: game.localizedName(languageTag)
+            seqCounter++
+            return LinearQueue.Entry(
+                key = "$routeId:pfr:${leg.plan.edgeIndex}:$seqCounter:${item.key}",
+                title = item.displayTitle(languageTag),
+                subtitle = leg.label,
+                sourceType = LinearSessionStore.SourceType.JUKEBOX,
+                gameId = item.gameId,
+                gameTitle = gameName,
+                yearLabel = game.yearLabel.takeIf { it.isNotBlank() },
+                arrangement = item.displayArrangement(languageTag),
+                ostIndex = item.ostIndex,
+                durationMs = item.durationMs,
+                artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) },
+                assetSha256 = item.track.primary.sha256,
+                sourceTrackKey = item.track.key,
+            )
+        }
+
+        val cleanConfig = config.normalized()
+        val gapMs = if (cleanConfig.trackPool == com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM) {
+            freeRoamEngine?.data?.settings?.freeRunIntervalMs ?: 1_500L
+        } else {
+            0L
+        }
+        if (cleanConfig.controlMode == com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT) {
+            val entries = mutableListOf<LinearQueue.Entry>()
+            for (leg in resolvedLegs) {
+                repeat(leg.plan.trackCount.coerceAtLeast(1)) {
+                    entries += pickEntryForLeg(leg)
+                }
+            }
+            if (entries.isEmpty()) {
+                return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_missing_medley_audio))
+            }
+            playExtraLinearQueue(
+                entries = entries,
+                startIndex = 0,
+                repeatMode = if (loopRoute) LinearQueue.RepeatMode.LIST else LinearQueue.RepeatMode.OFF,
+                shuffle = false,
+                context = LinearPlaybackCoordinator.SessionContext(
+                    contextKind = contextKind,
+                    contextId = contextId,
+                    contextTitle = routeTitle,
+                    nativeTransitionDefault = false,
+                    packFingerprints = currentPackFingerprints(),
+                    allowPlayNext = false,
+                    allowShuffle = false,
+                    allowSingleRepeat = false,
+                    allowRepeatToggle = true,
+                    interTrackGapMs = gapMs,
+                ),
+            )
+            requestNotificationPermissionIfNeeded()
+            return RoutePlayResult.Started
+        }
+
+        // DURATION mode: dynamically supply Free Roam tracks for the active leg and switch legs
+        // automatically once the leg's configured playback duration has elapsed (#5).
+        var activeLegIdx = 0
+        val initialEntry = pickEntryForLeg(resolvedLegs[0])
+        val supplier: () -> LinearQueue.Entry? = {
+            val leg = resolvedLegs.getOrNull(activeLegIdx)
+            if (leg != null) pickEntryForLeg(leg) else null
+        }
+        prepareForLinearPlayback()
+        linearCoordinator.startExtraQueue(
+            entries = listOf(initialEntry),
+            startIndex = 0,
+            packDir = dir,
+            repeatMode = if (loopRoute) LinearQueue.RepeatMode.LIST else LinearQueue.RepeatMode.OFF,
+            shuffleOverride = false,
+            context = LinearPlaybackCoordinator.SessionContext(
+                contextKind = contextKind,
+                contextId = contextId,
+                contextTitle = routeTitle,
+                nativeTransitionDefault = false,
+                packFingerprints = currentPackFingerprints(),
+                allowPlayNext = true,
+                allowShuffle = false,
+                allowSingleRepeat = false,
+                allowRepeatToggle = true,
+                interTrackGapMs = gapMs,
+                dynamicNextSupplier = supplier,
+                dynamicTargetBuffer = 2,
+            ),
+        )
+        pureFreeRoamDurationJob = viewModelScope.launch {
+            var legElapsedMs = 0L
+            var lastWallMs = android.os.SystemClock.elapsedRealtime()
+            while (isActive) {
+                delay(500L)
+                val nowWall = android.os.SystemClock.elapsedRealtime()
+                val delta = (nowWall - lastWallMs).coerceIn(0L, 2_000L)
+                lastWallMs = nowWall
+                val uiNow = _ui.value
+                if (!uiNow.linearMode || uiNow.linearContextId != contextId) break
+                if (!session.state.value.playing) continue
+                legElapsedMs += delta
+                val currentLeg = resolvedLegs.getOrNull(activeLegIdx) ?: break
+                if (legElapsedMs >= currentLeg.plan.durationMs) {
+                    legElapsedMs = 0L
+                    val nextLegIdx = activeLegIdx + 1
+                    if (nextLegIdx < resolvedLegs.size) {
+                        activeLegIdx = nextLegIdx
+                        val nextEntry = pickEntryForLeg(resolvedLegs[activeLegIdx])
+                        linearCoordinator.enqueueNext(nextEntry)
+                        linearCoordinator.skipNext()
+                    } else if (loopRoute) {
+                        activeLegIdx = 0
+                        val nextEntry = pickEntryForLeg(resolvedLegs[0])
+                        linearCoordinator.enqueueNext(nextEntry)
+                        linearCoordinator.skipNext()
+                    } else {
+                        // Finished final leg duration: stop cleanly after reaching configured time.
+                        fadeOutLinearAndStop()
+                        break
+                    }
+                }
+            }
+        }
+        requestNotificationPermissionIfNeeded()
+        return RoutePlayResult.Started
     }
 
     fun playOfficialRoute(
@@ -4296,32 +5300,55 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
         suiteMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode =
             com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+        pureFreeRoamConfig: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig =
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig(),
+        pureFreeRoamEdgeOverrides: Map<Int, com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EdgeFreeRoamOverride> = emptyMap(),
     ): RoutePlayResult {
         if (isCeremonyLocked) {
-            return RoutePlayResult.Blocked("Special Cup unlock ceremony is playing.")
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.player_blocked_ceremony))
         }
         if (route.requiresSpecialUnlock && !com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)) {
-            return RoutePlayResult.Blocked("Special Cup is locked.")
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.player_blocked_special_locked))
         }
         if (nativePerformance?.isFading == true) {
-            return RoutePlayResult.Blocked("Playback is currently fading out.")
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.player_blocked_fading))
         }
-        val report = inspectOfficialRoute(route, sessionOverrides, ruleMode)
+        val routeTitle = route.displayName(languageTag)
+        if (pureFreeRoamConfig.enabled) {
+            val legPlans = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.buildPureFreeRoamLegPlans(
+                route = route,
+                config = pureFreeRoamConfig,
+                ruleMode = ruleMode,
+                edgeOverrides = pureFreeRoamEdgeOverrides,
+                wikiCatalog = routeMusicCatalog,
+            )
+            return startPureFreeRoamRoutePlayback(
+                routeId = "official:${route.id}",
+                contextKind = LinearSessionStore.ContextKind.OFFICIAL_ROUTE,
+                contextId = route.id,
+                routeTitle = routeTitle,
+                legPlans = legPlans,
+                config = pureFreeRoamConfig,
+                loopRoute = loopRoute,
+                languageTag = languageTag,
+                roadPrefix = roadPrefix,
+            )
+        }
+        val report = inspectOfficialRoute(route, sessionOverrides, ruleMode, pureFreeRoamEnabled = false)
         if (!report.canPlay) {
-            val reason = report.blockingReason ?: "Route cannot be played."
+            val reason = localizedBlockingReason(report, com.mylittleblover.mkwplayer.R.string.route_cannot_play, languageTag)
             _ui.value = _ui.value.copy(detail = reason)
             return RoutePlayResult.Blocked(reason)
         }
         val unlocked = com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock)
         val openingId = com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.openingIdForOfficialRoute(route.id, route.kind)
-        val openingItem = if (openingId != null && com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(openingId, unlocked)) {
+        val openingItem = if (openingId != null && isExtraVisible(openingId, unlocked)) {
             extraCatalog.otherMusic
                 .filterIsInstance<com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.OtherMusicItem.OverlaidOpening>()
                 .firstOrNull { it.id == openingId }
         } else {
             null
         }
-        val routeTitle = route.displayName(languageTag)
         val stops = route.stops.map {
             com.mylittleblover.mkwplayer.routes.CustomRouteStop(it.stageCode, null)
         }
@@ -4339,9 +5366,10 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             routeTitle = routeTitle,
             officialKind = route.kind,
             suiteMode = suiteMode,
-        ) ?: return RoutePlayResult.Blocked("Missing required course medley audio.").also {
+        ) ?: return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_missing_medley_audio)).also {
             _ui.value = _ui.value.copy(detail = it.reason)
         }
+        cancelPureFreeRoamDurationJob()
         playExtraLinearQueue(
             entries = entries,
             startIndex = 0,
@@ -4373,14 +5401,31 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         customSubstituteTag: String,
     ): RoutePlayResult {
         if (isCeremonyLocked) {
-            return RoutePlayResult.Blocked("Special Cup unlock ceremony is playing.")
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.player_blocked_ceremony))
         }
         if (nativePerformance?.isFading == true) {
-            return RoutePlayResult.Blocked("Playback is currently fading out.")
+            return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.player_blocked_fading))
+        }
+        if (route.pureFreeRoamConfig.enabled) {
+            val legPlans = com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.buildPureFreeRoamLegPlans(
+                route = route,
+                wikiCatalog = routeMusicCatalog,
+            )
+            return startPureFreeRoamRoutePlayback(
+                routeId = "custom:${route.id}",
+                contextKind = LinearSessionStore.ContextKind.CUSTOM_ROUTE,
+                contextId = route.id,
+                routeTitle = route.name,
+                legPlans = legPlans,
+                config = route.pureFreeRoamConfig,
+                loopRoute = route.loopWholeRoute,
+                languageTag = languageTag,
+                roadPrefix = roadPrefix,
+            )
         }
         val report = inspectCustomRoute(route)
         if (!report.canPlay) {
-            val reason = report.blockingReason ?: "Custom route cannot be played."
+            val reason = localizedBlockingReason(report, com.mylittleblover.mkwplayer.R.string.route_custom_cannot_play, languageTag)
             _ui.value = _ui.value.copy(detail = reason)
             return RoutePlayResult.Blocked(reason)
         }
@@ -4396,9 +5441,11 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             customSubstituteTag = customSubstituteTag,
             officialKind = null,
             suiteMode = route.routeSuiteMode,
-        ) ?: return RoutePlayResult.Blocked("Missing required course medley audio.").also {
+            roadRuleMode = route.roadRuleMode,
+        ) ?: return RoutePlayResult.Blocked(str(com.mylittleblover.mkwplayer.R.string.route_missing_medley_audio)).also {
             _ui.value = _ui.value.copy(detail = it.reason)
         }
+        cancelPureFreeRoamDurationJob()
         playExtraLinearQueue(
             entries = entries,
             startIndex = 0,
@@ -4435,6 +5482,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         officialKind: com.mylittleblover.mkwplayer.routes.OfficialRouteKind? = null,
         suiteMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode =
             com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+        roadRuleMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode? = null,
     ): List<LinearQueue.Entry>? {
         val dir = pack?.directory ?: return null
         val resolver = editorSourceResolver(dir)
@@ -4469,6 +5517,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 officialKind = officialKind,
                 suiteMode = suiteMode,
                 userPresets = userPresets,
+                roadRuleMode = roadRuleMode,
             )
             val resolved = CourseFlowRecipeBuilder.resolvePresetRef(
                 courseCode = logical,
@@ -4511,7 +5560,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 presetId = effectiveRef,
                 medleyId = resolved.medley.id.takeIf { matchingUserPreset == null },
                 nativeTransitionEnabled = enableHandover,
-                nativeTransitionSourceLabel = if (handoverOut) "Outro → Next Pre" else null,
+                nativeTransitionSourceLabel = if (handoverOut) str(com.mylittleblover.mkwplayer.R.string.route_handover_outro_next_pre) else null,
                 arrangement = presetDisplayName,
                 durationMs = resolved.medley.durationMs,
                 artworkName = extraCatalog.courseArtwork[logical],
@@ -4528,13 +5577,13 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 val gameName = game?.localizedName(languageTag) ?: item.gameId
                 return LinearQueue.Entry(
                     key = "$routeId:edge:$i:${item.key}",
-                    title = item.localizedDisplayName(languageTag),
+                    title = item.displayTitle(languageTag),
                     subtitle = subLabel,
                     sourceType = LinearSessionStore.SourceType.JUKEBOX,
                     gameId = item.gameId,
                     gameTitle = gameName,
                     yearLabel = game?.yearLabel?.takeIf { it.isNotBlank() },
-                    arrangement = item.localizedArrangement(languageTag),
+                    arrangement = item.displayArrangement(languageTag),
                     ostIndex = item.ostIndex,
                     durationMs = item.durationMs,
                     artworkName = item.ostIndex?.let { "t_%03d.webp".format(java.util.Locale.ROOT, it) },
@@ -4547,6 +5596,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EdgeMusicResolution.KnownPoolComplete -> {
                     val override = res.selectedOverride
                     if (override != null) {
+                        override.jukeboxCode?.let { freeRoamEngine?.recordPlayed(it) }
                         entries += roadEntry(override, legLabel)
                     } else if (res.candidates.isNotEmpty()) {
                         val variants = res.candidates.map { roadEntry(it, legLabel) }
@@ -4555,14 +5605,46 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                         } else {
                             emptyList()
                         }
+                        val engine = freeRoamEngine
+                        val variantByCode = LinkedHashMap<String, LinearQueue.Entry>()
+                        res.candidates.forEachIndexed { candIdx, item ->
+                            val code = item.jukeboxCode?.trim().orEmpty()
+                            if (code.isNotEmpty() && code !in variantByCode) {
+                                variantByCode[code] = variants[candIdx]
+                            }
+                        }
+                        val enginePicker: (() -> LinearQueue.Entry?)? = if (engine != null && variantByCode.isNotEmpty()) {
+                            val fromStage = leg.from
+                            val ruleUsed = res.ruleModeUsed
+                            val available = variantByCode.keys
+                            val orderedCodes = res.candidates.mapNotNull { it.jukeboxCode?.trim()?.takeIf { c -> c.isNotEmpty() } }
+                            when (ruleUsed) {
+                                com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.VS_DAY -> ({
+                                    engine.pickInterstageFirstSong(fromStage = fromStage, isNight = false, availableCodes = available)
+                                        ?.let { variantByCode[it] }
+                                })
+                                com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.VS_NIGHT -> ({
+                                    engine.pickInterstageFirstSong(fromStage = fromStage, isNight = true, availableCodes = available)
+                                        ?.let { variantByCode[it] }
+                                })
+                                com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EffectiveRuleMode.GRAND_PRIX -> ({
+                                    engine.pickGrandPrixEdgeSong(orderedCodes)?.let { variantByCode[it] }
+                                })
+                                else -> null
+                            }
+                        } else {
+                            null
+                        }
                         entries += variants.first().copy(
                             roadCandidateVariants = variants,
                             roadCandidateWeights = weights,
+                            roadCandidatePicker = enginePicker,
                         )
                     }
                 }
                 is com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EdgeMusicResolution.CustomSubstitute -> {
                     val subLabel = if (customSubstituteTag.isNotBlank()) "$legLabel · $customSubstituteTag" else legLabel
+                    res.track.jukeboxCode?.let { freeRoamEngine?.recordPlayed(it) }
                     entries += roadEntry(res.track, subLabel)
                 }
                 else -> Unit // Special approach / Knockout Direct / Missing / Muted -> cleanly handled
@@ -4779,10 +5861,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 val dir = packDir ?: return null
                 val extraId = com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.extraIdFromEntryKey(se.key)
                     ?: se.key.removePrefix("extra:")
-                if (!com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog.isVisible(
-                        extraId,
-                        com.mylittleblover.mkwplayer.ui.CupVisibility.mayReveal(_ui.value.unlock),
-                    )
+                if (!isExtraVisible(extraId)
                 ) return null
                 val extraItem = extraCatalog.otherMusic.firstOrNull { it.id == extraId }
                 when (extraItem) {
@@ -4906,9 +5985,30 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         packPlaybackRequest++
         publish(session.stop())
         nativePerformance = null
+        val entryAssets = plan.entryPreparedAssets[segment]
+        val mergedPrepared = if (entryAssets != null) {
+            val assetsByPath = plan.spec.assets.associateBy { it.path }
+            fun assetPcmBytes(path: String): Long =
+                assetsByPath[path]?.let { it.frames * it.channels * 4L } ?: 0L
+            val combined = LinkedHashSet<String>(entryAssets)
+            var totalBytes = combined.sumOf(::assetPcmBytes)
+            val budgetBytes = 128L * 1024L * 1024L
+            for (path in plan.preparedAssets) {
+                if (path !in combined) {
+                    val cost = assetPcmBytes(path)
+                    if (totalBytes + cost <= budgetBytes) {
+                        combined += path
+                        totalBytes += cost
+                    }
+                }
+            }
+            combined
+        } else {
+            plan.preparedAssets
+        }
         interactivePlan = plan.copy(
             entry = segment,
-            preparedAssets = plan.entryPreparedAssets[segment] ?: plan.preparedAssets,
+            preparedAssets = mergedPrepared,
         )
         _ui.value = _ui.value.copy(flow = _ui.value.flow?.copy(activeSegment=null, performanceStage="", stageKey=null, pendingStageKey=null, performing=false))
     }
@@ -4988,7 +6088,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
                 canAdvance = driver.canAdvance,
                 canEnd = driver.canEnd,
             ),
-            status = "Playing",
+            status = str(com.mylittleblover.mkwplayer.R.string.discovery_playing),
         )
     }
 
@@ -5008,7 +6108,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             _ui.value = _ui.value.copy(
                 selectedKey = key,
                 title = track.name,
-                status = "Unsupported codec",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_status_unsupported_codec),
                 detail = track.reason,
                 canPause = false,
                 canResume = false,
@@ -5021,8 +6121,8 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         if (ready == null) {
             _ui.value = _ui.value.copy(
                 selectedKey = key,
-                status = "Not prepared",
-                detail = "Pick this file again to reopen it.",
+                status = str(com.mylittleblover.mkwplayer.R.string.player_status_not_prepared),
+                detail = str(com.mylittleblover.mkwplayer.R.string.player_detail_repick_file),
             )
             return
         }
@@ -5042,7 +6142,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             frames = ready.frames,
         )
         if (state.detail != null) {
-            _ui.value = _ui.value.copy(status = "Cannot play this file", detail = state.detail)
+            _ui.value = _ui.value.copy(status = str(com.mylittleblover.mkwplayer.R.string.player_err_play_file), detail = state.detail)
             return
         }
 
@@ -5057,7 +6157,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             selectedKey = track.key,
             flow = null,
             title = ready.name,
-            status = "Playing",
+            status = str(com.mylittleblover.mkwplayer.R.string.discovery_playing),
             total = EngineSnapshot.formatPosition(totalFrames, rate),
             canPause = true,
             canResume = false,
@@ -5071,7 +6171,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             detail = if (session.hasOutput) {
                 null
             } else {
-                "No device output on this system; the engine is running without a speaker."
+                str(com.mylittleblover.mkwplayer.R.string.player_detail_no_output)
             },
         )
 
@@ -5104,7 +6204,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             detail = if (granted) {
                 _ui.value.detail
             } else {
-                "Notifications are off, so the media controls will not appear."
+                str(com.mylittleblover.mkwplayer.R.string.player_detail_notif_off)
             },
         )
         unlockCoordinator.onNotificationPermissionResult(getApplication(), granted)
@@ -5233,6 +6333,7 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             nextAdvanceTargetKey=if(driver.finished) null else upcomingId?.let { plan.labels[it] },
             nextAdvanceSyncPoint=if(driver.finished) null else upcomingTrans?.sync,
             canAdvance=driver.canAdvance,canEnd=driver.canEnd,fastPlaying=driver.isFast,canFast=driver.canFast,
+            outros=driver.reachableOutros.sorted(),
             selectedVersion=driver.currentVersion,availableVersions=driver.availableVersions,
             selectedRegion=driver.currentRegion,availableRegions=driver.availableRegions,canCancelPending=driver.canCancelPending,
             sourceFrame=liveSourceFrame?.let { 0L },sourceFrames=srcLen,loopStart=segment?.loop?.start,loopEnd=segment?.loop?.end,
@@ -5278,11 +6379,11 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         val currentUi = _ui.value
         val updated = currentUi.copy(
             status = when {
-                state.detail != null -> "Failed"
-                state.playing -> "Playing"
-                state.paused -> "Paused"
-                state.title.isEmpty() -> "No track loaded"
-                else -> "Stopped"
+                state.detail != null -> str(com.mylittleblover.mkwplayer.R.string.player_status_failed)
+                state.playing -> str(com.mylittleblover.mkwplayer.R.string.discovery_playing)
+                state.paused -> str(com.mylittleblover.mkwplayer.R.string.discovery_paused)
+                state.title.isEmpty() -> str(com.mylittleblover.mkwplayer.R.string.player_status_no_track)
+                else -> str(com.mylittleblover.mkwplayer.R.string.stage_stopped)
             },
             position = if (!state.playing || currentUi.position == "--:--") formattedPos else currentUi.position,
             total = formattedTotal,
@@ -5344,7 +6445,14 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
 
     /** Natural completion stops only this session; it must not cancel a newer user selection. */
     private fun stopTransport(cancelPendingOpen: Boolean) {
-        if (cancelPendingOpen) packPlaybackRequest++
+        cancelPureFreeRoamDurationJob()
+        if (cancelPendingOpen) {
+            packPlaybackRequest++
+            pollJob?.cancel()
+            pollJob = null
+            visualizerJob?.cancel()
+            visualizerJob = null
+        }
         nativePerformance=null
         performance?.stop()
         performance=null
@@ -5354,18 +6462,45 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
             linearCoordinator.clearSession()
             linearCoordinator.clearSavedSession()
         }
-        publish(session.stop())
+        val stoppedState = session.stop()
+        publish(stoppedState)
         val zeroPos = EngineSnapshot.formatPosition(0, rate)
         _progressUi.value = ProgressUi(position = zeroPos, total = _ui.value.total, progress = 0f)
-        _ui.value = _ui.value.copy(progress = 0f, position = zeroPos,
+        _ui.value = _ui.value.copy(
+            progress = 0f,
+            position = zeroPos,
+            canPause = false,
+            canResume = false,
+            canStop = false,
             trackLoading = if (cancelPendingOpen) false else _ui.value.trackLoading,
             loadingTrackCode = if (cancelPendingOpen) null else _ui.value.loadingTrackCode,
             loadingTrackTitle = if (cancelPendingOpen) null else _ui.value.loadingTrackTitle,
-            linearMode = false, linearTrack = null, canSeek = false,
-            abLoopStartFrame = null, abLoopEndFrame = null,
+            linearMode = false,
+            linearTrack = null,
+            canSeek = false,
+            abLoopStartFrame = null,
+            abLoopEndFrame = null,
             continueListening = if (cancelPendingOpen) null else _ui.value.continueListening,
-            flow=_ui.value.flow?.copy(performing=false,performanceStage="Stopped",stageKey="Stopped",pendingStageKey=null,canAdvance=false,canEnd=false,fastPlaying=false,
-                canFast=false,canCancelPending=false,fading=false,fadeRemainingFrames=null,voiceCount=0,sourceFrame=null,availableRegions=emptySet(),availableVersions=emptySet(),selectedRegion=null,selectedVersion=null))
+            flow = _ui.value.flow?.copy(
+                performing = false,
+                performanceStage = "Stopped",
+                stageKey = "Stopped",
+                pendingStageKey = null,
+                canAdvance = false,
+                canEnd = false,
+                fastPlaying = false,
+                canFast = false,
+                canCancelPending = false,
+                fading = false,
+                fadeRemainingFrames = null,
+                voiceCount = 0,
+                sourceFrame = null,
+                availableRegions = emptySet(),
+                availableVersions = emptySet(),
+                selectedRegion = null,
+                selectedVersion = null,
+            ),
+        )
         PlaybackService.stop(getApplication())
     }
 
@@ -5408,11 +6543,16 @@ internal class PlayerViewModel(application: Application) : AndroidViewModel(appl
         pollJob = null
         visualizerJob?.cancel()
         visualizerJob = null
+        PlaybackTimers.onSleepExpired = null
+        PlaybackTimers.onInteractiveActionTriggered = null
         super.onCleared()
     }
 
     companion object {
         const val SPECTRUM_BAND_COUNT = 24
+
+        /** Context id identifying authentic v1.8.0 Free Roam dynamic radio sessions. */
+        const val FREE_ROAM_CONTEXT_ID = "freeroam"
 
         /** 200 ms keeps the progress bar smooth without touching the audio thread. */
         const val POLL_INTERVAL_MS = 200L

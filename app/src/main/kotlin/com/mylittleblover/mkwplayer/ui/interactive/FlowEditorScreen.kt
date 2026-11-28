@@ -1,13 +1,16 @@
 package com.mylittleblover.mkwplayer.ui.interactive
 
-import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,16 +32,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +66,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,18 +78,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mylittleblover.mkwplayer.R
+import com.mylittleblover.mkwplayer.audio.AudioExportSettings
 import com.mylittleblover.mkwplayer.audio.BwavWaveformExtractor
 import com.mylittleblover.mkwplayer.audio.EngineSnapshot
+import com.mylittleblover.mkwplayer.graph.MusicGraphBuilder
 import com.mylittleblover.mkwplayer.interactive.CourseFlowRecipeBuilder
+import com.mylittleblover.mkwplayer.interactive.CourseMedleyCatalog
 import com.mylittleblover.mkwplayer.library.CoursePreset
 import com.mylittleblover.mkwplayer.library.FlowStep
 import com.mylittleblover.mkwplayer.library.PresetRefs
+import com.mylittleblover.mkwplayer.ui.AppMotion
+import com.mylittleblover.mkwplayer.ui.SmoothProgressIndicator
 import com.mylittleblover.mkwplayer.ui.kit.MkwBottomSheet
 import com.mylittleblover.mkwplayer.ui.kit.MkwButtonSize
 import com.mylittleblover.mkwplayer.ui.kit.MkwCard
+import com.mylittleblover.mkwplayer.ui.kit.MkwDangerButton
+import com.mylittleblover.mkwplayer.ui.kit.MkwDialog
 import com.mylittleblover.mkwplayer.ui.kit.MkwFilterPill
+import com.mylittleblover.mkwplayer.ui.kit.MkwGhostButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwIconButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwIconButtonTone
+import com.mylittleblover.mkwplayer.ui.kit.MkwInkButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwInsetBox
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
 import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
@@ -87,8 +106,12 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwRoseButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSecondaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSurfaceTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwTextField
+import com.mylittleblover.mkwplayer.ui.rememberReducedMotion
+import com.mylittleblover.mkwplayer.ui.routes.builtInSuiteLabelRes
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * Event-driven course flow preset builder.
@@ -109,9 +132,20 @@ internal fun FlowEditorScreen(
     onLoadWaveform: suspend (stem: String) -> BwavWaveformExtractor.WaveformPeaks? = { null },
     onPreviewSeam: (CoursePreset, seamIndex: Int) -> Unit = { _, _ -> },
     onCompileExport: (CoursePreset) -> String? = { null },
+    isRenderingAudio: Boolean = false,
+    renderAudioProgress: Float = 0f,
+    renderAudioStatus: String? = null,
+    renderAudioError: String? = null,
+    renderAudioOutputPath: String? = null,
+    outputTrimEnabled: Boolean = true,
+    exportFolderDisplay: String? = null,
+    onRenderAudio: ((CoursePreset) -> Unit)? = null,
+    onCancelRenderAudio: (() -> Unit)? = null,
+    onDismissRenderDialog: (() -> Unit)? = null,
 ) {
-    val defaultName = remember(courseTitle, existingPreset) {
-        existingPreset?.name ?: "$courseTitle Custom"
+    val localizedDefaultName = stringResource(R.string.flow_editor_default_preset_name, courseTitle)
+    val defaultName = remember(localizedDefaultName, existingPreset) {
+        existingPreset?.name ?: localizedDefaultName
     }
     var presetName by rememberSaveable(existingPreset?.id, inventory.courseCode) {
         mutableStateOf(defaultName)
@@ -154,8 +188,17 @@ internal fun FlowEditorScreen(
     var fadeOutMs by rememberSaveable(existingPreset?.id, inventory.courseCode) {
         mutableIntStateOf(existingPreset?.fadeOutMs ?: 3000)
     }
+    var outroToNextPre by rememberSaveable(existingPreset?.id, inventory.courseCode) {
+        mutableStateOf(existingPreset?.outroToNextPre ?: true)
+    }
     var expandedWaveformStep by rememberSaveable(existingPreset?.id, inventory.courseCode) {
         mutableStateOf<Int?>(null)
+    }
+    var activeBuiltInVariant by rememberSaveable(existingPreset?.id, inventory.courseCode) {
+        mutableStateOf<String?>(null)
+    }
+    var showRenderDialog by rememberSaveable(existingPreset?.id, inventory.courseCode) {
+        mutableStateOf(false)
     }
 
     val waveformCache = remember(inventory.courseCode) {
@@ -169,15 +212,20 @@ internal fun FlowEditorScreen(
         CourseFlowRecipeBuilder.stepSourceOffsets(steps, selectedOutroNumber, inventory)
     }
 
+    val tailOutros = remember(steps, inventory) {
+        inventory.availableOutrosForTail(steps)
+    }
+
     // Ensure outro selection remains strictly event-legal and locks/snaps the host exit point on courses
-    LaunchedEffect(steps, selectedOutroNumber, inventory, stepSourceOffsets) {
-        if (selectedOutroNumber != null && !inventory.supportsOutroEnding(steps)) {
+    LaunchedEffect(steps, selectedOutroNumber, inventory, stepSourceOffsets, tailOutros) {
+        val outroNum = selectedOutroNumber
+        if (outroNum != null && tailOutros.none { it.number == outroNum }) {
             selectedOutroNumber = null
             return@LaunchedEffect
         }
         if (inventory.courseCode.startsWith("extra:")) return@LaunchedEffect
-        val outroNum = selectedOutroNumber ?: return@LaunchedEffect
-        val outro = inventory.outros.firstOrNull { it.number == outroNum } ?: return@LaunchedEffect
+        if (outroNum == null) return@LaunchedEffect
+        val outro = tailOutros.firstOrNull { it.number == outroNum } ?: return@LaunchedEffect
         if (outro.mainTriggerPoints.isEmpty() || steps.isEmpty()) return@LaunchedEffect
         val lastStep = steps.last()
         val lastPart = inventory.part(lastStep.roleKey)
@@ -213,7 +261,9 @@ internal fun FlowEditorScreen(
 
     fun draftPreset(): CoursePreset {
         val stableId = existingPreset?.id ?: PresetRefs.USER_PREFIX + UUID.randomUUID().toString()
-        val effectiveOutro = selectedOutroNumber.takeIf { inventory.supportsOutroEnding(steps) }
+        val effectiveOutro = selectedOutroNumber?.takeIf { num ->
+            inventory.availableOutrosForTail(steps).any { it.number == num }
+        }
         return CoursePreset(
             id = stableId,
             courseCode = inventory.courseCode,
@@ -227,13 +277,19 @@ internal fun FlowEditorScreen(
             },
             outroNumber = effectiveOutro,
             fadeOutMs = if (effectiveOutro == null) fadeOutMs else 0,
-            outroToNextPre = effectiveOutro != null,
+            outroToNextPre = effectiveOutro != null && outroToNextPre,
             updatedAtEpochMs = System.currentTimeMillis(),
         )
     }
 
     val compiledStats = remember(steps, selectedOutroNumber, fadeOutMs, inventory) {
         CourseFlowRecipeBuilder.estimateTimelineFrames(steps, selectedOutroNumber, fadeOutMs, inventory)
+    }
+    val builtInSuites = remember(inventory) {
+        inventory.builtInPresets
+            .filterNot { it.isKnockout }
+            .distinctBy { it.medley.normalizedSuiteVariant }
+            .sortedBy { it.medley.suiteSortOrder }
     }
 
     val context = LocalContext.current
@@ -332,42 +388,60 @@ internal fun FlowEditorScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    if (onRenderAudio != null || isRenderingAudio || renderAudioOutputPath != null || renderAudioError != null) {
+                        val renderPct = (renderAudioProgress.coerceIn(0f, 1f) * 100f).roundToInt()
+                        MkwInkButton(
+                            text = if (isRenderingAudio) {
+                                stringResource(R.string.flow_render_button_progress_fmt, renderPct)
+                            } else {
+                                stringResource(R.string.flow_render_button)
+                            },
+                            onClick = { showRenderDialog = true },
+                            enabled = steps.isNotEmpty() || isRenderingAudio,
+                            leadingIcon = Icons.Default.LibraryMusic,
+                            size = MkwButtonSize.Regular,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
 
-            // Quick templates strictly adhering to event-driven flow rules
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = stringResource(R.string.flow_editor_templates_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MkwKitTokens.Palette.inkSecondary,
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+            // Built-in medley suite presets strictly scoped to variants available for this course
+            if (builtInSuites.isNotEmpty()) {
+                item {
+                    MkwCard(
+                        tone = MkwSurfaceTone.Porcelain,
+                        contentPadding = PaddingValues(14.dp),
                     ) {
-                        MkwFilterPill(
-                            label = stringResource(R.string.flow_editor_template_standard),
-                            selected = false,
-                            onClick = {
-                                steps = inventory.standardMedleyTemplate()
-                                selectedOutroNumber = inventory.outros.firstOrNull()?.number
-                                expandedWaveformStep = null
-                            },
-                            role = Role.Button,
+                        Text(
+                            text = stringResource(R.string.flow_editor_builtin_suites_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MkwKitTokens.Palette.ink,
                         )
-                        if (inventory.courseCode != "Rainbow") {
-                            MkwFilterPill(
-                                label = stringResource(R.string.flow_editor_template_fast),
-                                selected = false,
-                                onClick = {
-                                    steps = inventory.fastRaceTemplate()
-                                    selectedOutroNumber = null
-                                    expandedWaveformStep = null
-                                },
-                                role = Role.Button,
-                            )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            builtInSuites.forEach { summary ->
+                                val variantKey = summary.medley.normalizedSuiteVariant
+                                val suiteLabel = stringResource(builtInSuiteLabelRes(variantKey))
+                                MkwFilterPill(
+                                    label = suiteLabel,
+                                    selected = activeBuiltInVariant == variantKey,
+                                    onClick = {
+                                        val draft = decodeMedleyToFlowDraft(summary.medley, inventory)
+                                        steps = draft.steps
+                                        selectedOutroNumber = draft.endingOutro
+                                        fadeOutMs = draft.fadeOutMs
+                                        outroToNextPre = draft.outroToNextPre
+                                        expandedWaveformStep = null
+                                        activeBuiltInVariant = variantKey
+                                    },
+                                    role = Role.Button,
+                                )
+                            }
                         }
                     }
                 }
@@ -419,9 +493,9 @@ internal fun FlowEditorScreen(
                     nextStep?.roleKey == "Area3_Pre"
                 val isTailOutroHost = !inventory.courseCode.startsWith("extra:") &&
                     index == steps.lastIndex &&
-                    inventory.supportsOutroEnding(steps)
+                    tailOutros.isNotEmpty()
                 val activeOutro = middlePairedOutro ?: if (isTailOutroHost) {
-                    selectedOutroNumber?.let { n -> inventory.outros.firstOrNull { it.number == n } }
+                    selectedOutroNumber?.let { n -> tailOutros.firstOrNull { it.number == n } }
                 } else null
                 val outroTriggers = if (activeOutro != null && part != null) {
                     CourseFlowRecipeBuilder.reachableOutroTriggers(
@@ -434,11 +508,12 @@ internal fun FlowEditorScreen(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FlowStepEventCard(
+                        courseCode = inventory.courseCode,
                         index = index,
                         step = step,
                         part = part,
                         prevRole = prevRole,
-                        incomingEventLabel = inventory.describeTransitionEvent(prevRole, step.roleKey),
+                        incomingEventLabel = localizedTransitionEventLabel(inventory, prevRole, step.roleKey),
                         canRemove = canRemoveStep,
                         isWaveformExpanded = isWaveformOpen,
                         waveformReady = waveformReady,
@@ -476,6 +551,7 @@ internal fun FlowEditorScreen(
                                 selectedOutroNumber = null
                             }
                             steps = updatedSteps
+                            activeBuiltInVariant = null
                         },
                         onToggleWaveform = {
                             expandedWaveformStep = if (isWaveformOpen) null else index
@@ -483,6 +559,7 @@ internal fun FlowEditorScreen(
                         onRemove = {
                             if (canRemoveStep) {
                                 steps = steps.toMutableList().apply { removeAt(index) }
+                                activeBuiltInVariant = null
                                 if (expandedWaveformStep == index) expandedWaveformStep = null
                                 else if ((expandedWaveformStep ?: -1) > index) expandedWaveformStep = expandedWaveformStep!! - 1
                             }
@@ -495,6 +572,7 @@ internal fun FlowEditorScreen(
                                     updated
                                 }
                                 steps = steps.toMutableList().apply { set(index, nextStepVal) }
+                                activeBuiltInVariant = null
                             }
                         },
                     )
@@ -503,12 +581,12 @@ internal fun FlowEditorScreen(
                     val updatedNext = steps.getOrNull(index + 1)
                     if (updatedNext != null) {
                         SeamTransitionRow(
-                            eventLabel = inventory.describeTransitionEvent(step.roleKey, updatedNext.roleKey),
+                            eventLabel = localizedTransitionEventLabel(inventory, step.roleKey, updatedNext.roleKey),
                             onPreviewSeam = { onPreviewSeam(draftPreset(), index) },
                         )
-                    } else if (selectedOutroNumber != null && inventory.supportsOutroEnding(steps)) {
+                    } else if (selectedOutroNumber != null && tailOutros.any { it.number == selectedOutroNumber }) {
                         SeamTransitionRow(
-                            eventLabel = "Outro %02d Handover".format(selectedOutroNumber),
+                            eventLabel = stringResource(R.string.flow_editor_outro_handover, selectedOutroNumber!!),
                             onPreviewSeam = { onPreviewSeam(draftPreset(), index) },
                         )
                     }
@@ -544,11 +622,11 @@ internal fun FlowEditorScreen(
                         ) {
                             allowedNext.forEach { role ->
                                 val part = inventory.part(role)
-                                val eventText = (if (tailRole == null) {
-                                    roleDisplayLabel(role)
+                                val eventText = if (tailRole == null) {
+                                    roleDisplayLabel(role, inventory.courseCode)
                                 } else {
-                                    inventory.describeTransitionEvent(tailRole, role)
-                                }).replace(" -> ", " \u2192 ")
+                                    localizedTransitionEventLabel(inventory, tailRole, role)
+                                }
                                 MkwFilterPill(
                                     label = eventText,
                                     selected = false,
@@ -561,6 +639,7 @@ internal fun FlowEditorScreen(
                                             loopCount = defaultLoop,
                                             exitFrame = if (part?.isBridgeLocked == true) null else part?.defaultExitFrame,
                                         )
+                                        activeBuiltInVariant = null
                                     },
                                     leadingIcon = Icons.Default.Add,
                                     role = Role.Button,
@@ -573,23 +652,18 @@ internal fun FlowEditorScreen(
 
             // Verified Outro / Fade ending
             item {
-                val outroAllowed = remember(steps, inventory) {
-                    inventory.supportsOutroEnding(steps)
-                }
                 val noFadeLabel = stringResource(R.string.flow_editor_no_fade)
                 val options = buildList<DrawerOption<Pair<Int?, Int>>> {
-                    if (outroAllowed) {
-                        inventory.outros.forEach { outro ->
-                            add(
-                                DrawerOption(
-                                    value = outro.number to 0,
-                                    label = stringResource(R.string.flow_editor_outro_item, outro.number),
-                                    subtitle = if (outro.supportsNativeHandover) {
-                                        stringResource(R.string.flow_editor_outro_native_ready)
-                                    } else null,
-                                ),
-                            )
-                        }
+                    tailOutros.forEach { outro ->
+                        add(
+                            DrawerOption(
+                                value = outro.number to 0,
+                                label = stringResource(R.string.flow_editor_outro_item, outro.number),
+                                subtitle = if (outro.supportsNativeHandover) {
+                                    stringResource(R.string.flow_editor_outro_native_ready)
+                                } else null,
+                            ),
+                        )
                     }
                     listOf(1000, 2000, 3000, 5000, 10000, 0).forEach { ms ->
                         add(
@@ -602,7 +676,7 @@ internal fun FlowEditorScreen(
                     }
                 }
                 val currentSelection: Pair<Int?, Int> =
-                    if (outroAllowed && selectedOutroNumber != null) {
+                    if (selectedOutroNumber != null && tailOutros.any { it.number == selectedOutroNumber }) {
                         selectedOutroNumber to 0
                     } else {
                         null to fadeOutMs
@@ -619,7 +693,14 @@ internal fun FlowEditorScreen(
                         selectedOutroNumber = outroNum
                         if (outroNum == null) {
                             fadeOutMs = fadeMsChosen
+                            outroToNextPre = false
+                        } else {
+                            outroToNextPre = tailOutros
+                                .firstOrNull { it.number == outroNum }
+                                ?.supportsNativeHandover
+                                ?: true
                         }
+                        activeBuiltInVariant = null
                     },
                 )
             }
@@ -709,6 +790,31 @@ internal fun FlowEditorScreen(
             }
         }
     }
+
+    val renderDialogVisible = showRenderDialog || isRenderingAudio || renderAudioError != null || renderAudioOutputPath != null
+    if (renderDialogVisible) {
+        FlowRenderAudioDialog(
+            presetName = presetName.trim().ifBlank { defaultName },
+            sampleRate = inventory.sampleRate,
+            durationFormatted = EngineSnapshot.formatPosition(compiledStats, inventory.sampleRate),
+            outputTrimEnabled = outputTrimEnabled,
+            exportFolderDisplay = exportFolderDisplay?.takeIf { it.isNotBlank() } ?: AudioExportSettings.DEFAULT_RELATIVE_PATH,
+            isRenderingAudio = isRenderingAudio,
+            renderAudioProgress = renderAudioProgress,
+            renderAudioStatus = renderAudioStatus,
+            renderAudioError = renderAudioError,
+            renderAudioOutputPath = renderAudioOutputPath,
+            canStartRender = onRenderAudio != null && steps.isNotEmpty(),
+            onStartRender = { onRenderAudio?.invoke(draftPreset()) },
+            onCancelRender = { onCancelRenderAudio?.invoke() },
+            onDismiss = {
+                if (!isRenderingAudio) {
+                    showRenderDialog = false
+                    onDismissRenderDialog?.invoke()
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -749,6 +855,7 @@ private fun SeamTransitionRow(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FlowStepEventCard(
+    courseCode: String,
     index: Int,
     step: FlowStep,
     part: CourseFlowRecipeBuilder.StagePartInfo?,
@@ -795,7 +902,7 @@ private fun FlowStepEventCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = "${index + 1}. ${roleDisplayLabel(step.roleKey)}",
+                        text = "${index + 1}. ${roleDisplayLabel(step.roleKey, courseCode)}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MkwKitTokens.Palette.ink,
@@ -816,10 +923,12 @@ private fun FlowStepEventCard(
                     val totalTime = EngineSnapshot.formatPosition(part.frames, part.sampleRate)
                     Text(
                         text = when {
-                            isLockedBridge -> "Bridge_ToFull $exitTime / $totalTime"
+                            isLockedBridge -> stringResource(R.string.flow_editor_bridge_handover_fmt, exitTime, totalTime)
                             isOutroHandoverLocked -> stringResource(R.string.flow_editor_area2_outro_handover, exitTime, totalTime)
-                            isOutroSingleLocked -> "Outro %02d Exit %s / %s".format(activeOutroNumber, exitTime, totalTime)
-                            isOutroMultiConstrained -> "Outro %02d Fixed Cue %s / %s".format(activeOutroNumber, exitTime, totalTime)
+                            isOutroSingleLocked && activeOutroNumber != null ->
+                                stringResource(R.string.flow_editor_outro_exit_fmt, activeOutroNumber, exitTime, totalTime)
+                            isOutroMultiConstrained && activeOutroNumber != null ->
+                                stringResource(R.string.flow_editor_outro_fixed_cue_fmt, activeOutroNumber, exitTime, totalTime)
                             else -> "$exitTime / $totalTime"
                         },
                         style = MkwKitTokens.tabular(MaterialTheme.typography.labelSmall),
@@ -941,7 +1050,7 @@ private fun FlowStepEventCard(
                     )
                     MkwIconButton(
                         icon = Icons.Default.Remove,
-                        contentDescription = "-",
+                        contentDescription = stringResource(R.string.flow_editor_loop_decrease),
                         onClick = { onUpdate(step.copy(loopCount = (step.loopCount - 1).coerceAtLeast(0))) },
                         enabled = step.loopCount > 0,
                         tone = MkwIconButtonTone.Bordered,
@@ -950,7 +1059,7 @@ private fun FlowStepEventCard(
                     )
                     MkwIconButton(
                         icon = Icons.Default.Add,
-                        contentDescription = "+",
+                        contentDescription = stringResource(R.string.flow_editor_loop_increase),
                         onClick = { onUpdate(step.copy(loopCount = (step.loopCount + 1).coerceAtMost(8))) },
                         enabled = step.loopCount < 8,
                         tone = MkwIconButtonTone.Bordered,
@@ -999,8 +1108,8 @@ private fun FlowStepEventCard(
 
             AnimatedVisibility(
                 visible = isWaveformExpanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
+                enter = fadeIn(tween(160, easing = AppMotion.easeOut)) + expandVertically(tween(180, easing = AppMotion.easeOut)),
+                exit = fadeOut(tween(120, easing = AppMotion.easeOut)) + shrinkVertically(tween(160, easing = AppMotion.easeOut)),
             ) {
                 val waveformCandidates = if (isOutroMultiConstrained) {
                     outroTriggers.map {
@@ -1013,10 +1122,27 @@ private fun FlowStepEventCard(
                     part.exitCandidates
                 }
                 val waveformLockLabel = when {
-                    isLockedBridge -> "Bridge_ToFull"
-                    isOutroHandoverLocked -> "Outro_ToNextPre"
-                    isOutroSingleLocked && activeOutroNumber != null -> "Outro %02d".format(activeOutroNumber)
+                    isLockedBridge -> stringResource(R.string.flow_editor_lock_bridge_handover)
+                    isOutroHandoverLocked -> stringResource(R.string.flow_editor_lock_outro_handover)
+                    isOutroSingleLocked && activeOutroNumber != null ->
+                        stringResource(R.string.flow_editor_outro_item, activeOutroNumber)
                     else -> null
+                }
+                val waveformLockedHint = when {
+                    isLockedBridge -> stringResource(R.string.flow_editor_bridge_locked)
+                    isOutroHandoverLocked -> stringResource(R.string.flow_editor_outro_handover_locked)
+                    isOutroSingleLocked && activeOutroNumber != null ->
+                        stringResource(R.string.flow_editor_outro_locked, activeOutroNumber)
+                    else -> null
+                }
+                val stepGridBeats = if (!isOutroMultiConstrained && part.isGridConstrained) {
+                    when {
+                        courseCode == "DonkeyKong" && step.roleKey == "Main" -> 4
+                        courseCode == "DonkeyKong" && step.roleKey in setOf("Region2", "Region3", "Region4") -> 8
+                        else -> com.mylittleblover.mkwplayer.interactive.MinfCatalog.preTransitionGridBeats(courseCode, step.roleKey)
+                    }
+                } else {
+                    null
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ZoomableWaveformEditor(
@@ -1029,8 +1155,10 @@ private fun FlowStepEventCard(
                         bridgeLocked = isExitLocked,
                         loopStart = part.loopStart,
                         loopEnd = part.loopEnd,
-                        constrainToCandidatesOnly = isOutroMultiConstrained,
+                        constrainToCandidatesOnly = isOutroMultiConstrained || part.isGridConstrained,
                         lockLabel = waveformLockLabel,
+                        gridBeats = stepGridBeats,
+                        lockedHint = waveformLockedHint,
                         onSelectExitFrame = { chosenFrame ->
                             if (!isExitLocked) {
                                 onUpdate(step.copy(exitFrame = chosenFrame))
@@ -1055,25 +1183,776 @@ private fun canSafelyRemoveMiddle(
     return nextRole in inventory.allowedNextRoles(prefix)
 }
 
-private fun roleDisplayLabel(roleKey: String): String = when {
-    roleKey == "Pre_Short" -> "Pre Short"
-    roleKey == "Pre" -> "Pre (Intro)"
-    roleKey == "Bridge" -> "Bridge"
-    roleKey == "Main" -> "Main Loop"
-    roleKey == "Main_Speaker" -> "Main (Speaker)"
-    roleKey == "Fast" -> "Final Lap (Fast)"
-    roleKey == "Fast_Speaker" -> "Final Lap (Speaker)"
-    roleKey == "Pattern2" -> "Pattern 2"
-    roleKey == "Fast_Pattern2" -> "Fast Pattern 2"
-    roleKey == "Area1_Pre" -> "Area 1 Pre"
-    roleKey == "Area1_Bridge" -> "Area 1 Bridge"
-    roleKey == "Area1_Inst" -> "Area 1 (Inst Only)"
-    roleKey == "Area1" -> "Area 1"
-    roleKey == "Area2" -> "Area 2"
-    roleKey.startsWith("Area2_Outro") -> "Area 2 Outro ${roleKey.removePrefix("Area2_Outro")}"
-    roleKey == "Area3_Pre" -> "Area 3 Pre"
-    roleKey == "Area3" -> "Area 3"
-    roleKey == "Final_Pre" -> "Final Lap Pre"
-    roleKey == "Final" -> "Final Lap"
-    else -> roleKey.replace('_', ' ')
+@Composable
+private fun roleDisplayLabel(roleKey: String, courseCode: String? = null): String {
+    val course = normalizeCourseCode(courseCode)
+    return when {
+        roleKey == "Pre_Short" -> stringResource(R.string.stage_short_prelude)
+        roleKey == "Pre" -> stringResource(R.string.flow_editor_role_pre)
+        roleKey == "Bridge" -> stringResource(R.string.stage_bridge)
+        roleKey == "Main" && course in setOf("SnowMountain", "Cinema", "DonkeyKong") -> stageText("Main", course)
+        roleKey == "Main" -> stringResource(R.string.flow_editor_role_main)
+        roleKey == "Main_Speaker" -> stringResource(R.string.flow_editor_role_main_speaker)
+        roleKey == "Fast" && course in setOf("SnowMountain", "Cinema") -> stageText("Fast", course)
+        roleKey == "Fast" -> stringResource(R.string.stage_final_lap)
+        roleKey == "Fast_Speaker" -> stringResource(R.string.flow_editor_role_fast_speaker)
+        roleKey == "Pattern2" -> stageText("Pattern2", course)
+        roleKey == "Fast_Pattern2" -> stageText("Fast_Pattern2", course)
+        roleKey == "Area1_Pre" || roleKey == "Area1_Bridge" || roleKey == "Area1_Inst" ||
+            roleKey == "Area1" || roleKey == "Area2" || roleKey.startsWith("Area2_Outro") ||
+            roleKey == "Area3_Pre" || roleKey == "Area3" || roleKey == "Final_Pre" || roleKey == "Final" ->
+            stageText(roleKey, "Rainbow")
+        roleKey == "Harmonica" -> stringResource(R.string.stage_title_extended)
+        roleKey == "BrassCut" -> stringResource(R.string.stage_title_brasscut)
+        roleKey.startsWith("Region") -> stageText(roleKey, course ?: "DonkeyKong")
+        else -> roleKey.replace('_', ' ')
+    }
+}
+
+@Composable
+private fun localizedTransitionEventLabel(
+    inventory: CourseFlowRecipeBuilder.CourseInventory,
+    prevRole: String?,
+    nextRole: String,
+): String {
+    val courseCode = inventory.courseCode
+    val nextLabel = roleDisplayLabel(nextRole, courseCode)
+    return when {
+        prevRole == null -> stringResource(R.string.flow_editor_event_entry, nextLabel)
+        prevRole == "Pre_Short" && nextRole == "Pre" ->
+            stringResource(R.string.flow_editor_event_pre_short_aligned)
+        prevRole == "Harmonica" && nextRole == "Main" ->
+            stringResource(R.string.flow_editor_event_exit_to_title_normal)
+        nextRole in setOf("Bridge", "Area1_Bridge") ->
+            stringResource(R.string.flow_editor_event_phase_overlap, nextLabel)
+        prevRole == "Area2" && nextRole.startsWith("Area2_Outro") ->
+            stringResource(R.string.flow_editor_event_full_to_outro, nextRole.removePrefix("Area2_Outro"), nextLabel)
+        prevRole.startsWith("Area2_Outro") && nextRole == "Area3_Pre" ->
+            stringResource(R.string.flow_editor_event_outro_to_next_pre, nextLabel)
+        prevRole in setOf("Bridge", "Area1_Bridge") ->
+            stringResource(R.string.flow_editor_event_bridge_to_full, nextLabel)
+        courseCode in setOf("Cinema", "SnowMountain") &&
+            prevRole in setOf("Main", "Pattern2", "Fast", "Fast_Pattern2") &&
+            nextRole in setOf("Main", "Pattern2", "Fast", "Fast_Pattern2") &&
+            (prevRole in setOf("Main", "Pattern2")) == (nextRole in setOf("Main", "Pattern2")) -> {
+            val exitingSnowP2 = courseCode == "SnowMountain" && prevRole in setOf("Pattern2", "Fast_Pattern2")
+            val fadeText = stringResource(R.string.settings_switch_fade_chip_sec_fmt, if (exitingSnowP2) "2.0" else "0.5")
+            stringResource(R.string.flow_editor_event_parallel_sync, fadeText, nextLabel)
+        }
+        courseCode == "Rainbow" && prevRole in setOf("Area1", "Area1_Inst") && nextRole == "Area2" ->
+            stringResource(R.string.flow_editor_event_split_stem_fade, nextLabel)
+        courseCode == "Rainbow" && prevRole == "Area3" && nextRole == "Final_Pre" ->
+            stringResource(R.string.flow_editor_event_rainbow_area3_crossfade, nextLabel)
+        courseCode == "KoopaTroopaBeach" &&
+            ((prevRole == "Main" && nextRole == "Main_Speaker") ||
+                (prevRole == "Main_Speaker" && nextRole == "Main") ||
+                (prevRole == "Fast" && nextRole == "Fast_Speaker") ||
+                (prevRole == "Fast_Speaker" && nextRole == "Fast")) ->
+            stringResource(R.string.flow_editor_event_speaker_overlay, nextLabel)
+        courseCode == "Rainbow" &&
+            ((prevRole == "Area1_Inst" && nextRole == "Area1") ||
+                (prevRole == "Area1" && nextRole == "Area1_Inst")) ->
+            stringResource(R.string.flow_editor_event_melody_overlay, nextLabel)
+        courseCode == "Rainbow" && nextRole == "Final" &&
+            prevRole in setOf("Area1_Pre", "Area1_Inst", "Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre") &&
+            inventory.hasFanfareAsset ->
+            stringResource(R.string.flow_editor_event_rainbow_fanfare, nextLabel)
+        nextRole in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") &&
+            prevRole !in setOf("Bridge", "Fast", "Fast_Pattern2", "Fast_Speaker") &&
+            inventory.hasFanfareAsset && courseCode != "Rainbow" ->
+            stringResource(R.string.flow_editor_event_final_lap_ff, nextLabel)
+        nextRole in setOf("Fast", "Fast_Pattern2", "Fast_Speaker") ->
+            stringResource(R.string.flow_editor_event_direct_fade, nextLabel)
+        else -> stringResource(R.string.flow_editor_event_next_bar_sync, nextLabel)
+    }
+}
+
+/**
+ * Decoded editable flow structure extracted from a built-in [CourseMedleyCatalog.Medley].
+ */
+internal data class FlowDraft(
+    val steps: List<FlowStep>,
+    val endingOutro: Int?,
+    val fadeOutMs: Int,
+    val outroToNextPre: Boolean,
+)
+
+private val OUTRO_STEM_NUMBER_REGEX = Regex("Outro(\\d{2})$", RegexOption.IGNORE_CASE)
+
+private data class DecodedClipSlice(
+    val start: Long,
+    val sourceOffset: Long,
+    var effectiveLength: Long,
+    val fadeOut: Long,
+    val volumePoints: List<MusicGraphBuilder.EnvelopePoint>,
+)
+
+private data class DecodedTaggedClip(
+    val roleKey: String?,
+    val outroOnlyNumber: Int?,
+    val rainbowOutroNumber: Int?,
+    val slice: DecodedClipSlice,
+)
+
+private data class DecodedRoleGroup(
+    val roleKey: String,
+    val slices: MutableList<DecodedClipSlice>,
+)
+
+private sealed interface StemClassification {
+    data object Skip : StemClassification
+    data class Secondary(val stemLower: String) : StemClassification
+    data class Part(val roleKey: String, val rainbowOutroNumber: Int? = null) : StemClassification
+    data class OutroOnly(val outroNumber: Int) : StemClassification
+}
+
+/**
+ * Decodes a built-in [CourseMedleyCatalog.Medley] back into an editable [FlowDraft] (steps,
+ * loop counts, exit frames, ending outro, native handover flag, and trailing fade-out duration)
+ * strictly aligned with [CourseFlowRecipeBuilder] compilation rules.
+ */
+internal fun decodeMedleyToFlowDraft(
+    medley: CourseMedleyCatalog.Medley,
+    inventory: CourseFlowRecipeBuilder.CourseInventory,
+): FlowDraft {
+    val logicalCourse = inventory.courseCode.removeSuffix("_00")
+    val sampleRate = inventory.sampleRate.coerceAtLeast(1)
+
+    val primaryRoleByStem = inventory.parts
+        .filter { it.secondaryStem == null }
+        .associate { it.stem.lowercase(Locale.ROOT) to it.roleKey }
+    val pairedRoleByStems = inventory.parts
+        .filter { it.secondaryStem != null }
+        .associate { (it.stem.lowercase(Locale.ROOT) to it.secondaryStem!!.lowercase(Locale.ROOT)) to it.roleKey }
+    val secondaryStems = inventory.parts
+        .mapNotNull { it.secondaryStem?.lowercase(Locale.ROOT) }
+        .toMutableSet()
+        .apply {
+            add("se_stage_koopatroopabeach_speaker_normal")
+            add("se_stage_koopatroopabeach_speaker_fast")
+            add("bgm_rainbow_area1_melody")
+        }
+    val outroByStem = inventory.outros
+        .associate { it.stem.lowercase(Locale.ROOT) to it.number }
+
+    fun classifyStem(stem: String): StemClassification {
+        val lower = stem.lowercase(Locale.ROOT)
+        if (lower == "bgm_seq_finallapff" || lower == "bgm_rainbow_finallapfanfare") {
+            return StemClassification.Skip
+        }
+        if (lower in secondaryStems) {
+            return StemClassification.Secondary(lower)
+        }
+        primaryRoleByStem[lower]?.let { role ->
+            val rainbowOutroNum = if (logicalCourse == "Rainbow" && role.startsWith("Area2_Outro")) {
+                role.removePrefix("Area2_Outro").toIntOrNull()
+            } else {
+                null
+            }
+            return StemClassification.Part(role, rainbowOutroNum)
+        }
+        outroByStem[lower]?.let { num ->
+            return StemClassification.OutroOnly(num)
+        }
+        // Fallback resolution from canonical stem naming
+        if (logicalCourse == "Rainbow" && stem.startsWith("BGM_Rainbow_", ignoreCase = true)) {
+            val suf = stem.substring("BGM_Rainbow_".length)
+            val rainbowOutro = if (suf.startsWith("Area2_Outro", ignoreCase = true)) {
+                suf.substring("Area2_Outro".length).toIntOrNull()
+            } else null
+            return StemClassification.Part(suf, rainbowOutro)
+        }
+        val stageBase = "BGM_Stage_$logicalCourse"
+        if (stem.equals(stageBase, ignoreCase = true)) {
+            return StemClassification.Part("Main")
+        }
+        val stagePrefix = "${stageBase}_"
+        if (stem.startsWith(stagePrefix, ignoreCase = true)) {
+            val suf = stem.substring(stagePrefix.length)
+            OUTRO_STEM_NUMBER_REGEX.matchEntire(suf)?.groupValues?.get(1)?.toIntOrNull()?.let { num ->
+                return StemClassification.OutroOnly(num)
+            }
+            val mapped = when {
+                suf.equals("Pre_Short", ignoreCase = true) -> "Pre_Short"
+                suf.equals("Pre", ignoreCase = true) -> "Pre"
+                suf.equals("Bridge", ignoreCase = true) -> "Bridge"
+                suf.equals("Fast", ignoreCase = true) || suf.equals("FL", ignoreCase = true) -> "Fast"
+                suf.equals("Fast_Pattern2", ignoreCase = true) -> "Fast_Pattern2"
+                suf.equals("Pattern2", ignoreCase = true) -> if (logicalCourse == "DonkeyKong") "Region2" else "Pattern2"
+                logicalCourse == "DonkeyKong" && suf.startsWith("Pattern", ignoreCase = true) ->
+                    "Region${suf.substring("Pattern".length)}"
+                else -> suf
+            }
+            return StemClassification.Part(mapped)
+        }
+        OUTRO_STEM_NUMBER_REGEX.find(stem)?.groupValues?.get(1)?.toIntOrNull()?.let { num ->
+            return StemClassification.OutroOnly(num)
+        }
+        return StemClassification.Skip
+    }
+
+    fun resolvePairedRole(primaryStemLower: String, baseRole: String, secondaryStemLower: String): String? {
+        pairedRoleByStems[primaryStemLower to secondaryStemLower]?.let { return it }
+        return when {
+            baseRole == "Main" && secondaryStemLower == "se_stage_koopatroopabeach_speaker_normal" -> "Main_Speaker"
+            baseRole == "Fast" && secondaryStemLower == "se_stage_koopatroopabeach_speaker_fast" -> "Fast_Speaker"
+            baseRole == "Area1_Inst" && secondaryStemLower == "bgm_rainbow_area1_melody" -> "Area1"
+            else -> null
+        }
+    }
+
+    // Index secondary overlay clips by timeline start so paired primary+secondary tracks merge cleanly
+    val secondaryIndicesByStart = HashMap<Long, MutableList<Pair<Int, String>>>()
+    medley.clips.forEachIndexed { idx, clip ->
+        val cls = classifyStem(clip.stem)
+        if (cls is StemClassification.Secondary) {
+            secondaryIndicesByStart.getOrPut(clip.start) { mutableListOf() }.add(idx to cls.stemLower)
+        }
+    }
+
+    val consumedSecondary = HashSet<Int>()
+    val tagged = mutableListOf<DecodedTaggedClip>()
+    medley.clips.forEachIndexed { idx, clip ->
+        if (idx in consumedSecondary) return@forEachIndexed
+        when (val cls = classifyStem(clip.stem)) {
+            StemClassification.Skip, is StemClassification.Secondary -> Unit
+            is StemClassification.OutroOnly -> {
+                tagged += DecodedTaggedClip(
+                    roleKey = null,
+                    outroOnlyNumber = cls.outroNumber,
+                    rainbowOutroNumber = null,
+                    slice = DecodedClipSlice(
+                        start = clip.start,
+                        sourceOffset = clip.sourceOffset,
+                        effectiveLength = clip.sourceLength,
+                        fadeOut = clip.fadeOut,
+                        volumePoints = clip.volumePoints,
+                    ),
+                )
+            }
+            is StemClassification.Part -> {
+                var resolvedRole = cls.roleKey
+                val primaryLower = clip.stem.lowercase(Locale.ROOT)
+                val matchingSecondaries = secondaryIndicesByStart[clip.start]
+                if (matchingSecondaries != null) {
+                    for ((secIdx, secStemLower) in matchingSecondaries) {
+                        if (secIdx in consumedSecondary) continue
+                        val paired = resolvePairedRole(primaryLower, resolvedRole, secStemLower)
+                        if (paired != null) {
+                            resolvedRole = paired
+                            consumedSecondary += secIdx
+                            break
+                        }
+                    }
+                }
+                tagged += DecodedTaggedClip(
+                    roleKey = resolvedRole,
+                    outroOnlyNumber = null,
+                    rainbowOutroNumber = cls.rainbowOutroNumber,
+                    slice = DecodedClipSlice(
+                        start = clip.start,
+                        sourceOffset = clip.sourceOffset,
+                        effectiveLength = clip.sourceLength,
+                        fadeOut = clip.fadeOut,
+                        volumePoints = clip.volumePoints,
+                    ),
+                )
+            }
+        }
+    }
+
+    // Separate a terminal Outro clip from the main step list (middle Rainbow Area2_Outro stays in steps)
+    var rawEndingOutro: Int? = null
+    if (tagged.isNotEmpty()) {
+        val last = tagged.last()
+        when {
+            last.outroOnlyNumber != null -> {
+                rawEndingOutro = last.outroOnlyNumber
+                tagged.removeAt(tagged.lastIndex)
+            }
+            last.rainbowOutroNumber != null &&
+                tagged.size >= 2 &&
+                tagged[tagged.lastIndex - 1].roleKey == "Area2" -> {
+                rawEndingOutro = last.rainbowOutroNumber
+                tagged.removeAt(tagged.lastIndex)
+            }
+        }
+    }
+
+    // Group consecutive clips belonging to the same role
+    val groups = mutableListOf<DecodedRoleGroup>()
+    tagged.forEach { entry ->
+        val role = entry.roleKey ?: return@forEach
+        val prev = groups.lastOrNull()
+        if (prev != null && prev.roleKey == role) {
+            prev.slices += entry.slice
+        } else {
+            groups += DecodedRoleGroup(role, mutableListOf(entry.slice))
+        }
+    }
+
+    // Extract trailing post-exit fade-out frames when the medley does not end with an Outro
+    var trailingFadeFrames = 0L
+    if (rawEndingOutro == null && groups.isNotEmpty()) {
+        val lastSlices = groups.last().slices
+        if (lastSlices.any { it.volumePoints.isNotEmpty() }) {
+            while (lastSlices.isNotEmpty() && lastSlices.last().volumePoints.isNotEmpty()) {
+                val slice = lastSlices.last()
+                var fadeStartLocal: Long? = null
+                for (pt in slice.volumePoints) {
+                    if (pt.value >= -1e-9) {
+                        fadeStartLocal = pt.frame
+                    } else {
+                        break
+                    }
+                }
+                if (fadeStartLocal == null || fadeStartLocal <= 0L) {
+                    trailingFadeFrames += slice.effectiveLength
+                    if (lastSlices.size > 1) {
+                        lastSlices.removeAt(lastSlices.lastIndex)
+                    } else {
+                        slice.effectiveLength = 1L
+                        break
+                    }
+                } else {
+                    trailingFadeFrames += (slice.effectiveLength - fadeStartLocal).coerceAtLeast(0L)
+                    slice.effectiveLength = fadeStartLocal.coerceAtLeast(1L)
+                    break
+                }
+            }
+        } else {
+            while (lastSlices.size > 1 &&
+                lastSlices.last().fadeOut > 0L &&
+                lastSlices.last().fadeOut == lastSlices.last().effectiveLength
+            ) {
+                trailingFadeFrames += lastSlices.last().fadeOut
+                lastSlices.removeAt(lastSlices.lastIndex)
+            }
+            val tail = lastSlices.lastOrNull()
+            if (tail != null && tail.fadeOut > 0L) {
+                trailingFadeFrames += tail.fadeOut
+                if (tail.fadeOut < tail.effectiveLength) {
+                    tail.effectiveLength = (tail.effectiveLength - tail.fadeOut).coerceAtLeast(1L)
+                }
+            }
+        }
+    }
+
+    // Build FlowSteps while stripping mid-medley post-exit crossfade/handover extensions
+    val steps = buildList {
+        groups.forEachIndexed { gIdx, group ->
+            val slices = group.slices
+            if (slices.isEmpty()) return@forEachIndexed
+            val isLast = gIdx == groups.lastIndex
+            if (!isLast) {
+                while (slices.size > 1 &&
+                    slices.last().fadeOut > 0L &&
+                    slices.last().fadeOut == slices.last().effectiveLength
+                ) {
+                    slices.removeAt(slices.lastIndex)
+                }
+                val lastSlice = slices.last()
+                val nextGroup = groups[gIdx + 1]
+                if (logicalCourse == "Rainbow" && group.roleKey == "Area3" && nextGroup.roleKey == "Final_Pre") {
+                    val nextStart = nextGroup.slices.first().start
+                    while (slices.size > 1 && slices.last().start >= nextStart) {
+                        slices.removeAt(slices.lastIndex)
+                    }
+                    val curLast = slices.last()
+                    val trimmed = nextStart - curLast.start
+                    if (trimmed > 0L) {
+                        curLast.effectiveLength = trimmed
+                    }
+                } else if (lastSlice.fadeOut in 1L until lastSlice.effectiveLength) {
+                    lastSlice.effectiveLength -= lastSlice.fadeOut
+                }
+            }
+            val part = inventory.part(group.roleKey)
+            val isBridgeLocked = part?.isBridgeLocked == true || group.roleKey in setOf("Bridge", "Area1_Bridge")
+            if (isBridgeLocked) {
+                add(FlowStep(roleKey = group.roleKey, loopCount = 0, exitFrame = null))
+            } else {
+                val supportsLoop = part?.supportsLoop ?: true
+                val loopCount = if (supportsLoop) (slices.size - 1).coerceIn(0, 8) else 0
+                val lastSlice = slices.last()
+                val rawExit = (lastSlice.sourceOffset + lastSlice.effectiveLength).coerceAtLeast(1L)
+                val clampedExit = if (part != null) rawExit.coerceIn(1L, part.frames) else rawExit
+                add(FlowStep(roleKey = group.roleKey, loopCount = loopCount, exitFrame = clampedExit))
+            }
+        }
+    }.ifEmpty { inventory.defaultEditorSteps() }
+
+    val effectiveOutro = rawEndingOutro?.takeIf { num ->
+        val hostOk = steps.isNotEmpty() && CourseFlowRecipeBuilder.isOutroHostRole(steps.last().roleKey)
+        if (!hostOk) false
+        else if (inventory.outros.isEmpty()) true
+        else inventory.outros.any { it.number == num }
+    }
+    val outroToNextPre = effectiveOutro != null &&
+        (inventory.outros.firstOrNull { it.number == effectiveOutro }?.supportsNativeHandover ?: true)
+    val fadeOutMs = if (effectiveOutro != null) {
+        0
+    } else {
+        ((trailingFadeFrames * 1000L + sampleRate / 2L) / sampleRate).toInt().coerceIn(0, 10_000)
+    }
+
+    return FlowDraft(
+        steps = steps,
+        endingOutro = effectiveOutro,
+        fadeOutMs = fadeOutMs,
+        outroToNextPre = outroToNextPre,
+    )
+}
+
+private enum class FlowRenderDialogPhase {
+    READY,
+    RENDERING,
+    SUCCESS,
+    ERROR,
+}
+
+@Composable
+private fun FlowRenderAudioDialog(
+    presetName: String,
+    sampleRate: Int,
+    durationFormatted: String,
+    outputTrimEnabled: Boolean,
+    exportFolderDisplay: String,
+    isRenderingAudio: Boolean,
+    renderAudioProgress: Float,
+    renderAudioStatus: String?,
+    renderAudioError: String?,
+    renderAudioOutputPath: String?,
+    canStartRender: Boolean,
+    onStartRender: () -> Unit,
+    onCancelRender: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val reducedMotion = rememberReducedMotion()
+    val clampedProgress = renderAudioProgress.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+    val progressPct = (clampedProgress * 100f).roundToInt()
+    val phase = when {
+        isRenderingAudio -> FlowRenderDialogPhase.RENDERING
+        !renderAudioOutputPath.isNullOrBlank() -> FlowRenderDialogPhase.SUCCESS
+        !renderAudioError.isNullOrBlank() -> FlowRenderDialogPhase.ERROR
+        else -> FlowRenderDialogPhase.READY
+    }
+
+    MkwDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.flow_render_dialog_title),
+        dismissButton = when (phase) {
+            FlowRenderDialogPhase.RENDERING, FlowRenderDialogPhase.SUCCESS -> null
+            FlowRenderDialogPhase.ERROR -> {
+                {
+                    MkwGhostButton(
+                        text = stringResource(R.string.flow_render_close),
+                        onClick = onDismiss,
+                    )
+                }
+            }
+            FlowRenderDialogPhase.READY -> {
+                {
+                    MkwGhostButton(
+                        text = stringResource(R.string.marker_action_cancel),
+                        onClick = onDismiss,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            when (phase) {
+                FlowRenderDialogPhase.RENDERING -> {
+                    MkwDangerButton(
+                        text = stringResource(R.string.flow_render_cancel),
+                        onClick = onCancelRender,
+                        size = MkwButtonSize.Compact,
+                    )
+                }
+                FlowRenderDialogPhase.SUCCESS -> {
+                    MkwPrimaryButton(
+                        text = stringResource(R.string.flow_render_done),
+                        onClick = onDismiss,
+                        size = MkwButtonSize.Compact,
+                    )
+                }
+                FlowRenderDialogPhase.ERROR -> {
+                    MkwPrimaryButton(
+                        text = stringResource(R.string.flow_render_retry),
+                        onClick = onStartRender,
+                        enabled = canStartRender,
+                        size = MkwButtonSize.Compact,
+                    )
+                }
+                FlowRenderDialogPhase.READY -> {
+                    MkwPrimaryButton(
+                        text = stringResource(R.string.flow_render_start),
+                        onClick = onStartRender,
+                        enabled = canStartRender,
+                        leadingIcon = Icons.Default.LibraryMusic,
+                        size = MkwButtonSize.Compact,
+                    )
+                }
+            }
+        },
+    ) {
+        // Preset & audio format summary stays anchored across all phases
+        MkwInsetBox(
+            shape = MkwKitTokens.Shape.control,
+            contentPadding = PaddingValues(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = presetName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MkwKitTokens.Palette.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.flow_render_format_summary_fmt,
+                        (sampleRate / 1000).coerceAtLeast(1),
+                        durationFormatted,
+                    ),
+                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelMedium),
+                    color = MkwKitTokens.Palette.inkSecondary,
+                )
+            }
+        }
+
+        AnimatedContent(
+            targetState = phase,
+            transitionSpec = {
+                if (reducedMotion) {
+                    fadeIn(tween(120)) togetherWith fadeOut(tween(100))
+                } else {
+                    fadeIn(tween(160, easing = AppMotion.easeOut)) togetherWith
+                        fadeOut(tween(120, easing = AppMotion.easeOut))
+                }
+            },
+            label = "flow-render-phase",
+            modifier = Modifier.fillMaxWidth(),
+        ) { currentPhase ->
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                when (currentPhase) {
+                    FlowRenderDialogPhase.READY -> {
+                        FlowRenderConfigCard(
+                            outputTrimEnabled = outputTrimEnabled,
+                            exportFolderDisplay = exportFolderDisplay,
+                        )
+                    }
+
+                    FlowRenderDialogPhase.RENDERING -> {
+                        FlowRenderConfigCard(
+                            outputTrimEnabled = outputTrimEnabled,
+                            exportFolderDisplay = exportFolderDisplay,
+                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = renderAudioStatus?.takeIf { it.isNotBlank() }
+                                        ?: stringResource(R.string.flow_render_in_progress),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    text = "$progressPct%",
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MkwKitTokens.Palette.crimson,
+                                )
+                            }
+                            SmoothProgressIndicator(
+                                progress = clampedProgress,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MkwKitTokens.Palette.crimson,
+                                trackColor = MkwKitTokens.Palette.trackStrong,
+                                barHeight = 8.dp,
+                            )
+                        }
+                    }
+
+                    FlowRenderDialogPhase.SUCCESS -> {
+                        val checkScale = remember(renderAudioOutputPath, reducedMotion) {
+                            Animatable(if (reducedMotion) 1f else 0.92f)
+                        }
+                        LaunchedEffect(renderAudioOutputPath, reducedMotion) {
+                            if (reducedMotion) {
+                                checkScale.snapTo(1f)
+                            } else {
+                                checkScale.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = AppMotion.snapSpring,
+                                )
+                            }
+                        }
+                        MkwCard(
+                            tone = MkwSurfaceTone.Porcelain,
+                            shape = MkwKitTokens.Shape.control,
+                            contentPadding = PaddingValues(12.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer {
+                                            scaleX = checkScale.value
+                                            scaleY = checkScale.value
+                                        },
+                                    tint = Color(0xFF0B7D55L),
+                                )
+                                Text(
+                                    text = stringResource(R.string.flow_render_success_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF0B7D55L),
+                                )
+                            }
+                            if (!renderAudioOutputPath.isNullOrBlank()) {
+                                Text(
+                                    text = stringResource(R.string.flow_render_output_path_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                )
+                                MkwInsetBox(
+                                    shape = MkwKitTokens.Shape.thumb,
+                                    contentPadding = PaddingValues(10.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        text = renderAudioOutputPath,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                        color = MkwKitTokens.Palette.ink,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    FlowRenderDialogPhase.ERROR -> {
+                        MkwCard(
+                            tone = MkwSurfaceTone.Porcelain,
+                            error = true,
+                            shape = MkwKitTokens.Shape.control,
+                            contentPadding = PaddingValues(12.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MkwKitTokens.Palette.danger,
+                                )
+                                Text(
+                                    text = stringResource(R.string.flow_render_error_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MkwKitTokens.Palette.danger,
+                                )
+                            }
+                            if (!renderAudioError.isNullOrBlank()) {
+                                Text(
+                                    text = renderAudioError,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MkwKitTokens.Palette.danger,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FlowRenderConfigCard(
+    outputTrimEnabled: Boolean,
+    exportFolderDisplay: String,
+) {
+    MkwCard(
+        tone = MkwSurfaceTone.Porcelain,
+        shape = MkwKitTokens.Shape.control,
+        contentPadding = PaddingValues(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Tune,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = if (outputTrimEnabled) MkwKitTokens.Palette.crimson else MkwKitTokens.Palette.inkSecondary,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(R.string.flow_render_gain_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MkwKitTokens.Palette.inkSecondary,
+                )
+                Text(
+                    text = stringResource(
+                        if (outputTrimEnabled) R.string.flow_render_gain_enabled else R.string.flow_render_gain_flat,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = if (outputTrimEnabled) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.ink,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.FolderOpen,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MkwKitTokens.Palette.inkSecondary,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(R.string.flow_render_folder_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MkwKitTokens.Palette.inkSecondary,
+                )
+                Text(
+                    text = exportFolderDisplay,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MkwKitTokens.Palette.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
 }

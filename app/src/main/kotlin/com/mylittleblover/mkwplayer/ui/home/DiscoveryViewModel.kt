@@ -40,6 +40,7 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
         val playlists: List<com.mylittleblover.mkwplayer.library.UserPlaylist> = emptyList(), val playlistError: Error? = null,
         val presets: List<com.mylittleblover.mkwplayer.library.CoursePreset> = emptyList(), val presetError: Error? = null,
         val customRoutes: List<com.mylittleblover.mkwplayer.routes.CustomRoute> = emptyList(), val customRouteError: Error? = null,
+        val officialRouteFreeRoam: Map<String, com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry> = emptyMap(),
         val recentIds: List<String> = emptyList(), val recentError: Error? = null,
     ) {
         val error: Error? get() = favoritesError ?: dailyError ?: playlistError ?: presetError ?: customRouteError ?: recentError
@@ -53,6 +54,8 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
     private val presetOperations = Mutex()
     private val customRouteStore = com.mylittleblover.mkwplayer.routes.CustomRouteStore(File(application.filesDir, "routes/custom_routes.json"))
     private val customRouteOperations = Mutex()
+    private val officialFreeRoamPrefs = com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamPrefs(File(application.filesDir, "routes/official_free_roam_prefs.json"))
+    private val officialFreeRoamOperations = Mutex()
     private val connections: com.mylittleblover.mkwplayer.library.StageConnections.Catalog? by lazy {
         runCatching {
             getApplication<Application>().assets.open("stage_connections.json").bufferedReader().use {
@@ -81,6 +84,7 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
         updateRecent { recent.read() }
         reloadPresets()
         updateCustomRoutes { customRouteStore.read() }
+        reloadOfficialRouteFreeRoam()
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 com.mylittleblover.mkwplayer.library.PlayStatsRepository.ensureLoadedSync(application)
@@ -108,6 +112,7 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
         updateRecent { recent.read() }
         reloadPresets()
         updateCustomRoutes { customRouteStore.read() }
+        reloadOfficialRouteFreeRoam()
         com.mylittleblover.mkwplayer.library.PlayStatsRepository.reload(getApplication())
     }
     fun reloadFavorites() {
@@ -284,9 +289,11 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
         edges: List<com.mylittleblover.mkwplayer.routes.CustomRouteEdgeConfig>,
         loopWholeRoute: Boolean,
         roadRuleMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode =
-            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE,
         routeSuiteMode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode =
             com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+        pureFreeRoamConfig: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig =
+            com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig(),
         onComplete: (Result<com.mylittleblover.mkwplayer.routes.CustomRoute>) -> Unit = {},
     ) {
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -297,9 +304,28 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
                             IllegalStateException("Stage connections catalog unavailable"),
                         )
                         if (routeId == null) {
-                            customRouteStore.create(name, stops, edges, conn, loopWholeRoute, roadRuleMode, routeSuiteMode)
+                            customRouteStore.create(
+                                name = name,
+                                stops = stops,
+                                edges = edges,
+                                connections = conn,
+                                loopWholeRoute = loopWholeRoute,
+                                roadRuleMode = roadRuleMode,
+                                routeSuiteMode = routeSuiteMode,
+                                pureFreeRoamConfig = pureFreeRoamConfig,
+                            )
                         } else {
-                            customRouteStore.saveDraftOver(routeId, name, stops, edges, conn, loopWholeRoute, roadRuleMode, routeSuiteMode)
+                            customRouteStore.saveDraftOver(
+                                existingId = routeId,
+                                name = name,
+                                draftStops = stops,
+                                draftEdges = edges,
+                                connections = conn,
+                                loopWholeRoute = loopWholeRoute,
+                                roadRuleMode = roadRuleMode,
+                                routeSuiteMode = routeSuiteMode,
+                                pureFreeRoamConfig = pureFreeRoamConfig,
+                            )
                         }
                     }
                 }
@@ -341,6 +367,72 @@ internal class DiscoveryViewModel(application: Application) : AndroidViewModel(a
         id: String,
         mode: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.RouteSuiteMode,
     ) = updateCustomRoutes { customRouteStore.setRouteSuiteMode(id, mode) }
+
+    fun setCustomRoutePureFreeRoamConfig(
+        id: String,
+        config: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig,
+    ) = updateCustomRoutes { customRouteStore.setPureFreeRoamConfig(id, config) }
+
+    fun setCustomRouteEdgeFreeRoamOverride(
+        id: String,
+        edgeIndex: Int,
+        override: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EdgeFreeRoamOverride?,
+    ) = updateCustomRoutes {
+        customRouteStore.setEdgeFreeRoamOverride(
+            id = id,
+            edgeIndex = edgeIndex,
+            trackCountOverride = override?.trackCountOverride,
+            durationMinutesOverride = override?.durationMinutesOverride,
+        )
+    }
+
+    fun reloadOfficialRouteFreeRoam() {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            officialFreeRoamOperations.withLock {
+                val loaded = withContext(Dispatchers.IO) { officialFreeRoamPrefs.readAll() }
+                loaded.onSuccess { map -> _state.update { it.copy(officialRouteFreeRoam = map) } }
+            }
+        }
+    }
+
+    fun officialRouteFreeRoamEntry(routeId: String): com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry =
+        _state.value.officialRouteFreeRoam[routeId]
+            ?: com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry()
+
+    fun setOfficialRouteFreeRoamConfig(
+        routeId: String,
+        config: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.PureFreeRoamConfig,
+    ) {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                officialFreeRoamOperations.withLock {
+                    val res = withContext(Dispatchers.IO) { officialFreeRoamPrefs.setConfig(routeId, config) }
+                    res.onSuccess { entry ->
+                        val key = routeId.trim()
+                        _state.update { it.copy(officialRouteFreeRoam = it.officialRouteFreeRoam + (key to entry)) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun setOfficialRouteFreeRoamEdgeOverride(
+        routeId: String,
+        edgeIndex: Int,
+        override: com.mylittleblover.mkwplayer.routes.RoadJukeboxCatalog.EdgeFreeRoamOverride?,
+    ) {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                officialFreeRoamOperations.withLock {
+                    val res = withContext(Dispatchers.IO) { officialFreeRoamPrefs.setEdgeOverride(routeId, edgeIndex, override) }
+                    res.onSuccess { entry ->
+                        val key = routeId.trim()
+                        _state.update { it.copy(officialRouteFreeRoam = it.officialRouteFreeRoam + (key to entry)) }
+                    }
+                }
+            }
+        }
+    }
 
     fun duplicatePreset(id: String, newName: String) {
         viewModelScope.launch {

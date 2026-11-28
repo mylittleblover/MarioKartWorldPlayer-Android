@@ -176,6 +176,21 @@ internal class ListeningProgress(
     }
 
     /**
+     * Marks the 10-question Special Cup quiz as passed, making the unlock ceremony ready
+     * (without prematurely setting `specialUnlocked`).
+     */
+    fun passQuiz(): SpecialCupUnlock.UnlockState {
+        current = unlock.withState(current).passQuiz()
+        return current
+    }
+
+    /** Remaining eligible stages that have not met the 30-second listening threshold yet. */
+    fun remainingStages(): Set<String> = unlock.withState(current).remainingStages()
+
+    /** Eligible stages that have already met the listening threshold. */
+    fun completedStages(): Set<String> = current.completedStages
+
+    /**
      * Adopts a restored state.
      *
      * Used when progress comes back from disk and there is no transport yet. Kept separate from

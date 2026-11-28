@@ -66,7 +66,7 @@ internal object CupArt {
     /** A Knockout Tour rally crest matching `official_routes.json` route ids. */
     data class Rally(val id: String, val label: String, val drawable: Int, val code: String)
 
-    /** The twelve Knockout Tour rallies in game order (`SV00`..`SV11`). */
+    /** The fourteen Knockout Tour rallies in game order (`SV00`..`SV13`). */
     val rallies: List<Rally> = listOf(
         Rally("golden_rally", "Golden Rally", R.drawable.sv_00, "SV00"),
         Rally("ice_rally", "Ice Rally", R.drawable.sv_01, "SV01"),
@@ -80,6 +80,8 @@ internal object CupArt {
         Rally("boomerang_rally", "Boomerang Rally", R.drawable.sv_09, "SV09"),
         Rally("propeller_rally", "Propeller Rally", R.drawable.sv_10, "SV10"),
         Rally("turnip_rally", "Turnip Rally", R.drawable.sv_11, "SV11"),
+        Rally("feather_rally", "Feather Rally", R.drawable.sv_12, "SV12"),
+        Rally("lucky_cat_rally", "Lucky Cat Rally", R.drawable.sv_13, "SV13"),
     )
 
     fun rally(id: String): Rally? = rallies.firstOrNull { it.id == id }
@@ -109,6 +111,8 @@ internal object CupArt {
         "boomerang_rally" to 18,
         "propeller_rally" to 19,
         "turnip_rally" to 20,
+        "feather_rally" to 21,
+        "lucky_cat_rally" to 22,
     )
 
     private val routeMaskNames: Map<String, String> = mapOf(
@@ -132,9 +136,11 @@ internal object CupArt {
         "boomerang_rally" to "map_light_sv09",
         "propeller_rally" to "map_light_sv10",
         "turnip_rally" to "map_light_sv11",
+        "feather_rally" to "map_light_sv12",
+        "lucky_cat_rally" to "map_light_sv13",
     )
 
-    /** Resolves an official route id to its procedural spotlight corridor token (`1..20`). */
+    /** Resolves an official route id to its procedural spotlight corridor token (`1..22`). */
     fun routeHighlightMask(routeId: String): Int? = routeMasks[routeId]
 
     /** Resolves an official route id to its `.mkwpack/artwork/map_light_*.png` base filename. */

@@ -197,8 +197,10 @@ class JukeboxMetadataCatalogTest {
         assertEquals(null, track177.localizedArrangement("ja"))
 
         val track120 = fullCatalog.itemForTrack(metadata.tracks.first { it.ostIndex == 120 }.packTrackKey)!!
-        assertEquals("地上BGM ラテンVer.", track120.localizedDisplayName("ja"))
+        assertEquals("地上BGM", track120.localizedDisplayName("ja"))
+        assertEquals("地上BGM", track120.displayTitle("ja"))
         assertEquals("地上BGM", track120.localizedTitle("ja"))
+        assertEquals("スカ＆レゲエ", track120.displayGenre("ja"))
         assertEquals("ラテンVer.", track120.localizedArrangement("ja"))
 
         val track246 = fullCatalog.itemForTrack(metadata.tracks.first { it.ostIndex == 246 }.packTrackKey)!!

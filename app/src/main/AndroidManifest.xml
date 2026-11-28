@@ -10,6 +10,8 @@
     <!-- Android 13+ requires the user to grant notifications before the media
          notification can appear. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Optional user-triggered check against GitHub Releases for app updates. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="false"

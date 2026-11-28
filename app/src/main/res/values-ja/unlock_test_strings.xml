@@ -20,7 +20,7 @@
     <string name="unlock_ceremony_subtitle">解放ファンファーレをお楽しみください。曲の終了後に操作できるようになります。</string>
     <string name="unlock_ceremony_locked_hint">解放演出中 · 停止や曲の切り替えはできません</string>
     <string name="unlock_congrats_title">スペシャルカップ解放！</string>
-    <string name="unlock_congrats_body">対象となるすべてのコースを再生しました。スペシャルカップ、レインボーロード、および関連楽曲が利用可能になりました。</string>
+    <string name="unlock_congrats_body">『マリオカート』の音楽と本アプリへの温かいご支援と愛情に感謝いたします。それでは、最後のグランプリ——スペシャルカップをお楽しみください。</string>
     <string name="unlock_congrats_enter">スペシャルカップへ</string>
     <string name="unlock_congrats_close">閉じる</string>
     <string name="settings_unlock_reset_btn">解放進捗をリセット</string>
@@ -28,4 +28,6 @@
     <string name="settings_unlock_reset_confirm_body">これまでのコース再生進捗を消去し、レインボーロードとスペシャルカップを再度ロック状態に戻します（テストモードも通常に戻ります）。</string>
     <string name="settings_unlock_reset_confirm_action">リセットする</string>
     <string name="settings_unlock_reset_done">解放進捗をリセットしました</string>
+    <string name="unlock_err_audio_missing">導入済みパックにスペシャルカップ解放演出の音源がありません。</string>
+    <string name="unlock_test_err_missing_111">解放演出をテストするにはトラック #111 を含むパックをインポートしてください。</string>
 </resources>

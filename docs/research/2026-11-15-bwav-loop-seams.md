@@ -190,3 +190,13 @@ $py = (Get-Command python -ErrorAction Stop).Source
 ```
 
 依赖：Python 3 + numpy（本机 runtime 已带）。不需要 scipy。
+
+---
+
+## 八、MKW v1.8.0 `BgmAll` 全量 650 流与 6 声道底层审计补充（2026-11-28）
+
+上述 20,991 个 BWAV 循环接缝结论已通过 **MKW v1.8.0 `BgmAll.Product.180.bars.zs` 全部 650 条 BGM 音频流审计**进一步印证并补全：
+
+- **650 条 `BgmAll` 流构成**：29 主赛道、彩虹之路 15 流、v1.8.0 SFC 复古 10 流（5 主题 + `_Fast`）、对战 16 流（8 场地 + `_FL`）、任务 5 流、菜单/过场/序列 64 流、点唱机 227 流；其中 **626 条为 2 声道**，**24 条为 6 声道**。
+- **24 条 6 声道流全解码结论**：2 条 DSP-ADPCM（`BGM_FirstBoot_HarmonicaSolo`、`SE_FirstBoot_Env01`）+ 22 条 NintendoOpus（8 大奖赛片头、12 条 SHA-256 逐字节一致的 `Dm_SV01_OP..Dm_SV12_OP` 生存赛片头、`Dm_RainbowAppears`、`Dm_MirrorModeOpen`），**全部为 5.1 环绕过场/片头，非赛道分轨**；实测 **24/24 条的 LFE（ch3）均处于静音基底（`-96.05 dBFS`）**，仅 `Dm_KinokoOp`、`Dm_MirrorModeOpen`、`Dm_RainbowAppears` 3 条含活跃中置 C（ch2），其余 21 条为 5.1 容器内 4.0 环绕。
+- **全库 `MINF v1.1` 乐理网格普查（344 条）**：BPM 范围 `90.0001–253.0002`；拍号分布为 **`4/4` 324 条**、**`3/4` 20 条**（`BigTree` 全套 11 流、`DinoBones` 全套 7 流、`Cave` 主曲+快曲 2 流）；`Pre_NoOverlap` 参数在全量 650 流中出现次数为 **0**。

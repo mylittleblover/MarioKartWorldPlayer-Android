@@ -92,7 +92,12 @@ internal object PackImportCoordinator {
                     canCancel = true,
                     checkpoint = cp,
                     hasPersistablePermission = false,
-                    errorReason = "Access to '${cp.displayName}' expired. Re-select the same .mkwpack to resume (${cp.completedMembers.size}/${cp.totalMembers} verified).",
+                    errorReason = context.getString(
+                        com.mylittleblover.mkwplayer.R.string.import_err_permission_expired_fmt,
+                        cp.displayName,
+                        cp.completedMembers.size,
+                        cp.totalMembers,
+                    ),
                 )
             }
         }
@@ -119,7 +124,7 @@ internal object PackImportCoordinator {
             hasPersistablePermission = takePersistableReadGrant(context, uri),
         ) {
             val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: error("Could not open direct file descriptor for this archive. Pick a .mkwpack stored on device or Downloads.")
+                ?: error(context.getString(com.mylittleblover.mkwplayer.R.string.import_err_open_fd))
             val channel = FileInputStream(pfd.fileDescriptor).channel
             Pair(channel, pfd)
         }
@@ -133,9 +138,11 @@ internal object PackImportCoordinator {
         startForeground: Boolean = true,
     ): StartResult {
         val cp = _state.value.checkpoint ?: PackImportCheckpointStore(libraryRoot).read().getOrNull()
-            ?: return StartResult.RejectedInvalid("No paused import checkpoint was found.")
+            ?: return StartResult.RejectedInvalid(context.getString(com.mylittleblover.mkwplayer.R.string.import_err_no_checkpoint))
         val uri = cp.sourceUri?.let { runCatching { Uri.parse(it) }.getOrNull() }
-            ?: return StartResult.RejectedInvalid("Paused import needs you to re-select '${cp.displayName}'.")
+            ?: return StartResult.RejectedInvalid(
+                context.getString(com.mylittleblover.mkwplayer.R.string.import_err_needs_repick_fmt, cp.displayName),
+            )
 
         return launchChannelTask(
             appContext = context.applicationContext,
@@ -148,7 +155,7 @@ internal object PackImportCoordinator {
             hasPersistablePermission = true,
         ) {
             val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: throw SecurityException("Permission expired for '${cp.displayName}'.")
+                ?: throw SecurityException(context.getString(com.mylittleblover.mkwplayer.R.string.import_err_access_denied))
             val channel = FileInputStream(pfd.fileDescriptor).channel
             Pair(channel, pfd)
         }
@@ -163,7 +170,7 @@ internal object PackImportCoordinator {
         startForeground: Boolean = true,
     ): StartResult {
         val cp = _state.value.checkpoint ?: PackImportCheckpointStore(libraryRoot).read().getOrNull()
-            ?: return StartResult.RejectedInvalid("No paused import checkpoint was found.")
+            ?: return StartResult.RejectedInvalid(context.getString(com.mylittleblover.mkwplayer.R.string.import_err_no_checkpoint))
         return launchChannelTask(
             appContext = context.applicationContext,
             libraryRoot = libraryRoot,
@@ -175,7 +182,7 @@ internal object PackImportCoordinator {
             hasPersistablePermission = takePersistableReadGrant(context, newUri),
         ) {
             val pfd = context.contentResolver.openFileDescriptor(newUri, "r")
-                ?: error("Could not open selected archive.")
+                ?: error(context.getString(com.mylittleblover.mkwplayer.R.string.import_err_open_selected))
             val channel = FileInputStream(pfd.fileDescriptor).channel
             Pair(channel, pfd)
         }
@@ -274,7 +281,7 @@ internal object PackImportCoordinator {
     ): StartResult {
         if (!activeTask.compareAndSet(false, true)) {
             return StartResult.RejectedBusy(
-                "An import task is already running. Only one .mkwpack import may execute at a time.",
+                appContext.getString(com.mylittleblover.mkwplayer.R.string.import_err_busy),
             )
         }
         activeLibraryRoot = libraryRoot
@@ -305,10 +312,12 @@ internal object PackImportCoordinator {
                             resumeCheckpoint = resumeCheckpoint,
                             hasPersistablePermission = hasPersistablePermission,
                             clearCheckpointOnCancel = true,
+                            committingLabel = appContext.getString(com.mylittleblover.mkwplayer.R.string.import_member_committing),
                         )
                     }
                 }
             } catch (sec: SecurityException) {
+                val deniedText = sec.message ?: appContext.getString(com.mylittleblover.mkwplayer.R.string.import_err_access_denied)
                 val cp = resumeCheckpoint ?: PackImportCheckpointStore(libraryRoot).read().getOrNull()
                 if (cp != null) {
                     _state.value = PackImportUiState(
@@ -320,20 +329,26 @@ internal object PackImportCoordinator {
                         canCancel = true,
                         checkpoint = cp,
                         hasPersistablePermission = false,
-                        errorReason = "Source permission expired (${sec.message ?: "access denied"}). Re-pick the file to resume.",
+                        errorReason = appContext.getString(
+                            com.mylittleblover.mkwplayer.R.string.import_err_permission_repick_fmt,
+                            deniedText,
+                        ),
                     )
                 } else {
                     _state.value = PackImportUiState(
                         phase = PackImportPhase.FAILED,
                         displayName = displayName,
-                        errorReason = "Permission error reading pack: ${sec.message ?: "access denied"}",
+                        errorReason = appContext.getString(
+                            com.mylittleblover.mkwplayer.R.string.import_err_permission_read_fmt,
+                            deniedText,
+                        ),
                     )
                 }
             } catch (err: Exception) {
                 _state.value = PackImportUiState(
                     phase = PackImportPhase.FAILED,
                     displayName = displayName,
-                    errorReason = err.message ?: "Failed to read .mkwpack archive.",
+                    errorReason = err.message ?: appContext.getString(com.mylittleblover.mkwplayer.R.string.import_err_failed),
                 )
             } finally {
                 enteringCommit.set(false)
@@ -352,6 +367,7 @@ internal object PackImportCoordinator {
         resumeCheckpoint: ImportCheckpoint?,
         hasPersistablePermission: Boolean,
         clearCheckpointOnCancel: Boolean,
+        committingLabel: String = "Committing library",
     ): StreamingPackInstaller.Result {
         val result = StreamingPackInstaller.installFromChannel(
             channel = channel,
@@ -396,7 +412,7 @@ internal object PackImportCoordinator {
                     _state.value = _state.value.copy(
                         phase = PackImportPhase.COMMITTING,
                         canCancel = false,
-                        currentMember = "Committing library",
+                        currentMember = committingLabel,
                     )
                 }
             },

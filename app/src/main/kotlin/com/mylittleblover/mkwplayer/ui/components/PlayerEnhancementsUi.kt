@@ -702,7 +702,7 @@ internal fun InteractiveTimerSheet(
             }
             flow.regionNumbers.forEach { r -> add(InteractiveTimedAction.SelectRegion(r, r.toString())) }
             flow.versionNumbers.forEach { v -> add(InteractiveTimedAction.SelectVersion(v, v.toString())) }
-            if (flow.hasSpeakerOverlay) {
+            if (flow.hasSpeakerOverlay && !flow.isRainbowMelodyOverlay) {
                 add(InteractiveTimedAction.ToggleSpeakerOverlay)
             }
         }

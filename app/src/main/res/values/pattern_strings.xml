@@ -1,9 +1,11 @@
 <resources>
     <string name="recording_version">Recording version</string>
     <string name="recording_version_number">Version %1$d</string>
-    <string name="recording_version_hint">Switches at the current musical position with a one-second crossfade.</string>
-    <string name="music_region">Music region</string>
-    <string name="music_region_number">Region %1$d</string>
-    <string name="music_region_hint">Advance to the next region at its authored boundary. Region 5 leads to Final Lap.</string>
+    <string name="recording_version_hint">Switches at the current musical position with a smooth crossfade.</string>
+    <string name="recording_version_hint_snow">Phase-locked crossfade (0.5s entering On the Water, 2.0s returning to Normal) in both Main and Final Lap.</string>
+    <string name="recording_version_hint_cinema">Phase-locked 0.5s bidirectional crossfade between Normal and Inside the Screen in both Main and Final Lap.</string>
+    <string name="music_region">Music lap</string>
+    <string name="music_region_number">Lap %1$d</string>
+    <string name="music_region_hint">Advance to the next lap at its authored boundary. Lap 5 leads to Final Lap.</string>
     <string name="cancel_pending_transition">Cancel queued change</string>
 </resources>

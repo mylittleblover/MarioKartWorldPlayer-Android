@@ -6,6 +6,11 @@ This document explains **why the layers are split this way**, and what each laye
 
 Code shows "what it is", not "why it isn't the other way". Most decisions in this project were settled only after ruling out a path that looked more natural but would cause silent failures — those reasons for ruling them out must be written down, or the next person will "cleanly change it back".
 
+> **`Beta 0.1.6` · MKW v1.8.0 Evolution Note (2026-11-28)**: Sections 1–15 preserve the original architectural invariants established during early Alpha. Three key subsystems have since been completed and aligned directly with MKW v1.8.0 in-game extracted reports:
+> 1. **Codec 2 (NintendoOpus, §11)**: Implemented natively via `MultiOpusSource`; all 227 Jukebox tracks and 22 six-channel 5.1 Opus cutscenes (all 24 six-channel streams verified silent-LFE, downmixed at `beta01` loudness parity) are fully playable.
+> 2. **Audio Output (§1/§3)**: `AudioOutput` now defaults to Android deep-buffer stereo `AudioTrack` (`16,384` frames ≈ 341 ms, Oboe kept as fallback), paired with lock-free `NativeOutput::rebind()` hot-switching and a 512-page `SourcePageCache` for glitch-free background/TWS playback.
+> 3. **Complete MKW v1.8.0 Music Data (§12)**: Fully audited against `BgmAll.Product.180.bars.zs` (650 streams), 344 `MINF v1.1` beat grids, 202 directed connections, 13 `SoundJukeBoxPlaylist` tables (1,102 slots / 227 tracks), and 121 course medleys; see [MUSIC-TRANSITIONS.md](MUSIC-TRANSITIONS.md).
+
 ---
 
 ## 1. Layering

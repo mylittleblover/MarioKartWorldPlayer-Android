@@ -309,24 +309,35 @@ class Beta04HandoverAndStreamSwapTest {
         )
 
         val rallies = routeCatalog.routes.filter { it.kind == OfficialRouteKind.RALLY }
-        assertEquals(12, rallies.size)
+        assertEquals(14, rallies.size)
 
         var totalLegBoundaries = 0
         for (rally in rallies) {
             assertEquals(6, rally.stops.size, "Rally ${rally.id} must have 6 stops")
             val entries = rally.stops.mapIndexed { idx, stop ->
                 val stage = stop.stageCode.removeSuffix("_00")
-                val medley = medleyCatalog.forCourse(stage).firstOrNull { !it.isKnockoutVariant }
-                    ?: error("Missing default medley for $stage in ${rally.id}")
+                val targetVariant = RoadJukeboxCatalog.resolveSuiteVariantForStop(
+                    officialKind = OfficialRouteKind.RALLY,
+                    suiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+                    stopIndex = idx,
+                    stopCount = rally.stops.size,
+                    stageCode = stage,
+                )
+                val courseMedleys = medleyCatalog.forCourse(stage)
+                val medley = courseMedleys.firstOrNull { it.normalizedSuiteVariant == targetVariant }
+                    ?: courseMedleys.firstOrNull { !it.isKnockoutVariant }
+                    ?: error("Missing rally medley (variant=$targetVariant) for $stage in ${rally.id}")
                 val handoverFrame = CourseFlowRecipeBuilder.resolveMedleyHandoverFrame(medley, minf)
-                assertNotNull(
-                    handoverFrame,
-                    "Missing Outro_ToNextPre handover frame for rally=${rally.id} stop=$idx stage=$stage stem=${medley.clips.lastOrNull()?.stem}",
-                )
-                assertTrue(
-                    handoverFrame in 1L..medley.totalFrames,
-                    "Out-of-range handover frame $handoverFrame for $stage",
-                )
+                if (idx < rally.stops.lastIndex) {
+                    assertNotNull(
+                        handoverFrame,
+                        "Missing Outro_ToNextPre handover frame for rally=${rally.id} stop=$idx stage=$stage variant=$targetVariant stem=${medley.clips.lastOrNull()?.stem}",
+                    )
+                    assertTrue(
+                        handoverFrame in 1L..medley.totalFrames,
+                        "Out-of-range handover frame $handoverFrame for $stage",
+                    )
+                }
                 val incomingPhase = CourseFlowRecipeBuilder.resolveIncomingPhase(medley, minf)
                 val resolved = CourseMedleyCompiler.ResolvedMedley(
                     medley = medley,
@@ -352,7 +363,7 @@ class Beta04HandoverAndStreamSwapTest {
             )
             totalLegBoundaries += rally.stops.size - 1
         }
-        assertEquals(60, totalLegBoundaries)
+        assertEquals(70, totalLegBoundaries)
 
         // Verify DKPass_Outro06 (event-tagged) and Lava_Outro01 (Outro00 fallback) resolve even against minimal MINF records.
         val dkPassMedley = medleyCatalog.forCourse("DKPass").first { it.clips.last().stem == "BGM_Stage_DKPass_Outro06" }

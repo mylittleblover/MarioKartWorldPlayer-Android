@@ -42,6 +42,7 @@
     <string name="interactive_sync_next_beat">次の拍</string>
     <string name="interactive_sync_next_bar">次の小節</string>
     <string name="interactive_sync_next_grid">次の 4 拍グリッド</string>
+    <string name="interactive_sync_next_grid_beats">次の %1$d 拍グリッド</string>
     <string name="interactive_sync_exit_cue">次の退出ポイント</string>
     <string name="interactive_sync_next_cue">次のキューポイント</string>
     <string name="interactive_sync_custom_cue">次のカスタムキュー</string>
@@ -51,4 +52,9 @@
     <string name="interactive_stop_hold_hint">タップで停止 · 長押しでフェード</string>
     <string name="interactive_loading_title">トラックを読み込み中…</string>
     <string name="interactive_loading_hint">インタラクティブ音源とセクションを準備しています…</string>
+    <string name="player_detail_no_stage_files">%1$s のファイルがありません。パックをインポートするかコースフォルダーを開いてください。</string>
+    <string name="interactive_err_start_unavailable">選択した開始パートは利用できません</string>
+    <string name="interactive_err_no_source">%1$s の再生可能な音源がありません。先に音源をインポートしてください。</string>
+    <string name="interactive_err_no_transition">現在のパートからこのパートへは移行できません。</string>
+    <string name="interactive_pending_countdown">切替予約：%1$s · 約 %2$d 秒後に切替</string>
 </resources>

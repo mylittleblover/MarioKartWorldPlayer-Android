@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marker_add_chip">+ 新增標記</string>
+    <string name="marker_add_dialog_title">新增曲目標記</string>
+    <string name="marker_timestamp_label">目前時間點</string>
+    <string name="marker_name_label">標記名稱</string>
+    <string name="marker_default_name_fmt">標記 %1$d</string>
+    <string name="marker_color_label">標記顏色</string>
+    <string name="marker_action_save">儲存</string>
+    <string name="marker_action_cancel">取消</string>
+    <string name="marker_action_delete">刪除</string>
+    <string name="marker_play_from_menu">從標記點播放</string>
+    <string name="marker_play_from_title">從標記點播放</string>
+    <string name="marker_sheet_empty">此曲目尚未儲存標記點。可在播放頁輕點「+ 新增標記」收藏精彩片段。</string>
+    <string name="marker_delete_title">刪除此標記？</string>
+    <string name="marker_delete_body_fmt">確定刪除「%1$s」（%2$s）嗎？</string>
+    <string name="marker_delete_cd">刪除標記 %1$s</string>
+    <string name="marker_chip_cd_fmt">%1$s，位置 %2$s，輕點跳轉，長按刪除</string>
+    <string name="marker_color_crimson">緋紅</string>
+    <string name="marker_color_amber">琥珀</string>
+    <string name="marker_color_emerald">翠綠</string>
+    <string name="marker_color_sky">天藍</string>
+    <string name="marker_color_violet">紫羅蘭</string>
+    <string name="marker_color_pink">粉紅</string>
+    <string name="marker_color_orange">橙色</string>
+    <string name="marker_color_slate">石板灰</string>
+
+    <string name="flow_editor_builtin_suites_title">內建組曲預設</string>
+    <string name="flow_editor_builtin_suite_applied_fmt">已載入 %1$s</string>
+    <string name="flow_render_button">渲染成音訊</string>
+    <string name="flow_render_button_progress_fmt">渲染中 %1$d%%</string>
+    <string name="flow_render_dialog_title">渲染流程為音訊</string>
+    <string name="flow_render_format_summary_fmt">WAV · 16-bit 立體聲 · %1$d kHz · %2$s</string>
+    <string name="flow_render_gain_label">輸出增益與限幅</string>
+    <string name="flow_render_gain_enabled">已開啟預設 +10 dB 增益與限幅</string>
+    <string name="flow_render_gain_flat">未開啟增益，按原電平匯出</string>
+    <string name="flow_render_folder_label">匯出資料夾</string>
+    <string name="flow_render_start">開始渲染</string>
+    <string name="flow_render_in_progress">正在離線渲染音訊…</string>
+    <string name="flow_render_cancel">取消渲染</string>
+    <string name="flow_render_success_title">音訊渲染完成</string>
+    <string name="flow_render_output_path_label">儲存位置</string>
+    <string name="flow_render_error_title">音訊渲染失敗</string>
+    <string name="flow_render_retry">重試</string>
+    <string name="flow_render_done">完成</string>
+    <string name="flow_render_close">關閉</string>
+</resources>

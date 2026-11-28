@@ -6,28 +6,64 @@
 
 namespace player2::audio {
 namespace {
+constexpr double kInvSqrt2=0.70710678118654752440;
+constexpr std::uint8_t kRoleFront=1;
+constexpr std::uint8_t kRoleCenter=2;
+constexpr std::uint8_t kRoleLfe=3;
+constexpr std::uint8_t kRoleRear=4;
+
+double speakerRoleGain(std::uint8_t flags) noexcept {
+    switch(flags) {
+        case kRoleFront: return 1.0;
+        case kRoleCenter: return kInvSqrt2;
+        case kRoleLfe: return 0.0;
+        case kRoleRear: return kInvSqrt2;
+        default: return 1.0;
+    }
+}
+
+std::array<double,2> groupStereoGains(const SourceStreamGroup& group) noexcept {
+    const double gain=(group.volume/127.0)*speakerRoleGain(group.flags);
+    const unsigned pan=std::min<unsigned>(group.pan,127u);
+    const double left=gain*(pan>64u ? (127.0-pan)/63.0 : 1.0);
+    const double right=gain*(pan<64u ? pan/64.0 : 1.0);
+    return {left,right};
+}
+
 class StreamStereoSource final:public AudioFrameSource {
+    static constexpr double kSoftKnee=0.88;
+    static constexpr double kSoftHeadroom=0.115; // Asymptotic ceiling 0.995 (< 1.0 full scale).
     std::unique_ptr<AudioFrameSource> raw_;SourceMetadata metadata_;SourceStreamInfo info_;
-    std::uint32_t mute_{},solo_{};double scale_{1};
+    std::uint32_t mute_{},solo_{};double scale_{1};bool hasSpeakerRoles_{false};
     // Source decoder and projection run on the same control/worker. Callback
     // consumes existing stereo pages; raw lanes never enlarge the page cache.
     std::array<float,64*32> scratch_{};
 public:
     explicit StreamStereoSource(std::unique_ptr<AudioFrameSource> raw):raw_(std::move(raw)),metadata_(raw_->metadata()),info_(*raw_->streamInspection()) {
         if(info_.originalChannels<3 || info_.originalChannels>32 || info_.originalChannels!=static_cast<unsigned>(metadata_.channels) || info_.groups.empty() || info_.groups.size()>32)fail(SourceStatus::MalformedSource);
-        std::array<unsigned,2> routes{};
+        std::array<double,2> routeWeight{};
         for(const auto& group:info_.groups) {
             if(group.channels.empty())fail(SourceStatus::MalformedSource);
+            if(group.flags==kRoleFront || group.flags==kRoleCenter || group.flags==kRoleLfe || group.flags==kRoleRear)hasSpeakerRoles_=true;
+            const auto gains=groupStereoGains(group);
             for(std::size_t n=0;n<group.channels.size();++n) {
                 if(group.channels[n]>=info_.originalChannels)fail(SourceStatus::MalformedSource);
-                if(group.channels.size()==1){++routes[0];++routes[1];}else ++routes[n%2];
+                if(group.channels.size()==1){routeWeight[0]+=gains[0];routeWeight[1]+=gains[1];}
+                else routeWeight[n%2]+=gains[n%2];
             }
         }
-        // Preserve unity gain for front L/R channels so 5.1/multichannel mixes (e.g. Opening dm_op,
-        // Title Theme) match 2-channel tracks in loudness; EngineRuntime's output ceiling limiter
-        // prevents clipping on peaks.
-        (void)routes;
-        scale_=1.0;info_.stereoScale=scale_;metadata_.channels=2;
+        // Surround speaker-role streams (BWAV 4.0/5.0/5.1) use standard ITU-R BS.775-1
+        // downmix weights (L/R=1, C=1/sqrt(2), LFE=0, Ls/Rs=1/sqrt(2)) at unity front-channel
+        // scale (matching v0.1.0-beta01 loudness without conservative L1 attenuation or extra
+        // +6 dB boost), paired with a deterministic stereo-linked C2 soft-knee peak limiter
+        // above 0.88 (ceiling < 0.995) to prevent clipping on hot peaks.
+        // Legacy multi-track BFSTM/BRSTM stem streams (flags=0) keep fixed L1 stem headroom.
+        if(hasSpeakerRoles_) {
+            scale_=1.0;
+        } else {
+            scale_=1.0/std::max({1.0,routeWeight[0],routeWeight[1]});
+        }
+        info_.stereoScale=scale_;metadata_.channels=2;
         metadata_.flags=(metadata_.flags|ChannelControl)&~RealtimeRender;
     }
     const SourceMetadata& metadata()const noexcept override{return metadata_;}
@@ -46,17 +82,28 @@ public:
                 std::array<double,2> mixed{};
                 for(std::size_t n=0;n<info_.groups.size();++n) {
                     if((mute_&(std::uint32_t{1}<<n)) || (solo_ && !(solo_&(std::uint32_t{1}<<n))))continue;
-                    const auto& group=info_.groups[n];const double volume=group.volume/127.0;
-                    const double left=volume*(group.pan>64 ? (127-group.pan)/63.0 : 1.0);
-                    const double right=volume*(group.pan<64 ? group.pan/64.0 : 1.0);
+                    const auto& group=info_.groups[n];
+                    const auto gains=groupStereoGains(group);
+                    if(gains[0]==0.0 && gains[1]==0.0)continue;
                     for(std::size_t ch=0;ch<group.channels.size();++ch) {
                         const auto sample=scratch_[frame*info_.originalChannels+group.channels[ch]];
-                        if(group.channels.size()==1){mixed[0]+=sample*left;mixed[1]+=sample*right;}
-                        else mixed[ch%2]+=sample*(ch%2 ? right : left);
+                        if(group.channels.size()==1){mixed[0]+=sample*gains[0];mixed[1]+=sample*gains[1];}
+                        else mixed[ch%2]+=sample*gains[ch%2];
                     }
                 }
-                output[(done+frame)*2]=static_cast<float>(mixed[0]*scale_);
-                output[(done+frame)*2+1]=static_cast<float>(mixed[1]*scale_);
+                double left=mixed[0]*scale_;
+                double right=mixed[1]*scale_;
+                if(hasSpeakerRoles_) {
+                    const double peak=std::max(std::abs(left),std::abs(right));
+                    if(peak>kSoftKnee) {
+                        const double limited=kSoftKnee+kSoftHeadroom*std::tanh((peak-kSoftKnee)/kSoftHeadroom);
+                        const double ratio=limited/peak;
+                        left*=ratio;
+                        right*=ratio;
+                    }
+                }
+                output[(done+frame)*2]=static_cast<float>(left);
+                output[(done+frame)*2+1]=static_cast<float>(right);
             }
             done+=got;if(got<count || raw_->renderStatus()!=SourceStatus::Ok)break;
         }

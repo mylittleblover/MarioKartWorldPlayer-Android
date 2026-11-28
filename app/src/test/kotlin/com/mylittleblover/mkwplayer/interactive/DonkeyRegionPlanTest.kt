@@ -25,7 +25,7 @@ class DonkeyRegionPlanTest {
             val part=catalog.part(if(number==1) "DonkeyKong" else "DonkeyKong_Pattern$number","Full")!!
             val segment=plan.spec.segments.single { it.index==source }
             assertEquals(segment.cues.map { it.frame }.sorted(),segment.cues.map { it.frame },"Native requires chronological cues")
-            assertEquals(part.beats.filter { it.label==1 }.map { it.frame },segment.cues.filter { it.name=="region.exit" }.map { it.frame })
+            assertEquals(DonkeyRegionCompiler.regionExitFrames(part, number),segment.cues.filter { it.name=="region.exit" }.map { it.frame })
             for((targetNumber,target) in plan.regions.filterKeys { it==number+1 }) {
                 val targetPart=catalog.part(if(targetNumber==1) "DonkeyKong" else "DonkeyKong_Pattern$targetNumber","Full")!!
                 val rule=plan.spec.transitions.single { it.sources==listOf(source) && it.destinations==listOf(target) }

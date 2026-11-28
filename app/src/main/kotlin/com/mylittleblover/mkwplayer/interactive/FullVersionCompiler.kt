@@ -7,7 +7,22 @@ import java.security.MessageDigest
 
 /** Same-speed alternate recordings; a speed change keeps its existing MINF transition. */
 internal object FullVersionCompiler {
-    fun extend(base: InteractivePlaybackPlan,flow: StageFlow,bytes: Map<String,ByteArray>,catalog: MinfCatalog): InteractivePlaybackPlan {
+    // Verified v1.8.0 Default.game__SoundBgmSetting.bgyml:
+    // Stage_ChangePatternFade = 0.5s (Cinema both directions, SnowMountain entering Pattern2)
+    // Stage_ChangePatternFade_Snow = 2.0s (SnowMountain exiting Pattern2 back to Main/Fast)
+    // Note: Unlike Switch ROMFS streaming (+0.20s pre-read seek at 0x0243af00), all four
+    // phase-locked assets (Main, Pattern2, Fast, Fast_Pattern2, ~81-83 MiB < 128 MiB budget)
+    // stay RAM-prepared in preparedAssets so Immediate + SameTime has 0 DeadlineMiss and 0 sample drift.
+    const val CHANGE_PATTERN_FADE_SEC = 0.5
+    const val CHANGE_PATTERN_FADE_SNOW_SEC = 2.0
+
+    fun extend(
+        base: InteractivePlaybackPlan,
+        flow: StageFlow,
+        bytes: Map<String,ByteArray>,
+        catalog: MinfCatalog,
+        includeBeat1Cues: Boolean = false,
+    ): InteractivePlaybackPlan {
         val stage=flow.name.removePrefix("BGM_Stage_")
         if(stage !in setOf("Cinema","SnowMountain")) return base
         val alternateName="${stage}_Pattern2"
@@ -25,9 +40,14 @@ internal object FullVersionCompiler {
         val parts=listOf(mainName,fastName).map { name -> StageFlowReader.readPart(name,bytes.getValue(name)).getOrThrow() }+
             flow.outros().filter { part -> ConfirmedOutroCatalog.forStage(alternateName)?.containsKey(part.outroNumber)==true }
         val alternate=flow.copy(name="BGM_Stage_$alternateName",parts=parts)
-        val prepared=MinfInteractiveCompiler.prepare(alternate,parts.associate { p ->
-            p.fileName to MessageDigest.getInstance("SHA-256").digest(bytes.getValue(p.fileName))
-        },catalog)
+        val prepared=MinfInteractiveCompiler.prepare(
+            flow = alternate,
+            digests = parts.associate { p ->
+                p.fileName to MessageDigest.getInstance("SHA-256").digest(bytes.getValue(p.fileName))
+            },
+            catalog = catalog,
+            includeBeat1Cues = includeBeat1Cues,
+        )
         val other=prepared.spec
         fun owned(s: G.Spec)=s.segments.map { it.index }+s.tracks.map { it.index }+
             s.transitions.map { it.index }+s.segments.flatMap { it.cues.map { c -> c.index } }+
@@ -45,10 +65,17 @@ internal object FullVersionCompiler {
         val fast=base.fast ?: error("$stage requires base Fast")
         val otherMain=id(prepared.compiled.segmentByRole.getValue(StageFlow.Role.Main))
         val otherFast=id(prepared.compiled.segmentByRole.getValue(StageFlow.Role.Fast))
-        val fade=G.Fade(beats=base.spec.bpm/60.0)
-        val switches=listOf(main to otherMain,otherMain to main,fast to otherFast,otherFast to fast).map { (a,b) ->
-            G.Transition(nextId++,listOf(a),listOf(b),sync=G.SyncPoint.Immediate,entry=G.EntryMode.SameTime,
-                fadeOut=fade,fadeIn=fade,postExit=true)
+        val enterFade = G.Fade(beats = CHANGE_PATTERN_FADE_SEC * base.spec.bpm / 60.0)
+        val exitSeconds = if (stage == "SnowMountain") CHANGE_PATTERN_FADE_SNOW_SEC else CHANGE_PATTERN_FADE_SEC
+        val exitFade = G.Fade(beats = exitSeconds * base.spec.bpm / 60.0)
+        val switches = listOf(
+            Triple(main, otherMain, enterFade),
+            Triple(otherMain, main, exitFade),
+            Triple(fast, otherFast, enterFade),
+            Triple(otherFast, fast, exitFade),
+        ).map { (a, b, fade) ->
+            G.Transition(nextId++, listOf(a), listOf(b), sync = G.SyncPoint.Immediate, entry = G.EntryMode.SameTime,
+                fadeOut = fade, fadeIn = fade, postExit = true)
         }
         val spec=base.spec.copy(assets=base.spec.assets+other.assets,segments=base.spec.segments+segments,
             tracks=base.spec.tracks+tracks,transitions=base.spec.transitions+transitions+switches)

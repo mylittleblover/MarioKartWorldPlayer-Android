@@ -171,6 +171,7 @@ void NativeOutput::closeLocked() {
     if(callback_)callback_->callbackLifetime_.joinControl();
     if(stream_) {stream_->close();stream_.reset();}
     callback_.reset();
+    rate_.store(0,std::memory_order_release);
 }
 bool NativeOutput::start(int requestedRate) {
     if(requestedRate!=0 && (requestedRate<8000 || requestedRate>192000)) return false;
@@ -233,6 +234,7 @@ void NativeOutput::stop() {
         while((state_->callbackGen_.load(std::memory_order_acquire)&1ULL)!=0ULL) {
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
+        rate_.store(0,std::memory_order_release);
     } else {
         closeLocked();
     }
@@ -270,12 +272,21 @@ bool NativeOutput::rebind(api::EngineHandle* nextEngine,int requestedRate) {
             }
             if(oldEngine) api::releaseEngineOutput(oldEngine);
         }
+        if(requestedRate>0) {
+            requestedRate_=requestedRate;
+            rate_.store(requestedRate,std::memory_order_release);
+        }
         return true;
     }
+    const int currentRate=rate_.load(std::memory_order_acquire);
+    const bool rateMatches=requestedRate==0 ||
+        (currentRate>0 && requestedRate==currentRate) ||
+        (requestedRate_>0 && requestedRate==requestedRate_);
     const bool streamHealthy=state_->running_ && stream_ &&
         stream_->getState()==oboe::StreamState::Started &&
         stream_->getChannelCount()==2 &&
-        stream_->getFormat()==oboe::AudioFormat::Float;
+        stream_->getFormat()==oboe::AudioFormat::Float &&
+        rateMatches;
     if(nextEngine==engine_) {
         if(streamHealthy) return true;
     }
@@ -370,6 +381,7 @@ void NativeOutput::recoverLoop() {
             std::lock_guard<std::mutex> lock(control_);
             if(state_->running_ && !state_->external_.load(std::memory_order_acquire) && !stream_) {
                 state_->running_=false;
+                rate_.store(0,std::memory_order_release);
                 if(engine_) api::releaseEngineOutput(engine_);
             }
         }

@@ -16,6 +16,28 @@ internal class MinfCatalog(val records: List<Record>) {
         val loopCandidates: List<Long> get() = beats.filter {
             it.label == 1 && it.frame in loopStart..loopEnd
         }.map { it.frame }
+
+        /**
+         * Returns loop-window exit frames aligned to a verified AMTA `Pre_TransitionGrid:` beat
+         * stride anchored to the first downbeat (`label == 1`), with ±2-sample tolerance for MINF
+         * boundary rounding clamped inside `[loopStart, loopEnd]`.
+         */
+        fun gridLoopCandidates(gridBeats: Int): List<Long> {
+            val step = gridBeats.coerceAtLeast(1)
+            val firstDownbeatIdx = beats.indexOfFirst { it.label == 1 }
+            if (firstDownbeatIdx < 0) return loopCandidates
+            val minFrame = (loopStart - 2L).coerceAtLeast(0L)
+            val maxFrame = loopEnd + 2L
+            val matched = beats.mapIndexedNotNull { idx, beat ->
+                if (beat.frame in minFrame..maxFrame && Math.floorMod(idx - firstDownbeatIdx, step) == 0) {
+                    beat.frame.coerceIn(loopStart, loopEnd)
+                } else {
+                    null
+                }
+            }.distinct().sorted()
+            return matched.ifEmpty { loopCandidates }
+        }
+
         fun event(name: String): List<Long>? = events.singleOrNull { it.name == name }?.frames
     }
 
@@ -31,6 +53,23 @@ internal class MinfCatalog(val records: List<Record>) {
     }
 
     companion object {
+        /**
+         * Verified v1.8.0 AMTA `Pre_TransitionGrid:` beat stride per stage/prelude role:
+         * - `Rainbow` `Area1_Pre`: 16 beats (4 bars)
+         * - `Cinema` / `Lava` (`Pre`, `Pre_Short`): 8 beats (2 bars)
+         * - `BigTree` / `DinoBones` (`Pre`, `Pre_Short`): 3 beats (3/4 bar)
+         * - All other courses and `Rainbow` `Area3_Pre` / `Final_Pre`: 4 beats (1 bar)
+         */
+        fun preTransitionGridBeats(stage: String, role: String): Int {
+            val baseStage = stage.removePrefix("BGM_Stage_").replace(Regex("_Pattern\\d+$"), "")
+            return when {
+                baseStage == "Rainbow" && role == "Area1_Pre" -> 16
+                baseStage == "Cinema" || baseStage == "Lava" -> 8
+                baseStage == "BigTree" || baseStage == "DinoBones" -> 3
+                else -> 4
+            }
+        }
+
         fun parse(text: String): MinfCatalog {
             val root = JSONObject(text)
             require(root.getString("version") == "2026-11-12")

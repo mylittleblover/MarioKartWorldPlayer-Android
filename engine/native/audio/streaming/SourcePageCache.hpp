@@ -57,7 +57,7 @@ private:
     static void increment(std::uint64_t& value) noexcept;
     static void increment(std::atomic<std::uint32_t>& value) noexcept;
 public:
-    explicit SourcePageCache(std::size_t maximumPcmBytes=MaximumPages*PagePcmBytes,std::size_t maximumEncodedBytes=64*1024*1024);
+    explicit SourcePageCache(std::size_t maximumPcmBytes=MaximumPages*PagePcmBytes,std::size_t maximumEncodedBytes=256*1024*1024);
     ~SourcePageCache();
     SourcePageCache(const SourcePageCache&)=delete;SourcePageCache& operator=(const SourcePageCache&)=delete;
     void pauseWorker() noexcept;
@@ -74,6 +74,7 @@ public:
     SourceStatus bind(int asset,std::unique_ptr<AudioFrameSource> source,std::size_t encodedBytes,const SourceSamplePosition* warm=nullptr,std::size_t count=0) noexcept;
     // Worker/control only, with decode worker paused; used by deterministic render/seek.
     SourceStatus prepare(int asset,SourceSamplePosition position) noexcept;
+    void clearPendingRequests() noexcept;
     // Stopped linear playback only: reserve a bounded restart prefix so replay
     // decode never runs in the callback and cannot immediately evict the seam.
     SourceStatus prepareLinearRepeat(int asset,std::optional<SourceLoopMetadata> range)noexcept;

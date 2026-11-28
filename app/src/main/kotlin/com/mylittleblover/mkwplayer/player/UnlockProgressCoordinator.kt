@@ -25,6 +25,9 @@ import com.mylittleblover.mkwplayer.ui.home.ExtraMusicCatalog
 import com.mylittleblover.mkwplayer.unlock.ListeningProgress
 import com.mylittleblover.mkwplayer.unlock.SpecialCupRules
 import com.mylittleblover.mkwplayer.unlock.SpecialCupUnlock
+import com.mylittleblover.mkwplayer.unlock.StaffCreditsStore
+import com.mylittleblover.mkwplayer.unlock.StaffCreditsTrigger
+import com.mylittleblover.mkwplayer.unlock.StaffCreditsUnlock
 import com.mylittleblover.mkwplayer.unlock.UnlockStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,12 +41,13 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
- * Process-wide Special Cup unlock, notification, and background recent-play coordinator.
+ * Process-wide Special Cup unlock, Staff Credits 30-course unlock, notification, and background
+ * recent-play coordinator.
  *
  * Lives on [PlaybackHolder] rather than [PlayerViewModel] so background playback driven by
  * [PlaybackService] and [LinearPlaybackCoordinator] continues crediting 30-second listens,
- * persisting [UnlockStore], firing the unlock heads-up notification, and recording recent tracks
- * even when `MainActivity` is stopped or cleared.
+ * persisting [UnlockStore] & [StaffCreditsStore], firing the unlock heads-up notification, and
+ * recording recent tracks even when `MainActivity` is stopped or cleared.
  */
 internal class UnlockProgressCoordinator {
 
@@ -55,11 +59,20 @@ internal class UnlockProgressCoordinator {
 
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val saveMutex = Mutex()
+    private val staffSaveMutex = Mutex()
 
     private var appContext: Context? = null
     private var unlockStore: UnlockStore? = null
     private var cup: SpecialCupUnlock? = null
     private var listening: ListeningProgress? = null
+
+    // Staff Credits 30-course tracking (#25): tracks all 30 MKW main courses including Rainbow,
+    // BigTree, and SFCMarioCircuit.
+    private var staffCreditsStore: StaffCreditsStore? = null
+    private var staffCredits: StaffCreditsUnlock = StaffCreditsUnlock()
+    private var extraCourseListener: ListeningProgress? = null
+    private var extraLastSeekSequence: Long = -1L
+    private var extraLastSampleWallMs: Long = 0L
 
     private var lastSeekSequence: Long = -1L
     private var lastSampleWallMs: Long = 0L
@@ -72,6 +85,13 @@ internal class UnlockProgressCoordinator {
 
     private val _naturalUnlockUi = MutableStateFlow<UnlockUi?>(null)
     val naturalUnlockUi: StateFlow<UnlockUi?> = _naturalUnlockUi.asStateFlow()
+
+    private val _staffCreditsUnlocked = MutableStateFlow(false)
+    val staffCreditsUnlocked: StateFlow<Boolean> = _staffCreditsUnlocked.asStateFlow()
+
+    /** Monotonic counter incremented when the 30th main course completes during linear playback (#25). */
+    private val _staffCreditsLinearUnlockEvent = MutableStateFlow(0L)
+    val staffCreditsLinearUnlockEvent: StateFlow<Long> = _staffCreditsLinearUnlockEvent.asStateFlow()
 
     private val _saveError = MutableStateFlow<String?>(null)
     val saveError: StateFlow<String?> = _saveError.asStateFlow()
@@ -94,11 +114,19 @@ internal class UnlockProgressCoordinator {
         val store = UnlockStore(storeFile)
         unlockStore = store
 
+        val scStore = StaffCreditsStore(File(app.filesDir, STAFF_CREDITS_FILE))
+        staffCreditsStore = scStore
+        val restoredStaff = scStore.load()
+        val scModel = StaffCreditsUnlock(restoredStaff.state ?: StaffCreditsUnlock.State())
+
         if (eligibleStages.isEmpty()) {
             cup = null
             listening = null
             offered = false
             _naturalUnlockUi.value = null
+            staffCredits = scModel
+            extraCourseListener = ListeningProgress(SpecialCupUnlock(EXTRA_MAIN_COURSES))
+            _staffCreditsUnlocked.value = scModel.isUnlocked
             return ConfigureOutcome(problem = null, repairedCeremony = false, newlyEntitled = false)
         }
 
@@ -117,6 +145,19 @@ internal class UnlockProgressCoordinator {
         lastSeekSequence = -1L
         lastSampleWallMs = 0L
 
+        // Seed Staff Credits with any already-completed courses from SpecialCupUnlock.
+        val prevStaffSnapshot = scModel.snapshot
+        val seededSnapshot = scModel.seedCompletedCourses(bridge.snapshot.completedStages)
+        val seededChanged = seededSnapshot != prevStaffSnapshot
+        staffCredits = scModel
+        extraCourseListener = ListeningProgress(SpecialCupUnlock(EXTRA_MAIN_COURSES))
+        extraLastSeekSequence = -1L
+        extraLastSampleWallMs = 0L
+        _staffCreditsUnlocked.value = scModel.isUnlocked
+        if (seededChanged) {
+            saveStaffCreditsAsync(seededSnapshot)
+        }
+
         if (reconciledChanged || newlyEntitledRetroactive) {
             saveUnlockAsync(bridge.snapshot)
         }
@@ -124,6 +165,7 @@ internal class UnlockProgressCoordinator {
         offered = bridge.snapshot.ceremony == SpecialCupUnlock.CeremonyPhase.PENDING ||
             bridge.snapshot.ceremony == SpecialCupUnlock.CeremonyPhase.PLAYING ||
             bridge.snapshot.ceremony == SpecialCupUnlock.CeremonyPhase.COMPLETED ||
+            bridge.snapshot.ceremonyReady ||
             newlyEntitledRetroactive
         _naturalUnlockUi.value = UnlockUi.from(bridge, offered)
 
@@ -146,10 +188,46 @@ internal class UnlockProgressCoordinator {
         return rules.withState(bridge.snapshot).isEntitled
     }
 
+    fun isSpecialUnlocked(): Boolean = listening?.snapshot?.specialUnlocked == true
+
+    fun isStaffCreditsUnlocked(): Boolean = staffCredits.isUnlocked
+
+    fun staffCreditsListenedCount(): Int = staffCredits.snapshot.completedCount
+
+    fun consumeDeferredInteractiveStaffCredits(): Boolean {
+        val consumed = staffCredits.consumeDeferredInteractiveTrigger()
+        if (consumed) {
+            saveStaffCreditsAsync(staffCredits.snapshot)
+        }
+        return consumed
+    }
+
+    fun passQuiz(): Boolean {
+        val bridge = listening ?: return false
+        val next = bridge.passQuiz()
+        offered = true
+        saveUnlockAsync(next)
+        _naturalUnlockUi.value = UnlockUi.from(bridge, offered = true)
+        return true
+    }
+
     fun owesCongratulations(): Boolean {
         val rules = cup ?: return false
         val bridge = listening ?: return false
         return rules.withState(bridge.snapshot).owesCongratulations
+    }
+
+    private fun recordStaffCreditsCompletion(stageCode: String, isInteractiveMode: Boolean) {
+        val prevCount = staffCredits.snapshot.completedCount
+        val prevUnlocked = staffCredits.isUnlocked
+        val trigger = staffCredits.onCourseCompleted(stageCode, isInteractiveMode = isInteractiveMode)
+        if (staffCredits.snapshot.completedCount != prevCount || staffCredits.isUnlocked != prevUnlocked || trigger != StaffCreditsTrigger.NONE) {
+            _staffCreditsUnlocked.value = staffCredits.isUnlocked
+            saveStaffCreditsAsync(staffCredits.snapshot)
+            if (trigger == StaffCreditsTrigger.QUEUE_NEXT_LINEAR) {
+                _staffCreditsLinearUnlockEvent.value = _staffCreditsLinearUnlockEvent.value + 1L
+            }
+        }
     }
 
     fun creditSample(
@@ -159,8 +237,6 @@ internal class UnlockProgressCoordinator {
         playbackSpeed: Float,
     ) {
         if (isCeremonyLocked) return
-        val rules = cup ?: return
-        val bridge = listening ?: return
 
         val rawCourse = if (state.linear) {
             state.courseCode?.takeIf { it.isNotBlank() && !it.startsWith(PlaylistItemRef.PREFIX_EXTRA) }
@@ -170,10 +246,49 @@ internal class UnlockProgressCoordinator {
         } ?: return
 
         val normalized = SpecialCupRules.normalizeStageCode(rawCourse)
-        if (normalized.isBlank() || SpecialCupRules.isExcludedFromUnlock(normalized)) return
+        if (normalized.isBlank()) return
+        val isInteractiveMode = !state.linear
+
+        // Track the 3 main courses excluded from SpecialCupRules (Rainbow, BigTree, SFCMarioCircuit)
+        // toward the 30-course Staff Credits unlock (#25).
+        val canonicalMain = StaffCreditsUnlock.resolveMainCourseCode(normalized)
+        if (canonicalMain != null && canonicalMain in EXTRA_MAIN_COURSES && canonicalMain !in staffCredits.snapshot.completedCourses) {
+            val extraBridge = extraCourseListener ?: ListeningProgress(SpecialCupUnlock(EXTRA_MAIN_COURSES)).also {
+                extraCourseListener = it
+            }
+            if (extraLastSeekSequence != seekSequence) {
+                if (extraLastSeekSequence >= 0L) extraBridge.stopped()
+                extraLastSeekSequence = seekSequence
+            }
+            if (extraBridge.snapshot.currentStage != canonicalMain) {
+                val sr = if (state.sampleRate > 0) state.sampleRate else 48_000
+                extraBridge.begin(canonicalMain, state.totalFrames.coerceAtLeast(0L), sr)
+                extraLastSampleWallMs = SystemClock.elapsedRealtime()
+            }
+            if (!state.playing && !state.paused) {
+                extraBridge.stopped()
+            }
+            val nowMs = SystemClock.elapsedRealtime()
+            val wallDeltaMs = if (extraLastSampleWallMs > 0L) (nowMs - extraLastSampleWallMs).coerceAtLeast(1L) else 1_000L
+            extraLastSampleWallMs = nowMs
+            val extraOutcome = extraBridge.sampleContinuous(
+                frames = state.positionFrames,
+                playing = state.playing,
+                wallDeltaMs = wallDeltaMs,
+                maxPlaybackSpeed = playbackSpeed.toDouble().coerceIn(1.0, 2.5),
+            )
+            if (extraOutcome.ignoredReason == null && canonicalMain in extraOutcome.state.completedStages) {
+                recordStaffCreditsCompletion(canonicalMain, isInteractiveMode = isInteractiveMode)
+            }
+        }
+
+        val rules = cup ?: return
+        val bridge = listening ?: return
+        if (SpecialCupRules.isExcludedFromUnlock(normalized)) return
         val stage = rules.resolveEligibleStage(normalized) ?: return
 
-        val beforeCompleted = bridge.snapshot.completedStages.size
+        val beforeCompletedSet = bridge.snapshot.completedStages
+        val beforeCompleted = beforeCompletedSet.size
         val beforeEntitled = bridge.snapshot.entitled
         val beforeCeremony = bridge.snapshot.ceremony
 
@@ -204,6 +319,11 @@ internal class UnlockProgressCoordinator {
             maxPlaybackSpeed = playbackSpeed.toDouble().coerceIn(1.0, 2.5),
         )
         if (outcome.ignoredReason != null) return
+
+        // Mirror newly completed eligible course into the 30-course Staff Credits tracker (#25).
+        if (stage in outcome.state.completedStages && (stage !in beforeCompletedSet || stage !in staffCredits.snapshot.completedCourses)) {
+            recordStaffCreditsCompletion(stage, isInteractiveMode = isInteractiveMode)
+        }
 
         if (outcome.offeredNow) {
             offered = true
@@ -273,9 +393,16 @@ internal class UnlockProgressCoordinator {
 
     fun reset(context: Context): String? {
         val store = unlockStore ?: UnlockStore(File(context.applicationContext.filesDir, PlayerViewModel.SPECIAL_CUP_FILE))
+        val scStore = staffCreditsStore ?: StaffCreditsStore(File(context.applicationContext.filesDir, STAFF_CREDITS_FILE))
         lastSeekSequence = -1L
         lastSampleWallMs = 0L
         lastUnlockSavedMs = 0L
+        extraLastSeekSequence = -1L
+        extraLastSampleWallMs = 0L
+        staffCredits.reset()
+        extraCourseListener = ListeningProgress(SpecialCupUnlock(EXTRA_MAIN_COURSES))
+        _staffCreditsUnlocked.value = false
+        scStore.reset()
         cancelUnlockNotification(context)
         return store.reset()
     }
@@ -317,8 +444,8 @@ internal class UnlockProgressCoordinator {
             .setSmallIcon(R.drawable.ic_stat_jukekart)
             .setLargeIcon(largeIcon)
             .setColor(0xFFC52D49.toInt())
-            .setContentTitle(app.getString(R.string.unlock_notif_title))
-            .setContentText(app.getString(R.string.unlock_notif_body))
+            .setContentTitle(app.getString(R.string.unlock_mystery_notif_title))
+            .setContentText(app.getString(R.string.unlock_mystery_notif_body))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -382,9 +509,20 @@ internal class UnlockProgressCoordinator {
         }
     }
 
+    private fun saveStaffCreditsAsync(state: StaffCreditsUnlock.State) {
+        val store = staffCreditsStore ?: return
+        ioScope.launch {
+            staffSaveMutex.withLock {
+                store.save(state)
+            }
+        }
+    }
+
     companion object {
         const val UNLOCK_CHANNEL_ID = "jukekart_special_unlock_high"
         const val UNLOCK_NOTIFICATION_ID = 1002
+        const val STAFF_CREDITS_FILE = "staff-credits-unlock.json"
+        val EXTRA_MAIN_COURSES: Set<String> = setOf("Rainbow", "BigTree", "SFCMarioCircuit")
 
         internal fun canonicalRefId(
             context: Context?,

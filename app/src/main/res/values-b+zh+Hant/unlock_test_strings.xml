@@ -20,7 +20,7 @@
     <string name="unlock_ceremony_subtitle">請欣賞特別盃登場演出——樂曲結束後即可繼續操作。</string>
     <string name="unlock_ceremony_locked_hint">解鎖演出進行中 · 無法停止或切換曲目</string>
     <string name="unlock_congrats_title">特別盃已解鎖！</string>
-    <string name="unlock_congrats_body">你已聆聽所有符合條件的賽道。特別盃、彩虹之路及其相關紀念曲目現已在播放器中全面開放。</string>
+    <string name="unlock_congrats_body">感謝您對《瑪利歐賽車》音樂與本軟體的支持與熱愛，接下來請聆聽最後的大獎賽——特別盃。</string>
     <string name="unlock_congrats_enter">前往特別盃</string>
     <string name="unlock_congrats_close">關閉</string>
     <string name="settings_unlock_reset_btn">重設解鎖進度</string>
@@ -28,4 +28,6 @@
     <string name="settings_unlock_reset_confirm_body">將清空所有賽道聆聽進度紀錄，重新鎖定特別盃與彩虹之路，並將測試模式恢復為正常。</string>
     <string name="settings_unlock_reset_confirm_action">確認重設</string>
     <string name="settings_unlock_reset_done">已重設解鎖進度</string>
+    <string name="unlock_err_audio_missing">已安裝的資源包缺少特別盃解鎖演出音訊。</string>
+    <string name="unlock_test_err_missing_111">請匯入包含 #111 號曲目的資源包以測試解鎖演出。</string>
 </resources>

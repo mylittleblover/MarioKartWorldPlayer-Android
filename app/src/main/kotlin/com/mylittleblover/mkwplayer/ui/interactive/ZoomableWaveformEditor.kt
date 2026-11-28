@@ -90,6 +90,8 @@ internal fun ZoomableWaveformEditor(
     modifier: Modifier = Modifier,
     constrainToCandidatesOnly: Boolean = false,
     lockLabel: String? = null,
+    gridBeats: Int? = null,
+    lockedHint: String? = null,
 ) {
     val totalFrames = frames.coerceAtLeast(1L)
     var zoom by remember(frames, exitCandidates.size) { mutableFloatStateOf(1f) }
@@ -162,7 +164,9 @@ internal fun ZoomableWaveformEditor(
             )
             Text(
                 text = when {
-                    bridgeLocked -> lockLabel ?: "Bridge_ToFull"
+                    bridgeLocked -> lockLabel ?: stringResource(R.string.flow_editor_lock_bridge_handover)
+                    constrainToCandidatesOnly && gridBeats != null ->
+                        stringResource(R.string.flow_editor_snap_grid_markers, gridBeats, exitCandidates.size)
                     else -> stringResource(R.string.flow_editor_snap_markers, exitCandidates.size)
                 },
                 style = MaterialTheme.typography.labelSmall,
@@ -440,7 +444,7 @@ internal fun ZoomableWaveformEditor(
 
         Text(
             text = when {
-                bridgeLocked -> stringResource(R.string.flow_editor_bridge_locked)
+                bridgeLocked -> lockedHint ?: stringResource(R.string.flow_editor_bridge_locked)
                 peaks == null -> stringResource(R.string.flow_editor_waveform_unavailable)
                 else -> stringResource(R.string.flow_editor_waveform_hint)
             },

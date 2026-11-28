@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -61,19 +63,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mylittleblover.mkwplayer.R
 import com.mylittleblover.mkwplayer.audio.EngineSnapshot
 import com.mylittleblover.mkwplayer.graph.MusicGraphBuilder
+import com.mylittleblover.mkwplayer.interactive.MinfCatalog
 import com.mylittleblover.mkwplayer.player.PlayerViewModel
 import com.mylittleblover.mkwplayer.ui.AppMotion
 import com.mylittleblover.mkwplayer.ui.SmoothProgressIndicator
@@ -87,15 +95,24 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwDivider
 import com.mylittleblover.mkwplayer.ui.kit.MkwGhostButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
 import com.mylittleblover.mkwplayer.ui.kit.MkwOptionRow
-import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwRadioMark
 import com.mylittleblover.mkwplayer.ui.kit.MkwRoseButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSecondaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSurfaceTone
 import com.mylittleblover.mkwplayer.ui.rememberPressScale
 import com.mylittleblover.mkwplayer.ui.rememberReducedMotion
-import java.util.Locale
+import kotlin.math.ceil
 import kotlinx.coroutines.flow.StateFlow
+
+/** True only while actively playing the Rainbow Road Area 1 body where Area1_Melody exists. */
+internal fun isRainbowArea1Stage(stageKey: String?): Boolean = stageKey == "Area1"
+
+/** Formats remaining frames as whole integer seconds (rounded up, minimum 1s, never decimals). */
+internal fun formatCountdownIntegerSeconds(frames: Long, transportRate: Int): Int {
+    val rate = transportRate.coerceAtLeast(1)
+    if (frames <= 0L) return 1
+    return ceil(frames.toDouble() / rate.toDouble()).toInt().coerceAtLeast(1)
+}
 
 /** A read-only view of Native source/transport clocks; no seek gesture or UI timer. */
 @Composable
@@ -137,10 +154,13 @@ internal fun InteractivePlaybackTimeline(
                 if (remaining == null) stringResource(R.string.interactive_fading)
                 else stringResource(
                     R.string.interactive_fade_remaining,
-                    String.format(Locale.ROOT, "%.1f", remaining.toDouble() / flow.transportRate),
+                    formatCountdownIntegerSeconds(remaining, flow.transportRate).toString(),
                 ),
                 style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
                 color = MkwKitTokens.Palette.crimson,
+                softWrap = true,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -151,13 +171,18 @@ internal fun InteractiveStageBanner(
     flow: PlayerViewModel.FlowUi,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    courseCode: String? = null,
+    pendingCountdownFrames: Long? = null,
+    progressFlow: StateFlow<PlayerViewModel.ProgressUi>? = null,
+    pendingCountdownFramesProvider: ((Long?) -> Long?)? = null,
 ) {
+    val resolvedCourse = courseCode ?: inferCourseCode(flow)
     val active = flow.performing && flow.voiceCount > 0 && flow.sourceFrame != null
     val pending = flow.pendingStageKey
     val currentLabel = if (flow.performing && flow.voiceCount > 0 && flow.sourceFrame == null) {
         stringResource(R.string.stage_transitioning)
     } else {
-        stageText(flow.stageKey ?: flow.performanceStage)
+        stageText(flow.stageKey ?: flow.performanceStage, resolvedCourse)
     }
 
     MkwCard(
@@ -181,15 +206,19 @@ internal fun InteractiveStageBanner(
                 stringResource(R.string.interactive_current_stage_label),
                 style = MaterialTheme.typography.labelMedium,
                 color = MkwKitTokens.Palette.inkSecondary,
+                maxLines = 1,
+                softWrap = false,
             )
-            Spacer(Modifier.weight(1f))
             Text(
                 currentLabel,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MkwKitTokens.Palette.ink,
-                maxLines = 1,
+                textAlign = TextAlign.End,
+                softWrap = true,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
         }
         AnimatedVisibility(
@@ -198,16 +227,35 @@ internal fun InteractiveStageBanner(
             exit = fadeOut(tween(120)) + shrinkVertically(tween(160)),
         ) {
             pending?.let { nextStage ->
+                val liveSourceFrame = if (pendingCountdownFrames == null && pendingCountdownFramesProvider != null) {
+                    progressFlow?.collectAsState()?.value?.sourceFrame ?: flow.sourceFrame
+                } else {
+                    null
+                }
+                val countdownFrames = pendingCountdownFrames ?: pendingCountdownFramesProvider?.invoke(liveSourceFrame)
+                val nextLabel = stageText(nextStage, resolvedCourse)
+                val pendingText = if (countdownFrames != null) {
+                    stringResource(
+                        R.string.interactive_pending_countdown,
+                        nextLabel,
+                        formatCountdownIntegerSeconds(countdownFrames, flow.transportRate),
+                    )
+                } else {
+                    stringResource(R.string.interactive_pending_next_cue, nextLabel)
+                }
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        stringResource(R.string.interactive_pending_next_cue, stageText(nextStage)),
-                        style = MaterialTheme.typography.bodySmall,
+                        pendingText,
+                        style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
                         fontWeight = FontWeight.Medium,
                         color = MkwKitTokens.Palette.crimsonDeep,
+                        softWrap = true,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                     if (flow.canCancelPending) {
@@ -285,8 +333,7 @@ internal fun InteractiveStopBar(
         fadeRemainingFrames
     }
     val remainText = liveFadeRemaining?.let { frames ->
-        val rate = transportRate.coerceAtLeast(1)
-        String.format(Locale.ROOT, "%.1f", frames.toDouble() / rate.toDouble())
+        formatCountdownIntegerSeconds(frames, transportRate).toString()
     }
     val holdFillColor = MkwKitTokens.Palette.danger.copy(alpha = 0.16f)
 
@@ -364,8 +411,11 @@ internal fun InteractiveStopBar(
                                 style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (canStop) MkwKitTokens.Palette.ink else MkwKitTokens.Palette.inkSecondary,
-                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                softWrap = true,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
                             )
                         }
                     }
@@ -389,6 +439,7 @@ internal fun InteractiveStopBar(
                 stringResource(R.string.interactive_fade_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MkwKitTokens.Palette.inkSecondary,
+                softWrap = true,
             )
             Spacer(Modifier.height(4.dp))
             Column(
@@ -457,10 +508,12 @@ private fun <T> InteractiveSelectorBar(
                 style = MaterialTheme.typography.labelLarge,
                 color = MkwKitTokens.Palette.inkSecondary,
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
+                softWrap = true,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Surface(
+                modifier = Modifier.widthIn(max = 220.dp),
                 shape = MkwKitTokens.Shape.pill,
                 color = if (enabled) MkwKitTokens.Palette.rose else MkwKitTokens.Palette.trackStrong,
                 border = if (enabled) {
@@ -477,8 +530,10 @@ private fun <T> InteractiveSelectorBar(
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = if (enabled) MkwKitTokens.Palette.crimsonDeep else MkwKitTokens.Palette.inkSecondary,
-                        maxLines = 1,
+                        softWrap = true,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
@@ -538,19 +593,36 @@ private fun <T> InteractiveSelectorBar(
 }
 
 @Composable
-internal fun InteractiveEntryChooser(choices: Map<Int, String>, selected: Int?, enabled: Boolean, onSelect: (Int) -> Unit) {
-    if (choices.isEmpty()) return
-    val selectedName = stageText(choices[selected] ?: choices.values.first())
+internal fun InteractiveEntryChooser(
+    choices: Map<Int, String>,
+    selected: Int?,
+    enabled: Boolean,
+    onSelect: (Int) -> Unit,
+    courseCode: String? = null,
+) {
+    val resolvedCourse = normalizeCourseCode(courseCode) ?: when {
+        choices.values.any { it.startsWith("Area1") || it.startsWith("Area2") || it.startsWith("Area3") } -> "Rainbow"
+        choices.values.any { it.startsWith("Region ") } -> "DonkeyKong"
+        else -> null
+    }
+    val visibleChoices = if (resolvedCourse == "Rainbow") {
+        choices.filterValues { it != "Final" && it != "Final_Pre" }
+    } else {
+        choices
+    }
+    if (visibleChoices.isEmpty()) return
+    val effectiveSelected = if (selected in visibleChoices) selected else visibleChoices.keys.first()
+    val selectedName = stageText(visibleChoices[effectiveSelected] ?: visibleChoices.values.first(), resolvedCourse)
     InteractiveSelectorBar(
         label = stringResource(R.string.stage_start_label),
         buttonText = selectedName,
         sheetTitle = stringResource(R.string.stage_start_choose),
-        options = choices.map { (id, label) ->
+        options = visibleChoices.map { (id, label) ->
             SelectorOption(
                 value = id,
-                label = stageText(label),
+                label = stageText(label, resolvedCourse),
                 enabled = true,
-                selected = id == selected,
+                selected = id == effectiveSelected,
             )
         },
         enabled = enabled,
@@ -586,24 +658,30 @@ internal fun InteractiveVersionChooser(
     selectedVersion: Int?,
     availableVersions: Set<Int>,
     onSelect: (Int) -> Unit,
+    courseCode: String? = null,
 ) {
     if (versionNumbers.isEmpty()) return
     val displayedVersion = selectedVersion ?: versionNumbers.first()
     val options = versionNumbers.map { number ->
         SelectorOption(
             value = number,
-            label = stringResource(R.string.recording_version_number, number),
+            label = recordingVersionLabel(number, courseCode),
             enabled = number in availableVersions || number == selectedVersion,
             selected = number == selectedVersion,
         )
     }
+    val hintRes = when (normalizeCourseCode(courseCode)) {
+        "SnowMountain" -> R.string.recording_version_hint_snow
+        "Cinema" -> R.string.recording_version_hint_cinema
+        else -> R.string.recording_version_hint
+    }
     InteractiveSelectorBar(
         label = stringResource(R.string.recording_version),
-        buttonText = stringResource(R.string.recording_version_number, displayedVersion),
+        buttonText = recordingVersionLabel(displayedVersion, courseCode),
         sheetTitle = stringResource(R.string.recording_version),
-        sheetSubtitle = stringResource(R.string.recording_version_hint),
+        sheetSubtitle = stringResource(hintRes),
         options = options,
-        enabled = true,
+        enabled = availableVersions.isNotEmpty(),
         showSelectionRadio = true,
         onSelect = onSelect,
     )
@@ -612,10 +690,16 @@ internal fun InteractiveVersionChooser(
 /** A read-only inventory of this graph's actual stages, rendered as unified MKW badges. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun InteractiveStructure(flow: PlayerViewModel.FlowUi) {
+internal fun InteractiveStructure(
+    flow: PlayerViewModel.FlowUi,
+    courseCode: String? = null,
+) {
     if (flow.availableStageKeys.isEmpty()) return
-    val names = flow.availableStageKeys.map { stageText(it) }.distinct()
-    val current = if (flow.sourceFrame != null && flow.voiceCount > 0) flow.stageKey?.let { stageText(it) } else null
+    val resolvedCourse = courseCode ?: inferCourseCode(flow)
+    val names = flow.availableStageKeys.map { stageText(it, resolvedCourse) }.distinct()
+    val current = if (flow.sourceFrame != null && flow.voiceCount > 0) {
+        flow.stageKey?.let { stageText(it, resolvedCourse) }
+    } else null
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.stage_available), style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -631,6 +715,79 @@ internal fun InteractiveStructure(flow: PlayerViewModel.FlowUi) {
     }
 }
 
+private enum class ActionPillStyle { Primary, Rose, Secondary }
+
+@Composable
+private fun InteractiveActionPillButton(
+    text: String,
+    icon: ImageVector,
+    style: ActionPillStyle,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    hero: Boolean = false,
+    enabled: Boolean = true,
+) {
+    val container = when {
+        !enabled -> MkwKitTokens.Palette.trackStrong
+        style == ActionPillStyle.Primary -> MkwKitTokens.Palette.crimson
+        style == ActionPillStyle.Rose -> MkwKitTokens.Palette.rose
+        else -> MkwKitTokens.Palette.ground
+    }
+    val content = when {
+        !enabled -> MkwKitTokens.Palette.inkSecondary.copy(alpha = 0.5f)
+        style == ActionPillStyle.Primary -> Color.White
+        style == ActionPillStyle.Rose -> MkwKitTokens.Palette.crimsonDeep
+        else -> MkwKitTokens.Palette.ink
+    }
+    val border = if (style == ActionPillStyle.Secondary) {
+        BorderStroke(MkwKitTokens.Stroke.border, MkwKitTokens.Palette.hairline)
+    } else {
+        null
+    }
+    val minHeight = if (hero) MkwKitTokens.Size.buttonHero else MkwKitTokens.Size.buttonRegular
+    val horizontalPad = if (hero) 20.dp else 12.dp
+    val (pressScale, interactionSource) = rememberPressScale(pressedScale = 0.97f)
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        interactionSource = interactionSource,
+        shape = MkwKitTokens.Shape.pill,
+        color = container,
+        contentColor = content,
+        border = border,
+        modifier = modifier
+            .defaultMinSize(minHeight = minHeight)
+            .then(if (enabled) pressScale else Modifier)
+            .semantics { role = Role.Button },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = horizontalPad, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = content,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = content,
+                textAlign = TextAlign.Center,
+                softWrap = true,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+    }
+}
+
 /** Only currently available events occupy space; primary advancement leads secondary pill actions cleanly. */
 @Composable
 internal fun InteractiveActionBar(
@@ -641,18 +798,19 @@ internal fun InteractiveActionBar(
     onEnd: () -> Unit,
     showCancelInBar: Boolean = true,
 ) {
-    val showNext = flow.canAdvance && flow.selectedRegion != 5
     val showFast = flow.canFast
+    val showNext = flow.canAdvance && flow.selectedRegion != 5 && !(flow.stageKey == "Final_Pre" && showFast)
     val showEnd = flow.canEnd && flow.selectedRegion != 5
     val showCancel = showCancelInBar && flow.canCancelPending
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (showNext) {
-            MkwPrimaryButton(
+            InteractiveActionPillButton(
                 text = stringResource(R.string.interactive_action_next),
+                icon = Icons.Filled.SkipNext,
+                style = ActionPillStyle.Primary,
                 onClick = onAdvance,
-                size = MkwButtonSize.Hero,
-                leadingIcon = Icons.Filled.SkipNext,
+                hero = true,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -677,23 +835,14 @@ internal fun InteractiveActionBar(
                                 .weight(weight.coerceAtLeast(.001f))
                                 .fillMaxHeight()
                                 .graphicsLayer { alpha = weight; clip = true }
-                            if (isFast) {
-                                MkwRoseButton(
-                                    text = stringResource(labelRes),
-                                    onClick = action,
-                                    enabled = visible,
-                                    leadingIcon = icon,
-                                    modifier = mod,
-                                )
-                            } else {
-                                MkwSecondaryButton(
-                                    text = stringResource(labelRes),
-                                    onClick = action,
-                                    enabled = visible,
-                                    leadingIcon = icon,
-                                    modifier = mod,
-                                )
-                            }
+                            InteractiveActionPillButton(
+                                text = stringResource(labelRes),
+                                icon = icon,
+                                style = if (isFast) ActionPillStyle.Rose else ActionPillStyle.Secondary,
+                                onClick = action,
+                                enabled = visible,
+                                modifier = mod,
+                            )
                         }
                     }
                 }
@@ -702,21 +851,74 @@ internal fun InteractiveActionBar(
     }
 }
 
+/** Resolves the authentic MKW v1.8.0 beat grid count (3/4/8/16) for a pending grid/cue transition. */
+internal fun resolvedGridBeatsForSync(
+    courseCode: String?,
+    stageKey: String?,
+    sourceCue: String?,
+): Int? {
+    val course = normalizeCourseCode(courseCode) ?: return null
+    val normalizedStage = stageKey?.trim().orEmpty()
+    val lowered = normalizedStage.lowercase()
+    return when (sourceCue) {
+        "pre.exit" -> {
+            val roleKey = when {
+                normalizedStage == "Area1_Pre" || normalizedStage == "Area3_Pre" || normalizedStage == "Final_Pre" -> normalizedStage
+                lowered in setOf("preshort", "pre_short", "pre (short)", "short prelude", "short prelude, looping") -> "Pre_Short"
+                else -> "Pre"
+            }
+            MinfCatalog.preTransitionGridBeats(course, roleKey)
+        }
+        "region.exit" -> if (course == "DonkeyKong") {
+            val regionNum = Regex("^Region ?(\\d+)$").matchEntire(normalizedStage)?.groupValues?.get(1)?.toIntOrNull()
+            when {
+                regionNum == null || regionNum == 1 -> 4
+                else -> 8
+            }
+        } else null
+        null -> when {
+            normalizedStage == "Area1_Pre" || normalizedStage == "Area3_Pre" ->
+                MinfCatalog.preTransitionGridBeats(course, normalizedStage)
+            lowered in setOf("preshort", "pre_short", "pre (short)", "short prelude", "short prelude, looping") ->
+                MinfCatalog.preTransitionGridBeats(course, "Pre_Short")
+            lowered in setOf("pre", "prelude", "prelude, looping") ->
+                MinfCatalog.preTransitionGridBeats(course, "Pre")
+            else -> null
+        }
+        else -> null
+    }
+}
+
 @Composable
-internal fun syncPointText(sync: MusicGraphBuilder.SyncPoint?): String? = when (sync) {
+internal fun syncPointText(
+    sync: MusicGraphBuilder.SyncPoint?,
+    courseCode: String? = null,
+    stageKey: String? = null,
+    sourceCue: String? = null,
+): String? = when (sync) {
     MusicGraphBuilder.SyncPoint.Immediate -> stringResource(R.string.interactive_sync_immediate)
     MusicGraphBuilder.SyncPoint.NextBeat -> stringResource(R.string.interactive_sync_next_beat)
     MusicGraphBuilder.SyncPoint.NextBar -> stringResource(R.string.interactive_sync_next_bar)
-    MusicGraphBuilder.SyncPoint.NextGrid -> stringResource(R.string.interactive_sync_next_grid)
+    MusicGraphBuilder.SyncPoint.NextGrid ->
+        resolvedGridBeatsForSync(courseCode, stageKey, null)
+            ?.let { stringResource(R.string.interactive_sync_next_grid_beats, it) }
+            ?: stringResource(R.string.interactive_sync_next_grid)
     MusicGraphBuilder.SyncPoint.ExitCue -> stringResource(R.string.interactive_sync_exit_cue)
     MusicGraphBuilder.SyncPoint.NextCue -> stringResource(R.string.interactive_sync_next_cue)
-    MusicGraphBuilder.SyncPoint.NextCustomCue -> stringResource(R.string.interactive_sync_custom_cue)
+    MusicGraphBuilder.SyncPoint.NextCustomCue -> when (sourceCue) {
+        "pre.exit", "region.exit" ->
+            resolvedGridBeatsForSync(courseCode, stageKey, sourceCue)
+                ?.let { stringResource(R.string.interactive_sync_next_grid_beats, it) }
+                ?: stringResource(R.string.interactive_sync_custom_cue)
+        "bar.exit", "beat1.exit", "fast.exit" -> stringResource(R.string.interactive_sync_next_bar)
+        else -> stringResource(R.string.interactive_sync_custom_cue)
+    }
     null -> null
 }
 
 /**
  * Focused live stage performance control zone grouping current section badge, queued transition
- * sync target + cancel trigger, active fade status, and transition actions cleanly together.
+ * countdown/sync target + cancel trigger, active fade status, and transition actions cleanly together.
  */
 @Composable
 internal fun InteractivePhaseControlZone(
@@ -727,11 +929,15 @@ internal fun InteractivePhaseControlZone(
     onCancel: () -> Unit,
     onEnd: () -> Unit,
     progressFlow: StateFlow<PlayerViewModel.ProgressUi>? = null,
+    courseCode: String? = null,
+    pendingCountdownFrames: Long? = null,
+    pendingCountdownFramesProvider: ((Long?) -> Long?)? = null,
 ) {
+    val resolvedCourse = courseCode ?: inferCourseCode(flow)
     val active = flow.performing && flow.voiceCount > 0 && flow.sourceFrame != null
     val currentTitle = when {
         flow.performing && flow.voiceCount > 0 && flow.sourceFrame == null -> stringResource(R.string.stage_transitioning)
-        else -> stageText(flow.stageKey ?: flow.performanceStage)
+        else -> stageText(flow.stageKey ?: flow.performanceStage, resolvedCourse)
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -750,25 +956,44 @@ internal fun InteractivePhaseControlZone(
                 stringResource(R.string.interactive_current_stage_label),
                 style = MaterialTheme.typography.labelLarge,
                 color = MkwKitTokens.Palette.inkSecondary,
+                maxLines = 1,
+                softWrap = false,
             )
-            Spacer(Modifier.weight(1f))
             Text(
                 currentTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MkwKitTokens.Palette.ink,
-                maxLines = 1,
+                textAlign = TextAlign.End,
+                softWrap = true,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
         }
 
         if (flow.pendingStageKey != null) {
-            val pendingName = stageText(flow.pendingStageKey)
-            val syncText = syncPointText(flow.pendingSyncPoint)
-            val waitText = if (syncText != null) {
-                stringResource(R.string.interactive_pending_with_sync, pendingName, syncText)
+            val liveSourceFrame = if (pendingCountdownFrames == null && pendingCountdownFramesProvider != null) {
+                progressFlow?.collectAsState()?.value?.sourceFrame ?: flow.sourceFrame
             } else {
-                stringResource(R.string.interactive_pending_next_cue, pendingName)
+                null
+            }
+            val effectivePendingFrames = pendingCountdownFrames ?: pendingCountdownFramesProvider?.invoke(liveSourceFrame)
+            val pendingName = stageText(flow.pendingStageKey, resolvedCourse)
+            val syncText = syncPointText(
+                sync = flow.pendingSyncPoint,
+                courseCode = resolvedCourse,
+                stageKey = flow.stageKey,
+                sourceCue = flow.pendingSourceCue,
+            )
+            val waitText = when {
+                effectivePendingFrames != null -> stringResource(
+                    R.string.interactive_pending_countdown,
+                    pendingName,
+                    formatCountdownIntegerSeconds(effectivePendingFrames, flow.transportRate),
+                )
+                syncText != null -> stringResource(R.string.interactive_pending_with_sync, pendingName, syncText)
+                else -> stringResource(R.string.interactive_pending_next_cue, pendingName)
             }
             MkwCard(
                 tone = MkwSurfaceTone.RoseTint,
@@ -789,11 +1014,12 @@ internal fun InteractivePhaseControlZone(
                     )
                     Text(
                         waitText,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
                         color = MkwKitTokens.Palette.crimsonDeep,
-                        modifier = Modifier.weight(1f),
+                        softWrap = true,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
                     if (flow.canCancelPending) {
                         MkwSecondaryButton(
@@ -810,8 +1036,7 @@ internal fun InteractivePhaseControlZone(
         if (flow.fading) {
             val liveFade = progressFlow?.collectAsState()?.value?.fadeRemainingFrames ?: flow.fadeRemainingFrames
             val remainText = liveFade?.let { frames ->
-                val rate = flow.transportRate.coerceAtLeast(1)
-                String.format(Locale.ROOT, "%.1f", frames.toDouble() / rate.toDouble())
+                formatCountdownIntegerSeconds(frames, flow.transportRate).toString()
             }
             val fadeLabel = when {
                 paused && remainText != null -> stringResource(R.string.interactive_fade_paused, remainText)
@@ -828,11 +1053,15 @@ internal fun InteractivePhaseControlZone(
                     style = MkwKitTokens.tabular(MaterialTheme.typography.labelLarge),
                     fontWeight = FontWeight.SemiBold,
                     color = MkwKitTokens.Palette.danger,
+                    softWrap = true,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     stringResource(R.string.interactive_fade_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MkwKitTokens.Palette.inkSecondary,
+                    softWrap = true,
                 )
             }
         }

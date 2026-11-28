@@ -42,6 +42,7 @@
     <string name="interactive_sync_next_beat">Next beat</string>
     <string name="interactive_sync_next_bar">Next bar</string>
     <string name="interactive_sync_next_grid">Next 4-beat grid</string>
+    <string name="interactive_sync_next_grid_beats">Next %1$d-beat grid</string>
     <string name="interactive_sync_exit_cue">Next exit cue</string>
     <string name="interactive_sync_next_cue">Next cue marker</string>
     <string name="interactive_sync_custom_cue">Next custom cue</string>
@@ -51,4 +52,9 @@
     <string name="interactive_stop_hold_hint">Tap to stop · Hold to fade</string>
     <string name="interactive_loading_title">Loading track…</string>
     <string name="interactive_loading_hint">Preparing interactive audio graph and sections…</string>
+    <string name="player_detail_no_stage_files">No files for %1$s yet. Import a pack or open the stages folder.</string>
+    <string name="interactive_err_start_unavailable">Selected starting stage is unavailable</string>
+    <string name="interactive_err_no_source">No playable source for %1$s. Import its audio first.</string>
+    <string name="interactive_err_no_transition">No transition from the current section.</string>
+    <string name="interactive_pending_countdown">Queued: %1$s · in %2$d s</string>
 </resources>

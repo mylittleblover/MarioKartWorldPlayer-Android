@@ -214,21 +214,22 @@ class Alpha24FeaturesTest {
                 FlowStep("Fast", exitFrame = 400_000L),
             ),
         )
+        val expectedPreExit = inv.part("Pre")!!.exitCandidates.minBy { kotlin.math.abs(it.frame - 192_000L) }.frame
         val compiledNoFade = CourseFlowRecipeBuilder.compileUserPreset(preToFast, inv, minfCatalog, resolver, segmentSwitchFadeOutMs = 0)
         assertNotNull(compiledNoFade)
         val ffNoFade = compiledNoFade.medley.clips.firstOrNull { it.stem == "BGM_Seq_FinalLapFF" }
         assertNotNull(ffNoFade)
-        assertEquals(192_000L, ffNoFade.start)
-        assertEquals(0L, compiledNoFade.medley.clips.first { it.stem.endsWith("_Pre") }.fadeOut)
+        assertEquals(expectedPreExit + FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES, ffNoFade.start)
+        assertEquals(FinalLapFanfareCompiler.FULL_FADE_OUT_FRAMES, compiledNoFade.medley.clips.first { it.stem.endsWith("_Pre") }.fadeOut)
 
         val compiledWithFade = CourseFlowRecipeBuilder.compileUserPreset(preToFast, inv, minfCatalog, resolver, segmentSwitchFadeOutMs = 1500)
         assertNotNull(compiledWithFade)
         val preClip = compiledWithFade.medley.clips.first { it.stem.endsWith("_Pre") }
         val ffWithFade = compiledWithFade.medley.clips.first { it.stem == "BGM_Seq_FinalLapFF" }
         val expectedExtra = 72_000L // 1.5s @ 48 kHz
-        // Handover cursor stays at exit point (192_000L) while tail extends AFTER exit point.
-        assertEquals(192_000L, ffWithFade.start)
-        assertEquals(192_000L + expectedExtra, preClip.sourceLength)
+        // Handover cursor stays at snapped exit point while tail extends AFTER exit point.
+        assertEquals(expectedPreExit + FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES, ffWithFade.start)
+        assertEquals(expectedPreExit + expectedExtra, preClip.sourceLength)
         assertEquals(expectedExtra, preClip.fadeOut)
     }
 
@@ -505,9 +506,9 @@ class Alpha24FeaturesTest {
         val finalPreClip = clips[1]
         assertEquals("BGM_Rainbow_Area3", area3Clip.stem)
         assertEquals("BGM_Rainbow_Final_Pre", finalPreClip.stem)
-        assertEquals(1_048_000L, area3Clip.sourceLength)
-        assertEquals(48_000L, area3Clip.fadeOut)
-        assertEquals(48_000L, finalPreClip.fadeIn)
+        assertEquals(1_201_600L, area3Clip.sourceLength) // 1.20s hold (57,600) + 3.00s fadeOut (144,000)
+        assertEquals(144_000L, area3Clip.fadeOut)
+        assertEquals(120_000L, finalPreClip.fadeIn) // 2.50s fadeIn
         assertEquals(1_000_000L, finalPreClip.start)
     }
 
@@ -596,8 +597,7 @@ class Alpha24FeaturesTest {
         val minfCatalog = minf()
         val resolver = resolverWith(frames = 5_000_000L)
 
-        // Cinema Main <-> Pattern2 and Fast <-> Fast_Pattern2 must overlap at [cursor .. cursor + 1s]
-        // while preserving continuous SameTime parallel source progress across switches.
+        // Verified v1.8.0: Cinema uses 0.5s (24,000 f) both ways; SnowMountain uses 0.5s enter / 2.0s exit Pattern2.
         val cinemaInv = CourseFlowRecipeBuilder.inspectCourse("Cinema", minfCatalog, medleyCatalog(), resolver)
         val cinemaPreset = CoursePreset(
             id = "cinema-exact-xfade",
@@ -615,19 +615,19 @@ class Alpha24FeaturesTest {
         val cinemaClips = cinemaCompiled.medley.clips
         assertEquals(3, cinemaClips.size)
         assertEquals("BGM_Stage_Cinema", cinemaClips[0].stem)
-        assertEquals(1_048_000L, cinemaClips[0].sourceLength)
-        assertEquals(48_000L, cinemaClips[0].fadeOut)
+        assertEquals(1_024_000L, cinemaClips[0].sourceLength)
+        assertEquals(24_000L, cinemaClips[0].fadeOut)
         assertEquals("BGM_Stage_Cinema_Pattern2", cinemaClips[1].stem)
         assertEquals(1_000_000L, cinemaClips[1].start)
         assertEquals(1_000_000L, cinemaClips[1].sourceOffset)
-        assertEquals(548_000L, cinemaClips[1].sourceLength)
-        assertEquals(48_000L, cinemaClips[1].fadeIn)
-        assertEquals(48_000L, cinemaClips[1].fadeOut)
+        assertEquals(524_000L, cinemaClips[1].sourceLength)
+        assertEquals(24_000L, cinemaClips[1].fadeIn)
+        assertEquals(24_000L, cinemaClips[1].fadeOut)
         assertEquals("BGM_Stage_Cinema", cinemaClips[2].stem)
         assertEquals(1_500_000L, cinemaClips[2].start)
         assertEquals(1_500_000L, cinemaClips[2].sourceOffset)
         assertEquals(500_000L, cinemaClips[2].sourceLength)
-        assertEquals(48_000L, cinemaClips[2].fadeIn)
+        assertEquals(24_000L, cinemaClips[2].fadeIn)
         assertEquals(
             cinemaCompiled.medley.totalFrames,
             CourseFlowRecipeBuilder.estimateTimelineFrames(cinemaPreset.steps, cinemaPreset.outroNumber, cinemaPreset.fadeOutMs, cinemaInv),
@@ -678,11 +678,11 @@ class Alpha24FeaturesTest {
         val cinemaFastCompiled = CourseFlowRecipeBuilder.compileUserPreset(cinemaFastPreset, cinemaInv, minfCatalog, resolver)
         assertNotNull(cinemaFastCompiled)
         val cfClips = cinemaFastCompiled.medley.clips
-        assertEquals(1_048_000L, cfClips[0].sourceLength)
-        assertEquals(48_000L, cfClips[0].fadeOut)
+        assertEquals(1_024_000L, cfClips[0].sourceLength)
+        assertEquals(24_000L, cfClips[0].fadeOut)
         assertEquals(1_000_000L, cfClips[1].start)
         assertEquals(1_000_000L, cfClips[1].sourceOffset)
-        assertEquals(48_000L, cfClips[1].fadeIn)
+        assertEquals(24_000L, cfClips[1].fadeIn)
 
         val snowInv = CourseFlowRecipeBuilder.inspectCourse("SnowMountain", minfCatalog, medleyCatalog(), resolver)
         val snowPreset = CoursePreset(
@@ -692,15 +692,18 @@ class Alpha24FeaturesTest {
             steps = listOf(
                 FlowStep("Fast", loopCount = 0, exitFrame = 1_000_000L),
                 FlowStep("Fast_Pattern2", loopCount = 0, exitFrame = 1_500_000L),
+                FlowStep("Fast", loopCount = 0, exitFrame = 2_000_000L),
             ),
             fadeOutMs = 0,
         )
         val snowCompiled = CourseFlowRecipeBuilder.compileUserPreset(snowPreset, snowInv, minfCatalog, resolver)
         assertNotNull(snowCompiled)
-        assertEquals(48_000L, snowCompiled.medley.clips[0].fadeOut)
+        assertEquals(24_000L, snowCompiled.medley.clips[0].fadeOut)
         assertEquals(1_000_000L, snowCompiled.medley.clips[1].start)
         assertEquals(1_000_000L, snowCompiled.medley.clips[1].sourceOffset)
-        assertEquals(48_000L, snowCompiled.medley.clips[1].fadeIn)
+        assertEquals(24_000L, snowCompiled.medley.clips[1].fadeIn)
+        assertEquals(96_000L, snowCompiled.medley.clips[1].fadeOut)
+        assertEquals(96_000L, snowCompiled.medley.clips[2].fadeIn)
     }
 
     @Test

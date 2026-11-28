@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marker_add_chip">+ Add marker</string>
+    <string name="marker_add_dialog_title">Add Track Marker</string>
+    <string name="marker_timestamp_label">Timestamp</string>
+    <string name="marker_name_label">Marker name</string>
+    <string name="marker_default_name_fmt">Marker %1$d</string>
+    <string name="marker_color_label">Marker color</string>
+    <string name="marker_action_save">Save</string>
+    <string name="marker_action_cancel">Cancel</string>
+    <string name="marker_action_delete">Delete</string>
+    <string name="marker_play_from_menu">Play from marker</string>
+    <string name="marker_play_from_title">Play from marker</string>
+    <string name="marker_sheet_empty">No markers saved yet. Tap &quot;+ Add marker&quot; on the player screen to bookmark your favorite moments.</string>
+    <string name="marker_delete_title">Delete marker?</string>
+    <string name="marker_delete_body_fmt">Remove &quot;%1$s&quot; (%2$s)?</string>
+    <string name="marker_delete_cd">Delete marker %1$s</string>
+    <string name="marker_chip_cd_fmt">%1$s at %2$s, tap to jump, long-press to delete</string>
+    <string name="marker_color_crimson">Crimson</string>
+    <string name="marker_color_amber">Amber</string>
+    <string name="marker_color_emerald">Emerald</string>
+    <string name="marker_color_sky">Sky</string>
+    <string name="marker_color_violet">Violet</string>
+    <string name="marker_color_pink">Pink</string>
+    <string name="marker_color_orange">Orange</string>
+    <string name="marker_color_slate">Slate</string>
+
+    <string name="flow_editor_builtin_suites_title">Built-in suite presets</string>
+    <string name="flow_editor_builtin_suite_applied_fmt">Loaded %1$s</string>
+    <string name="flow_render_button">Render to Audio</string>
+    <string name="flow_render_button_progress_fmt">Rendering %1$d%%</string>
+    <string name="flow_render_dialog_title">Render Flow to Audio</string>
+    <string name="flow_render_format_summary_fmt">WAV · 16-bit Stereo · %1$d kHz · %2$s</string>
+    <string name="flow_render_gain_label">Output level</string>
+    <string name="flow_render_gain_enabled">Default +10 dB gain &amp; limiter enabled</string>
+    <string name="flow_render_gain_flat">Gain off — exporting at original level</string>
+    <string name="flow_render_folder_label">Export folder</string>
+    <string name="flow_render_start">Start render</string>
+    <string name="flow_render_in_progress">Rendering offline audio…</string>
+    <string name="flow_render_cancel">Cancel render</string>
+    <string name="flow_render_success_title">Audio exported</string>
+    <string name="flow_render_output_path_label">Saved to</string>
+    <string name="flow_render_error_title">Render failed</string>
+    <string name="flow_render_retry">Retry</string>
+    <string name="flow_render_done">Done</string>
+    <string name="flow_render_close">Close</string>
+</resources>

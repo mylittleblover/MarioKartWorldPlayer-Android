@@ -373,4 +373,236 @@ class LinearPlaybackSessionTest {
         session.poll()
         assertEquals(listOf(100, 101), playCalls, "must not retry DeadlineMiss segment on every subsequent poll")
     }
+
+    @Test
+    fun stopClosesOutputImmediatelyAndStaysStoppedAcrossStaleAsyncSnapshots() {
+        var outputClosed = false
+        val asyncEngine = object : SessionAudioEngine {
+            override val sampleRate: Int = 48_000
+            var status = EngineSnapshot.PLAYING
+            override fun nativeHandle(): Long = 404L
+            override fun cancelPendingTransition(): Int = AudioEngine.STATUS_OK
+            override fun loadGraph(packet: ByteArray): Int = AudioEngine.STATUS_OK
+            override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = AudioEngine.STATUS_OK
+            override fun loadLinearBwav(bytes: ByteArray, assetId: String, loop: Boolean, streamed: Boolean): Int = AudioEngine.STATUS_OK
+            override fun play(target: Int): Int { status = EngineSnapshot.PLAYING; return AudioEngine.STATUS_OK }
+            override fun stop(): Int = AudioEngine.STATUS_OK // Async: snapshot still reports PLAYING
+            override fun pause(): Int = AudioEngine.STATUS_OK
+            override fun resume(): Int = AudioEngine.STATUS_OK
+            override fun seek(frame: Long): Int = AudioEngine.STATUS_OK
+            override fun snapshot(): LongArray = LongArray(65).also {
+                it[0] = EngineSnapshot.WIRE_VERSION
+                it[1] = 12_000L
+                it[2] = status
+                it[3] = 1L
+            }
+            override fun sourceSnapshot(slot: Int): LongArray? = null
+            override fun close() {}
+        }
+        val session = PlaybackSession(
+            createEngine = { asyncEngine },
+            openOutput = { _, _ -> FakeOutput { outputClosed = true } },
+        )
+        session.loadLinear("Test", byteArrayOf(1), "a".repeat(64), 480_000L)
+        assertTrue(session.state.value.active)
+        assertFalse(outputClosed)
+
+        val stopped = session.stop()
+        assertTrue(outputClosed, "stop() must close output immediately to flush AudioTrack buffer")
+        assertFalse(stopped.active)
+        assertFalse(stopped.playing)
+        assertFalse(stopped.loaded)
+        assertFalse(session.hasOutput)
+
+        // Polling after stop while native snapshot was still stale PLAYING must never resurrect playback.
+        val polled = session.poll()
+        assertFalse(polled.active)
+        assertFalse(polled.playing)
+    }
+
+    @Test
+    fun commitPreparedForwardsFlushFlagToAudioOutputRebind() {
+        val flushFlags = mutableListOf<Boolean>()
+        val rebindOutput = object : SessionAudioOutput {
+            override fun timingSnapshot(): LongArray? = null
+            override fun rebindEngine(engineHandle: Long, sampleRate: Int, flush: Boolean): Boolean {
+                flushFlags += flush
+                return true
+            }
+            override fun close() {}
+        }
+        var nextHandle = 1L
+        val session = PlaybackSession(
+            createEngine = {
+                val h = nextHandle++
+                object : SessionAudioEngine {
+                    override val sampleRate: Int = 48_000
+                    override fun nativeHandle(): Long = h
+                    override fun cancelPendingTransition(): Int = 0
+                    override fun loadGraph(packet: ByteArray): Int = 0
+                    override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = 0
+                    override fun play(target: Int): Int = 0
+                    override fun stop(): Int = 0
+                    override fun pause(): Int = 0
+                    override fun resume(): Int = 0
+                    override fun seek(frame: Long): Int = 0
+                    override fun snapshot(): LongArray = LongArray(65).also {
+                        it[0] = EngineSnapshot.WIRE_VERSION
+                        it[2] = EngineSnapshot.PLAYING
+                    }
+                    override fun sourceSnapshot(slot: Int): LongArray? = null
+                    override fun close() {}
+                }
+            },
+            openOutput = { _, _ -> rebindOutput },
+        )
+
+        val p1 = (session.prepareFlow("T1", byteArrayOf(1), emptyList(), 1000L, 100, linear = true) as PlaybackSession.PrepareResult.Ok).prepared
+        session.commitPrepared(p1, flushOutput = true) // opens initial output
+
+        val p2 = (session.prepareFlow("T2", byteArrayOf(1), emptyList(), 1000L, 100, linear = true) as PlaybackSession.PrepareResult.Ok).prepared
+        session.commitPrepared(p2, flushOutput = true) // manual skip -> flush = true
+
+        val p3 = (session.prepareFlow("T3", byteArrayOf(1), emptyList(), 1000L, 100, linear = true) as PlaybackSession.PrepareResult.Ok).prepared
+        session.commitPrepared(p3, flushOutput = false) // natural end -> flush = false (gapless)
+
+        assertEquals(listOf(true, false), flushFlags)
+        session.release()
+    }
+
+    @Test
+    fun updateLinearWindowExpandsSeekRangeAndPreservesWindowDisplayTotal() = kotlinx.coroutines.runBlocking<Unit> {
+        val seekTargets = mutableListOf<Long>()
+        var outputSuspended = false
+        val suspendTrackingOutput = object : SessionAudioOutput {
+            override fun timingSnapshot(): LongArray? = null
+            override fun suspendStream(): Boolean {
+                outputSuspended = true
+                return true
+            }
+            override fun resumeStream(sampleRate: Int): Boolean {
+                outputSuspended = false
+                return true
+            }
+            override fun close() {
+                outputSuspended = true
+            }
+        }
+        val engine = object : SessionAudioEngine {
+            var transportFrame = 0L
+            var currentSegment = 100L
+            override val sampleRate: Int = 48_000
+            override fun nativeHandle(): Long = 505L
+            override fun cancelPendingTransition(): Int = AudioEngine.STATUS_OK
+            override fun loadGraph(packet: ByteArray): Int = AudioEngine.STATUS_OK
+            override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = AudioEngine.STATUS_OK
+            override fun play(target: Int): Int = AudioEngine.STATUS_OK
+            override fun stop(): Int = AudioEngine.STATUS_OK
+            override fun pause(): Int = AudioEngine.STATUS_OK
+            override fun resume(): Int = AudioEngine.STATUS_OK
+            override fun seek(frame: Long): Int {
+                assertTrue(outputSuspended, "output must be suspended while native seek executes")
+                seekTargets += frame
+                transportFrame = frame
+                return AudioEngine.STATUS_OK
+            }
+            override fun snapshot(): LongArray = LongArray(65).also {
+                it[0] = EngineSnapshot.WIRE_VERSION
+                it[1] = transportFrame
+                it[2] = EngineSnapshot.PLAYING
+                it[3] = 1L
+                it[11] = currentSegment
+            }
+            override fun sourceSnapshot(slot: Int): LongArray? = null
+            override fun close() {}
+        }
+
+        val session = PlaybackSession(
+            createEngine = { engine },
+            openOutput = { _, _ -> suspendTrackingOutput },
+        )
+        val prep = session.prepareFlow(
+            title = "Stop 1",
+            packet = byteArrayOf(1),
+            assets = emptyList(),
+            frames = 5_000_000L,
+            startSegment = 100,
+            autoAdvance = mapOf(100 to 101, 101 to 102),
+            prequeueInitial = true,
+            linear = true,
+        )
+        assertTrue(prep is PlaybackSession.PrepareResult.Ok)
+        session.commitPrepared((prep as PlaybackSession.PrepareResult.Ok).prepared)
+
+        // Advance to Stop 3 whose origin (9_600_000) + localTarget far exceeds Stop 1's 5_000_000 frames.
+        engine.currentSegment = 102L
+        engine.transportFrame = 9_600_000L
+        session.updateLinearWindow(
+            title = "Stop 3",
+            totalFrames = 5_200_000L,
+            transportOriginFrames = 9_600_000L,
+        )
+
+        val sought = session.seekAsync(9_600_000L + 2_400_000L, kotlinx.coroutines.Dispatchers.IO)
+        assertEquals(listOf(12_000_000L), seekTargets)
+        assertTrue(sought.playing, "Stop 3 seek must stay playing, detail=${sought.detail}")
+        assertEquals(null, sought.detail)
+        assertEquals(2_400_000L, sought.positionFrames)
+        assertEquals(5_200_000L, sought.totalFrames)
+        assertFalse(outputSuspended, "AudioOutput must resume after Stop 3 seek")
+        session.release()
+    }
+
+    @Test
+    fun failedSeekResumesSuspendedOutputWhenEngineRemainsPlaying() = kotlinx.coroutines.runBlocking<Unit> {
+        var outputSuspended = false
+        var resumeCalls = 0
+        val suspendTrackingOutput = object : SessionAudioOutput {
+            override fun timingSnapshot(): LongArray? = null
+            override fun suspendStream(): Boolean {
+                outputSuspended = true
+                return true
+            }
+            override fun resumeStream(sampleRate: Int): Boolean {
+                outputSuspended = false
+                resumeCalls++
+                return true
+            }
+            override fun close() {
+                outputSuspended = true
+            }
+        }
+        val engine = object : SessionAudioEngine {
+            override val sampleRate: Int = 48_000
+            override fun nativeHandle(): Long = 606L
+            override fun cancelPendingTransition(): Int = AudioEngine.STATUS_OK
+            override fun loadGraph(packet: ByteArray): Int = AudioEngine.STATUS_OK
+            override fun bindBwav(assetIndex: Int, bytes: ByteArray, assetId: String): Int = AudioEngine.STATUS_OK
+            override fun loadLinearBwav(bytes: ByteArray, assetId: String, loop: Boolean, streamed: Boolean): Int = AudioEngine.STATUS_OK
+            override fun play(target: Int): Int = AudioEngine.STATUS_OK
+            override fun stop(): Int = AudioEngine.STATUS_OK
+            override fun pause(): Int = AudioEngine.STATUS_OK
+            override fun resume(): Int = AudioEngine.STATUS_OK
+            override fun seek(frame: Long): Int = 6 // ResourceLimit
+            override fun snapshot(): LongArray = LongArray(65).also {
+                it[0] = EngineSnapshot.WIRE_VERSION
+                it[1] = 24_000L
+                it[2] = EngineSnapshot.PLAYING
+                it[3] = 1L
+            }
+            override fun sourceSnapshot(slot: Int): LongArray? = null
+            override fun close() {}
+        }
+
+        val session = PlaybackSession(
+            createEngine = { engine },
+            openOutput = { _, _ -> suspendTrackingOutput },
+        )
+        session.loadLinear("Long Track", byteArrayOf(1), "a".repeat(64), 1_000_000L)
+        val result = session.seekAsync(500_000L, kotlinx.coroutines.Dispatchers.IO)
+        assertTrue(result.detail != null)
+        assertEquals(1, resumeCalls, "Failed seek must resume suspended AudioOutput while engine is still playing")
+        assertFalse(outputSuspended, "AudioOutput must never be left permanently suspended after a rejected seek")
+        session.release()
+    }
 }

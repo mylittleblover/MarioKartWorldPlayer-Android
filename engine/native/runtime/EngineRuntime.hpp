@@ -68,6 +68,19 @@ class EngineRuntime {
     std::array<std::unique_ptr<AudioBuffer>,4096> assets_{};
     std::unique_ptr<AudioBuffer> linear_;
     bool linearLoop_{};std::optional<audio::SourceLoopMetadata> linearRepeatRange_;
+    Frame linearFadeEnd_{-1},linearFadeDuration_{0};
+    void applyLinearFadeWindow(Voice& voice) const noexcept {
+        if(linearFadeEnd_>0) {
+            voice.exitFade=true;
+            voice.fadeEnd=linearFadeEnd_;
+            voice.fadeStart=std::max<Frame>(0,linearFadeEnd_-std::max<Frame>(0,linearFadeDuration_));
+            voice.fadeShape=Shape::Linear;
+        } else {
+            voice.exitFade=false;
+            voice.fadeStart=-1;
+            voice.fadeEnd=-1;
+        }
+    }
     std::array<Scene,16> scenes_{};
     std::array<SelectionState,4096> selections_{};
     std::array<const PlaylistItem*,4096> playlistGroups_{};

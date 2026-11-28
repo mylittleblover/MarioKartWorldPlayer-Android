@@ -206,7 +206,7 @@ class StageTransitionPlannerTest {
     @Test
     fun theLayeredStageSetIsTheOneTheResearchNamed() {
         assertEquals(
-            setOf("DesertHills", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit"),
+            setOf("AirshipFortress", "DesertHills", "DinoBones", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit"),
             StageTransitionPlanner.layeredStages(),
         )
     }

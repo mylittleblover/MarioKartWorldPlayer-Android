@@ -1,39 +1,61 @@
 package com.mylittleblover.mkwplayer.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mylittleblover.mkwplayer.BuildConfig
 import com.mylittleblover.mkwplayer.R
 import com.mylittleblover.mkwplayer.i18n.AppLanguage
+import com.mylittleblover.mkwplayer.ui.AppMotion
 import com.mylittleblover.mkwplayer.ui.kit.MkwBottomSheet
 import com.mylittleblover.mkwplayer.ui.kit.MkwButtonSize
 import com.mylittleblover.mkwplayer.ui.kit.MkwCard
@@ -43,6 +65,7 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwDivider
 import com.mylittleblover.mkwplayer.ui.kit.MkwFilterPill
 import com.mylittleblover.mkwplayer.ui.kit.MkwGhostButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
+import com.mylittleblover.mkwplayer.ui.kit.MkwMotion
 import com.mylittleblover.mkwplayer.ui.kit.MkwOptionRow
 import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwRadioMark
@@ -51,7 +74,18 @@ import com.mylittleblover.mkwplayer.ui.kit.MkwSecondaryButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwSurfaceTone
 import com.mylittleblover.mkwplayer.ui.kit.MkwSwitch
 import com.mylittleblover.mkwplayer.ui.kit.MkwTextField
+import com.mylittleblover.mkwplayer.ui.rememberPressScale
+import com.mylittleblover.mkwplayer.ui.rememberReducedMotion
+import com.mylittleblover.mkwplayer.ui.theme.AppThemeAccent
+import com.mylittleblover.mkwplayer.ui.theme.ThemeSettingsStore
 import com.mylittleblover.mkwplayer.unlock.UnlockTestMode
+import kotlinx.coroutines.launch
+
+private sealed interface UpdateUiState {
+    data object Idle : UpdateUiState
+    data object Checking : UpdateUiState
+    data class Done(val result: UpdateCheckResult) : UpdateUiState
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -84,8 +118,13 @@ internal fun AppSettingsScreen(
     onResumeImport: () -> Unit = {},
     onRepickImport: () -> Unit = {},
     onDismissChangelog: () -> Unit = {},
+    selectedThemeAccent: AppThemeAccent? = null,
+    onSelectThemeAccent: ((AppThemeAccent) -> Unit)? = null,
+    exportLocationLabel: String? = null,
+    onPickExportLocation: (() -> Unit)? = null,
 ) {
     var choosingLanguage by rememberSaveable { mutableStateOf(false) }
+    var choosingThemeAccent by rememberSaveable { mutableStateOf(false) }
     var devUnlocked by rememberSaveable { mutableStateOf(testMode != UnlockTestMode.NORMAL) }
     var devExpanded by rememberSaveable { mutableStateOf(testMode != UnlockTestMode.NORMAL) }
     val tapTracker = remember { DevOptionsTapTracker() }
@@ -99,8 +138,37 @@ internal fun AppSettingsScreen(
         if (devUnlocked) tapTracker.seedUnlocked(true)
     }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+    remember(context) { ThemeSettingsStore.ensureLoaded(context) }
+    val activeThemeAccent = selectedThemeAccent ?: ThemeSettingsStore.activeAccent
+    val handleSelectThemeAccent: (AppThemeAccent) -> Unit = { chosen ->
+        if (onSelectThemeAccent != null) {
+            onSelectThemeAccent(chosen)
+        } else {
+            ThemeSettingsStore.select(context, chosen)
+        }
+    }
+    var updateUiState by remember { mutableStateOf<UpdateUiState>(UpdateUiState.Idle) }
     var activeToast by remember { mutableStateOf<Toast?>(null) }
     var confirmResetUnlock by rememberSaveable { mutableStateOf(false) }
+
+    fun openExternalUrl(url: String) {
+        val opened = runCatching {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }.isSuccess
+        if (!opened) {
+            activeToast?.cancel()
+            activeToast = Toast.makeText(
+                context,
+                context.getString(R.string.settings_link_open_failed),
+                Toast.LENGTH_SHORT,
+            ).also { it.show() }
+        }
+    }
 
     if (confirmResetUnlock) {
         MkwDialog(
@@ -166,6 +234,44 @@ internal fun AppSettingsScreen(
         }
     }
 
+    if (choosingThemeAccent) {
+        MkwBottomSheet(
+            onDismissRequest = { choosingThemeAccent = false },
+            title = stringResource(R.string.settings_theme_title),
+            subtitle = stringResource(R.string.settings_theme_hint),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp)
+                    .selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                AppThemeAccent.entries.forEach { choice ->
+                    val selected = activeThemeAccent == choice
+                    MkwOptionRow(
+                        headline = stringResource(choice.labelRes),
+                        selected = selected,
+                        role = Role.RadioButton,
+                        onClick = {
+                            if (!selected) handleSelectThemeAccent(choice)
+                            choosingThemeAccent = false
+                        },
+                        leading = {
+                            ThemeAccentSwatchDot(
+                                accent = choice,
+                                selected = selected,
+                            )
+                        },
+                        trailing = { MkwRadioMark(selected = selected) },
+                    )
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize().navigationBarsPadding(),
         contentPadding = PaddingValues(
@@ -210,7 +316,11 @@ internal fun AppSettingsScreen(
                         text = stringResource(R.string.settings_import_details),
                         onClick = { expanded = !expanded },
                     )
-                    AnimatedVisibility(expanded) {
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = MkwMotion.panelEnter(reducedMotion),
+                        exit = MkwMotion.panelExit(reducedMotion),
+                    ) {
                         Text(detail, style = MaterialTheme.typography.bodySmall, color = MkwKitTokens.Palette.inkSecondary)
                     }
                 }
@@ -394,8 +504,20 @@ internal fun AppSettingsScreen(
                 Column(Modifier.fillMaxWidth().selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     com.mylittleblover.mkwplayer.audio.OutputTrim.choices.forEach { choice ->
                         val selected = choice == outputTrim
+                        fun fmtDb(v: Double): String =
+                            if (v == v.toLong().toDouble()) "${v.toLong()} dB" else "$v dB"
+                        val trimHeadline = when {
+                            choice.gainDb == 0.0 && !choice.limits ->
+                                stringResource(R.string.settings_output_unchanged)
+                            choice.gainDb == 0.0 ->
+                                stringResource(R.string.settings_output_unchanged_limited, fmtDb(choice.ceilingDb))
+                            choice.limits ->
+                                stringResource(R.string.settings_output_gain_limited, fmtDb(choice.gainDb), fmtDb(choice.ceilingDb))
+                            else ->
+                                stringResource(R.string.settings_output_gain_only, fmtDb(choice.gainDb))
+                        }
                         MkwOptionRow(
-                            headline = choice.summary,
+                            headline = trimHeadline,
                             supporting = stringResource(
                                 if (choice.limits) R.string.settings_output_limited else R.string.settings_output_flat,
                             ),
@@ -456,9 +578,9 @@ internal fun AppSettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    listOf(0 to "0s", 500 to "0.5s", 1000 to "1s", 2000 to "2s", 5000 to "5s").forEach { (ms, label) ->
+                    listOf(0 to "0", 500 to "0.5", 1000 to "1", 2000 to "2", 5000 to "5").forEach { (ms, secsText) ->
                         MkwFilterPill(
-                            label = label,
+                            label = stringResource(R.string.settings_switch_fade_chip_sec_fmt, secsText),
                             selected = playbackBehavior.segmentSwitchFadeOutMs == ms,
                             onClick = { onSegmentSwitchFadeOutMs(ms) },
                         )
@@ -630,6 +752,83 @@ internal fun AppSettingsScreen(
                 }
             }
         }
+        if (onPickExportLocation != null || !exportLocationLabel.isNullOrBlank()) {
+            item("export-folder") {
+                MkwCard(
+                    tone = MkwSurfaceTone.Porcelain,
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 12.dp),
+                ) {
+                    Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.settings_export_folder_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MkwKitTokens.Palette.ink,
+                        )
+                        Text(
+                            stringResource(R.string.settings_export_folder_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MkwKitTokens.Palette.inkSecondary,
+                        )
+                    }
+                    MkwOptionRow(
+                        headline = exportLocationLabel?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.settings_export_folder_default),
+                        onClick = { onPickExportLocation?.invoke() },
+                        enabled = onPickExportLocation != null,
+                        leading = {
+                            Icon(
+                                imageVector = Icons.Filled.FolderOpen,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        trailing = if (onPickExportLocation != null) {
+                            {
+                                MkwFilterPill(
+                                    label = stringResource(R.string.settings_export_folder_change),
+                                    selected = true,
+                                    onClick = onPickExportLocation,
+                                    role = Role.Button,
+                                )
+                            }
+                        } else null,
+                    )
+                }
+            }
+        }
+        item("theme-accent") {
+            MkwCard(
+                onClick = { choosingThemeAccent = true },
+                tone = MkwSurfaceTone.Porcelain,
+                contentPadding = PaddingValues(18.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.settings_theme_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MkwKitTokens.Palette.ink,
+                        )
+                        Text(
+                            stringResource(R.string.settings_theme_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MkwKitTokens.Palette.inkSecondary,
+                        )
+                    }
+                    ThemeAccentValuePill(
+                        accent = activeThemeAccent,
+                        onClick = { choosingThemeAccent = true },
+                    )
+                }
+            }
+        }
         item("language-heading") {
             MkwCard(
                 onClick = { choosingLanguage = true },
@@ -655,10 +854,251 @@ internal fun AppSettingsScreen(
                 }
             }
         }
+        item("updates-links") {
+            MkwCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = MkwMotion.sizeSpring()),
+                tone = MkwSurfaceTone.Porcelain,
+                contentPadding = PaddingValues(18.dp),
+            ) {
+                Text(
+                    stringResource(R.string.settings_updates_links_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MkwKitTokens.Palette.ink,
+                )
+                Text(
+                    stringResource(R.string.settings_updates_links_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MkwKitTokens.Palette.inkSecondary,
+                )
+                MkwRoseButton(
+                    text = if (updateUiState is UpdateUiState.Checking) {
+                        stringResource(R.string.settings_update_checking)
+                    } else {
+                        stringResource(R.string.settings_update_check_btn)
+                    },
+                    onClick = {
+                        if (updateUiState !is UpdateUiState.Checking) {
+                            updateUiState = UpdateUiState.Checking
+                            coroutineScope.launch {
+                                val res = UpdateChecker.checkForUpdates(BuildConfig.VERSION_NAME)
+                                updateUiState = UpdateUiState.Done(res)
+                            }
+                        }
+                    },
+                    leadingIcon = Icons.Filled.SystemUpdate,
+                    enabled = updateUiState !is UpdateUiState.Checking,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                AnimatedContent(
+                    targetState = updateUiState,
+                    transitionSpec = { MkwMotion.viewSwap(reducedMotion) },
+                    label = "settings-update-status",
+                ) { state ->
+                    when (state) {
+                        UpdateUiState.Idle -> Spacer(Modifier.height(0.dp))
+
+                        UpdateUiState.Checking -> MkwCard(
+                            tone = MkwSurfaceTone.White,
+                            shape = MkwKitTokens.Shape.control,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MkwKitTokens.Palette.crimson,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_update_checking),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                )
+                            }
+                        }
+
+                        is UpdateUiState.Done -> when (val res = state.result) {
+                            is UpdateCheckResult.UpToDate -> MkwCard(
+                                tone = MkwSurfaceTone.White,
+                                shape = MkwKitTokens.Shape.control,
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MkwKitTokens.Palette.crimson,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_update_up_to_date, res.currentVersion),
+                                        style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MkwKitTokens.Palette.ink,
+                                    )
+                                }
+                            }
+
+                            is UpdateCheckResult.UpdateAvailable -> MkwCard(
+                                tone = MkwSurfaceTone.RoseTint,
+                                selected = true,
+                                shape = MkwKitTokens.Shape.control,
+                                contentPadding = PaddingValues(14.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.settings_update_available_title, res.latestTag),
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.titleSmall),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MkwKitTokens.Palette.crimsonDeep,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_update_available_subtitle, res.currentVersion),
+                                    style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
+                                    color = MkwKitTokens.Palette.inkSecondary,
+                                )
+                                if (res.releaseNotes.isNotBlank()) {
+                                    Text(
+                                        text = res.releaseNotes,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MkwKitTokens.Palette.ink,
+                                        maxLines = 4,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                MkwPrimaryButton(
+                                    text = stringResource(R.string.settings_update_download_btn),
+                                    onClick = { openExternalUrl(res.htmlUrl) },
+                                    leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                                    size = MkwButtonSize.Compact,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+
+                            is UpdateCheckResult.Error -> {
+                                val errorMsg = when (res.kind) {
+                                    UpdateErrorKind.NETWORK -> stringResource(R.string.settings_update_err_network)
+                                    UpdateErrorKind.RATE_LIMITED -> stringResource(R.string.settings_update_err_rate_limited)
+                                    UpdateErrorKind.HTTP_ERROR -> stringResource(
+                                        R.string.settings_update_err_http,
+                                        res.detail.orEmpty(),
+                                    )
+                                    UpdateErrorKind.NO_RELEASES -> stringResource(R.string.settings_update_err_no_releases)
+                                    UpdateErrorKind.PARSE_ERROR -> stringResource(R.string.settings_update_err_parse)
+                                }
+                                MkwCard(
+                                    tone = MkwSurfaceTone.Porcelain,
+                                    error = true,
+                                    shape = MkwKitTokens.Shape.control,
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Warning,
+                                            contentDescription = null,
+                                            tint = MkwKitTokens.Palette.danger,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Text(
+                                            text = errorMsg,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MkwKitTokens.Palette.danger,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                MkwDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    MkwOptionRow(
+                        headline = stringResource(R.string.settings_link_github_title),
+                        supporting = stringResource(R.string.settings_link_github_subtitle),
+                        onClick = { openExternalUrl(UpdateChecker.GITHUB_REPO_URL) },
+                        leading = {
+                            Icon(
+                                imageVector = Icons.Filled.Code,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.inkSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                    )
+                    MkwOptionRow(
+                        headline = stringResource(R.string.settings_link_issues_title),
+                        supporting = stringResource(R.string.settings_link_issues_subtitle),
+                        onClick = { openExternalUrl(UpdateChecker.GITHUB_ISSUES_URL) },
+                        leading = {
+                            Icon(
+                                imageVector = Icons.Filled.BugReport,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.inkSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                    )
+                    MkwOptionRow(
+                        headline = stringResource(R.string.settings_link_bilibili_title),
+                        supporting = stringResource(R.string.settings_link_bilibili_subtitle),
+                        onClick = { openExternalUrl(UpdateChecker.AUTHOR_BILIBILI_URL) },
+                        leading = {
+                            Icon(
+                                imageVector = Icons.Filled.VideoLibrary,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.crimson,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                                tint = MkwKitTokens.Palette.inkSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                    )
+                }
+            }
+        }
         if (devUnlocked || testMode != UnlockTestMode.NORMAL) {
             item("unlock-test") {
                 MkwCard(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(tween(200, easing = com.mylittleblover.mkwplayer.ui.AppMotion.easeOut)),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(tween(180, easing = AppMotion.easeOut)),
                     tone = MkwSurfaceTone.Porcelain,
                     contentPadding = PaddingValues(12.dp),
                 ) {
@@ -671,7 +1111,11 @@ internal fun AppSettingsScreen(
                             Icon(if (devExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = MkwKitTokens.Palette.inkSecondary)
                         },
                     )
-                    AnimatedVisibility(devExpanded) {
+                    AnimatedVisibility(
+                        visible = devExpanded,
+                        enter = MkwMotion.panelEnter(reducedMotion),
+                        exit = MkwMotion.panelExit(reducedMotion),
+                    ) {
                         Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Column(Modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(stringResource(R.string.settings_unlock_test_hint), style = MaterialTheme.typography.bodySmall, color = MkwKitTokens.Palette.inkSecondary)
@@ -873,5 +1317,86 @@ internal fun AppSettingsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ThemeAccentValuePill(
+    accent: AppThemeAccent,
+    onClick: () -> Unit,
+) {
+    val (pressScale, interactionSource) = rememberPressScale(pressedScale = 0.97f)
+    Box(
+        modifier = Modifier.defaultMinSize(minHeight = MkwKitTokens.Size.pillHeight),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            onClick = onClick,
+            interactionSource = interactionSource,
+            shape = MkwKitTokens.Shape.pill,
+            color = MkwKitTokens.Palette.rose,
+            border = BorderStroke(
+                MkwKitTokens.Stroke.border,
+                MkwKitTokens.Palette.crimson.copy(alpha = 0.55f),
+            ),
+            modifier = Modifier
+                .heightIn(min = MkwKitTokens.Size.pillHeight)
+                .then(pressScale)
+                .semantics { role = Role.Button },
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 11.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(accent.swatchPreview)
+                        .border(0.75.dp, Color.Black.copy(alpha = 0.16f), CircleShape),
+                )
+                Text(
+                    text = stringResource(accent.labelRes),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MkwKitTokens.Palette.crimsonDeep,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MkwKitTokens.Palette.crimsonDeep,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeAccentSwatchDot(
+    accent: AppThemeAccent,
+    selected: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .border(
+                width = if (selected) MkwKitTokens.Stroke.focused else MkwKitTokens.Stroke.hairline,
+                color = if (selected) accent.primary else MkwKitTokens.Palette.hairline,
+                shape = CircleShape,
+            )
+            .padding(2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(accent.swatchPreview)
+                .border(0.75.dp, Color.Black.copy(alpha = 0.14f), CircleShape),
+        )
     }
 }

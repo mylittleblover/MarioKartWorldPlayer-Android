@@ -5,15 +5,18 @@ import com.mylittleblover.mkwplayer.unlock.SpecialCupUnlock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The cup must be invisible until it is earned.
+ * The cup must be invisible until it is earned and its unlock ceremony completes (#24).
  *
  * That is the feature. An entry that appears locked, or a counter that reads zero before anything has
  * been heard, tells the user there is something to unlock and removes the surprise the whole stage
- * exists to deliver.
+ * exists to deliver. Once the requirement is satisfied (via listening or the quiz), the ceremony
+ * becomes ready and the persistent banner appears, while Special Cup & Rainbow Road stay hidden until
+ * the ceremony plays to completion.
  */
 class UnlockUiTest {
 
@@ -35,13 +38,15 @@ class UnlockUiTest {
 
     private fun fresh(vararg stages: String) = ListeningProgress(SpecialCupUnlock(stages.toSet()))
 
-    // ---------------------------------------------------------------- hidden until earned
+    // ---------------------------------------------------------------- hidden until ceremony completes (#24)
 
     @Test
     fun theCupIsInvisibleBeforeItIsEarned() {
         val ui = UnlockUi.from(fresh("A", "B"), offered = false)
         assertFalse(ui.visible, "an unearned cup must not appear in the list")
         assertFalse(ui.canEnter)
+        assertFalse(ui.ceremonyReady)
+        assertFalse(ui.shouldShowPersistentBanner)
     }
 
     @Test
@@ -54,10 +59,43 @@ class UnlockUiTest {
     }
 
     @Test
-    fun theCupBecomesVisibleWhenEarned() {
-        val ui = UnlockUi.from(earned("A"), offered = true)
-        assertTrue(ui.visible, "the earned cup appears")
-        assertNull(ui.hiddenReason)
+    fun earningAllStagesMakesCeremonyReadyButKeepsCupHiddenUntilCeremonyCompletes() {
+        val bridge = earned("A")
+        val pendingUi = UnlockUi.from(bridge, offered = true)
+        assertFalse(pendingUi.visible, "Special Cup stays hidden until the ceremony completes")
+        assertNotNull(pendingUi.hiddenReason)
+        assertTrue(pendingUi.canEnter, "user can enter the ceremony once earned")
+        assertTrue(pendingUi.ceremonyReady)
+        assertTrue(pendingUi.shouldShowPersistentBanner)
+        assertTrue(pendingUi.offered)
+        assertFalse(pendingUi.ceremonyCompleted)
+
+        // Completing the ceremony officially unlocks Special Cup & clears the persistent banner.
+        val unlock = SpecialCupUnlock(setOf("A")).withState(bridge.snapshot)
+        val playing = unlock.withState(unlock.beginCeremony())
+        val finished = playing.withState(playing.finishCeremony(reachedEnd = true))
+        val completedUi = UnlockUi.from(finished, offered = true)
+        assertTrue(completedUi.visible, "Special Cup becomes visible once ceremony completes")
+        assertNull(completedUi.hiddenReason)
+        assertTrue(completedUi.ceremonyCompleted)
+        assertTrue(completedUi.canEnter, "completed ceremony can still be replayed")
+        assertTrue(completedUi.ceremonyReady)
+        assertFalse(completedUi.shouldShowPersistentBanner)
+        assertTrue(completedUi.congratulationOwed)
+    }
+
+    @Test
+    fun passingTheQuizMakesCeremonyReadyWithoutUnlockingBeforeCeremonyFinishes() {
+        val bridge = fresh("A", "B").also { it.passQuiz() }
+        val ui = UnlockUi.from(bridge, offered = false)
+        assertTrue(ui.quizPassed)
+        assertNull(ui.remaining)
+        assertFalse(ui.visible, "passing the quiz must not unlock Special Cup before ceremony completes")
+        assertNotNull(ui.hiddenReason)
+        assertTrue(ui.canEnter)
+        assertTrue(ui.ceremonyReady)
+        assertTrue(ui.shouldShowPersistentBanner)
+        assertTrue(ui.offered)
     }
 
     @Test
@@ -71,6 +109,8 @@ class UnlockUiTest {
         )
         assertTrue(ui.ceremonyPlaying)
         assertFalse(ui.canEnter)
+        assertFalse(ui.visible, "cup remains hidden while first-time ceremony is still playing")
+        assertFalse(ui.shouldShowPersistentBanner, "persistent banner hides while ceremony is playing")
     }
 
     // ---------------------------------------------------------------- progress wording
@@ -114,6 +154,7 @@ class UnlockUiTest {
         val completed = fresh("A").snapshot.copy(
             ceremony = SpecialCupUnlock.CeremonyPhase.COMPLETED,
             congratulated = false,
+            specialUnlocked = true,
         )
         val ui = UnlockUi.from(
             ListeningProgress(SpecialCupUnlock(setOf("A"))).also { it.seed(completed) },
@@ -122,6 +163,8 @@ class UnlockUiTest {
         assertTrue(ui.ceremonyCompleted)
         assertFalse(ui.ceremonyPlaying)
         assertTrue(ui.congratulationOwed)
+        assertTrue(ui.visible)
+        assertNull(ui.hiddenReason)
     }
 
     @Test
@@ -129,11 +172,13 @@ class UnlockUiTest {
         val completed = fresh("A").snapshot.copy(
             ceremony = SpecialCupUnlock.CeremonyPhase.COMPLETED,
             congratulated = true,
+            specialUnlocked = true,
         )
         val ui = UnlockUi.from(
             ListeningProgress(SpecialCupUnlock(setOf("A"))).also { it.seed(completed) },
             offered = true,
         )
         assertFalse(ui.congratulationOwed)
+        assertTrue(ui.visible)
     }
 }

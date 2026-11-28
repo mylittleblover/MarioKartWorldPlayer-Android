@@ -27,6 +27,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mylittleblover.mkwplayer.ui.kit.drawSpecialProgressBar
 
 /** Android's animator duration scale is honored by Compose, including disabled system animations. */
 internal object AppMotion {
@@ -185,15 +186,38 @@ internal fun SmoothProgressIndicator(
     color: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     barHeight: Dp = 4.dp,
+    specialStyle: com.mylittleblover.mkwplayer.ui.kit.MkwSliderSpecialStyle? = null,
+    resetKey: Any? = null,
 ) {
+    val reduceMotion = rememberReducedMotion()
     val safe = progress.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
     val value by animateFloatAsState(safe, tween(AppMotion.duration, easing = LinearEasing), label = "playback-progress")
+    val specialState = com.mylittleblover.mkwplayer.ui.kit.rememberSpecialBarVisualState(
+        specialStyle = specialStyle,
+        resetKey = resetKey,
+        reduceMotion = reduceMotion,
+    )
     Canvas(modifier = modifier.height(barHeight)) {
         val radius = CornerRadius(size.height / 2f, size.height / 2f)
-        drawRoundRect(color = trackColor, size = size, cornerRadius = radius)
         val fillWidth = (size.width * value).coerceIn(0f, size.width)
-        if (fillWidth > 0.5f) {
-            drawRoundRect(color = color, size = Size(fillWidth, size.height), cornerRadius = radius)
+        if (specialState.currentStyle != null) {
+            drawSpecialProgressBar(
+                visualState = specialState,
+                trackLeft = 0f,
+                barTop = 0f,
+                usableW = size.width,
+                barH = size.height,
+                corner = radius,
+                fillLeft = 0f,
+                fillWidth = fillWidth,
+                baseTrackColor = trackColor,
+                enabled = true,
+            )
+        } else {
+            drawRoundRect(color = trackColor, size = size, cornerRadius = radius)
+            if (fillWidth > 0.5f) {
+                drawRoundRect(color = color, size = Size(fillWidth, size.height), cornerRadius = radius)
+            }
         }
     }
 }

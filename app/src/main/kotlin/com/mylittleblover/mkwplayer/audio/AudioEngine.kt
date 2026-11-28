@@ -135,6 +135,13 @@ internal class AudioEngine private constructor(private val handle: Long) : Sessi
     override fun setLinearRepeat(enabled: Boolean, begin: Long, end: Long): Int =
         if (closed) CLOSED else NativeAudioLibrary.setLinearRepeat(handle, enabled, begin, end)
 
+    override fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long): Int {
+        if (closed) return CLOSED
+        val clampedFade = fadeOutFrames.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val endNumber = if (endFrame > 0L) endFrame.toDouble() else -1.0
+        return NativeAudioLibrary.command(handle, COMMAND_LINEAR_FADE_WINDOW, 0, clampedFade, endNumber, -1L)
+    }
+
     /**
      * Submits Play.
      *
@@ -166,10 +173,15 @@ internal class AudioEngine private constructor(private val handle: Long) : Sessi
     override fun seek(frame: Long): Int =
         if (closed) CLOSED else NativeAudioLibrary.seek(handle, frame)
 
+    override fun renderInto(output: FloatArray, frames: Int): Int {
+        if (closed) return CLOSED
+        return NativeAudioLibrary.render(handle, output, frames)
+    }
+
     fun render(frames: Int): FloatArray? {
         if (closed) return null
         val buffer = FloatArray(frames * 2)
-        val status = NativeAudioLibrary.render(handle, buffer, frames)
+        val status = renderInto(buffer, frames)
         return if (status == STATUS_OK) buffer else null
     }
 
@@ -211,6 +223,9 @@ internal class AudioEngine private constructor(private val handle: Long) : Sessi
         const val COMMAND_LAYER_GAIN = 10
 
         const val COMMAND_CANCEL_PENDING = 17
+
+        /** EngineCommandKind.LinearFadeWindow */
+        const val COMMAND_LINEAR_FADE_WINDOW = 19
 
         /** The only Play target a linear runtime accepts. */
         const val PLAY_LINEAR = -1

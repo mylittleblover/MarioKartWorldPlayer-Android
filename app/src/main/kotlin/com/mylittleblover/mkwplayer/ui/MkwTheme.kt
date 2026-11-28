@@ -1,26 +1,42 @@
 package com.mylittleblover.mkwplayer.ui
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
+import com.mylittleblover.mkwplayer.ui.theme.AppThemeAccent
+import com.mylittleblover.mkwplayer.ui.theme.LocalAppThemeAccent
+import com.mylittleblover.mkwplayer.ui.theme.ThemeSettingsStore
+import com.mylittleblover.mkwplayer.ui.theme.mkwLightColorScheme
 
-/** Selected design A: white surfaces and a restrained red accent, including under system dark mode. */
-private val mkwColors = lightColorScheme(
-    primary = Color(0xFFC52D49), onPrimary = Color.White,
-    primaryContainer = Color(0xFFFCE8ED), onPrimaryContainer = Color(0xFF851C32),
-    secondary = Color(0xFF5E626E), onSecondary = Color.White,
-    secondaryContainer = Color(0xFFF0F1F5), onSecondaryContainer = Color(0xFF30343E),
-    background = Color.White, onBackground = Color(0xFF20232B),
-    surface = Color.White, onSurface = Color(0xFF20232B),
-    surfaceVariant = Color(0xFFF0F1F5), onSurfaceVariant = Color(0xFF626672),
-    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF8F8FA),
-    surfaceContainer = Color(0xFFF5F5F8), surfaceContainerHigh = Color(0xFFF0F1F5),
-    surfaceContainerHighest = Color(0xFFE8E9EF),
-    outline = Color(0xFF747884), outlineVariant = Color(0xFFE2E4EA),
-)
-
+/**
+ * Porcelain & Hairline light theme parameterized by the active character [AppThemeAccent].
+ *
+ * When [accent] is omitted (default), observes [ThemeSettingsStore.activeAccent] and loads the
+ * persisted user preference once on startup so switching accents in Settings re-themes every screen
+ * immediately without restarting.
+ */
 @Composable
-internal fun MkwTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = mkwColors, content = content)
+internal fun MkwTheme(
+    accent: AppThemeAccent? = null,
+    content: @Composable () -> Unit,
+) {
+    val resolvedAccent = if (accent != null) {
+        remember(accent) {
+            MkwKitTokens.applyAccent(accent)
+            accent
+        }
+        accent
+    } else {
+        val context = LocalContext.current
+        remember(context) { ThemeSettingsStore.ensureLoaded(context) }
+        ThemeSettingsStore.activeAccent
+    }
+
+    val colorScheme = remember(resolvedAccent) { mkwLightColorScheme(resolvedAccent) }
+    CompositionLocalProvider(LocalAppThemeAccent provides resolvedAccent) {
+        MaterialTheme(colorScheme = colorScheme, content = content)
+    }
 }

@@ -35,12 +35,12 @@ class OfficialRouteCatalogTest {
     @Test fun missingEntitlementKeepsSpecialClosedButNormalRallyCoursesVisible() {
         val catalog = parse()
         for (unlocked in listOf(null, false)) {
-            assertEquals(19, catalog.visible(unlocked).size)
+            assertEquals(21, catalog.visible(unlocked).size)
             assertFalse(catalog.visible(unlocked).any { it.id == "special_cup" })
             assertFalse("Rainbow" in catalog.stageCodes(unlocked))
             assertTrue(catalog.stageCodes(unlocked).containsAll(listOf("BigTree", "SFCMarioCircuit", "Central")))
         }
-        assertEquals(20, catalog.visible(true).size)
+        assertEquals(22, catalog.visible(true).size)
         assertEquals(30, catalog.stageCodes(true).size)
     }
     @Test fun translatedNamesDoNotChangeIdentityOrStopOrder() {

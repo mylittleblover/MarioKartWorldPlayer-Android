@@ -698,6 +698,82 @@
         }
       ],
       "sourceUrl": "https://www.mariowiki.com/Turnip_Rally"
+    },
+    {
+      "id": "feather_rally",
+      "kind": "rally",
+      "names": {
+        "en": "Feather Rally",
+        "ja": "ハネラリー",
+        "zh-Hans": "羽毛拉力赛",
+        "zh-Hant": "羽毛拉力賽"
+      },
+      "requiresSpecialUnlock": false,
+      "stops": [
+        {
+          "ordinal": 1,
+          "stage": "FirstCircuit"
+        },
+        {
+          "ordinal": 2,
+          "stage": "WarioStadium"
+        },
+        {
+          "ordinal": 3,
+          "stage": "ToadFactory"
+        },
+        {
+          "ordinal": 4,
+          "stage": "SFCMarioCircuit"
+        },
+        {
+          "ordinal": 5,
+          "stage": "BigTree"
+        },
+        {
+          "ordinal": 6,
+          "stage": "Cinema"
+        }
+      ],
+      "sourceUrl": "https://www.mariowiki.com/Feather_Rally"
+    },
+    {
+      "id": "lucky_cat_rally",
+      "kind": "rally",
+      "names": {
+        "en": "Lucky Cat Rally",
+        "ja": "まねきネコラリー",
+        "zh-Hans": "招财猫拉力赛",
+        "zh-Hant": "招財貓拉力賽"
+      },
+      "requiresSpecialUnlock": false,
+      "stops": [
+        {
+          "ordinal": 1,
+          "stage": "StormClouds"
+        },
+        {
+          "ordinal": 2,
+          "stage": "LagoonCity"
+        },
+        {
+          "ordinal": 3,
+          "stage": "RaftingRiver"
+        },
+        {
+          "ordinal": 4,
+          "stage": "Cave"
+        },
+        {
+          "ordinal": 5,
+          "stage": "SnowMountain"
+        },
+        {
+          "ordinal": 6,
+          "stage": "IceBuildings"
+        }
+      ],
+      "sourceUrl": "https://www.mariowiki.com/Lucky_Cat_Rally"
     }
   ],
   "stages": [

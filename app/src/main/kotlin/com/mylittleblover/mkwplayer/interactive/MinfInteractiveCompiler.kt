@@ -51,13 +51,14 @@ internal object MinfInteractiveCompiler {
                     val role=if(part.role==StageFlow.Role.Pre) "Pre" else "Pre_Short"
                     val r=catalog.part(stage,role) ?: error("No $role MINF for $stage")
                     require(part.loopStart==r.loopStart && part.loopEnd==r.loopEnd) { "$stage $role source loop differs from MINF" }
-                    require(r.loopCandidates.isNotEmpty())
+                    val preCandidates = r.gridLoopCandidates(MinfCatalog.preTransitionGridBeats(stage, role))
+                    require(preCandidates.isNotEmpty())
                     val extraBeat1 = if (includeBeat1Cues) {
                         r.beats.filter { it.label == 1 && it.frame in 0L..part.frames }
                             .map { G.Cue(cueIndex++, "beat1.exit", it.frame) }
                     } else emptyList()
                     G.Segment(id,exit=part.frames,loop=G.Loop(r.loopStart,r.loopEnd),
-                        cues=(r.loopCandidates.map { G.Cue(cueIndex++,"pre.exit",it) } + extraBeat1).sortedBy { it.frame })
+                        cues=(preCandidates.map { G.Cue(cueIndex++,"pre.exit",it) } + extraBeat1).sortedBy { it.frame })
                 }
                 StageFlow.Role.Bridge -> G.Segment(id,exit=part.frames)
                 StageFlow.Role.Main -> {
@@ -108,11 +109,12 @@ internal object MinfInteractiveCompiler {
                 add(G.Transition(rule++,listOf(main),listOf(to),sync=G.SyncPoint.NextCustomCue,sourceCue="outro.$n"))
             }
         }
+        val numerator = full.beats.maxOfOrNull { it.label }?.takeIf { it in 2..12 } ?: 4
         val spec=G.Spec(
             assets=ordered.map { p -> G.Asset(p.fileName,p.sampleRate,p.channels,p.frames,digests.getValue(p.fileName),lookAheadFrames=p.sampleRate*2L) },
             segments=segments,
             tracks=ordered.mapIndexed { i,p -> G.Track(300+i,indices.getValue(p.fileName),listOf(G.Clip(500+i,i,sourceLength=p.frames))) },
-            transitions=transitions,bpm=full.bpm,
+            transitions=transitions,bpm=full.bpm,numerator=numerator,
         )
         return Prepared(spec,StageFlowCompiler.Compiled(G.build(spec),flow,byRole,byOutro,ordered.map { it.fileName }),
             if(userNaturalEnd) "USER_PROPOSED_BRIDGE_END" else if(fullEntry!=null) "SOURCE_MINF_EXPLICIT_FULL_ENTRY" else "SOURCE_MINF_PHASE_CANDIDATE")

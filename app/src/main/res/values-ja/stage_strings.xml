@@ -26,4 +26,11 @@
     <string name="stage_title_brasscut">ショート版（Brasscut）</string>
     <string name="stage_battle_fast">まもなく終了</string>
     <string name="stage_outro_numbered">アウトロ %1$d</string>
+    <string name="stage_pattern_normal">通常</string>
+    <string name="stage_pattern_water">水上</string>
+    <string name="stage_pattern_inside_screen">スクリーン内</string>
+    <string name="stage_rainbow_area1">1周目</string>
+    <string name="stage_rainbow_area1_inst">1周目（伴奏のみ）</string>
+    <string name="stage_rainbow_area3">宇宙ステーション</string>
+    <string name="stage_dk_lap">%1$d周目</string>
 </resources>

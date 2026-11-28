@@ -21,3 +21,13 @@ Final 源帧 0 比 Fanfare 源帧 0 晚 **218,734 帧（4.556958333 秒）**。F
 这说明这份参考混音中的时间关系与 158 BPM 下的 12 拍高度吻合，但单凭参考无法证明它是游戏内固定延迟或某个 MINF 事件定义。Final 进入时，Fanfare 已播放 4.556958 秒，距其源文件结束仍有 120,090 帧（2.501875 秒）；不过 Fanfare 已进入快速衰减尾部，源 RMS 从 4.25 秒的 458.61 降到 5 秒的 9.28。该时间重叠不代表两条强旋律持续叠放。
 
 完整哈希、每个窗口的对齐分数、loop 相位检查和裁剪元数据见 [alignment.json](/workspace/mkw-planning/rainbow-correct-reference/alignment.json)。12 秒对照片段是 [Rainbow-correct-reference-fan-final-636-648s.wav](/workspace/mkw-delivery/Rainbow-correct-reference-fan-final-636-648s.wav)：Fanfare 源帧 0 在片段 3.498646 秒，Final 源帧 0 在 8.055604 秒。
+
+## MKW v1.8.0 游戏内提取报告完整对齐（2026-11-28，已实装于 `Beta 0.1.6`）
+
+经 `M_BgmRainbow.bars.zs`（全部 15 条 2 声道流）、`Default.game__SoundBgmSetting.bgyml` 与 `main.bin`（`0x024396c0` / `0x0243bff0` / `0x0243d060..0x0243d8e0`）全量逆向，彩虹之路全段衔接规则已全部确认：
+
+- **进场与 `Area1_Pre`**：连接赛道 `Central → Rainbow` 跳过点唱机直接起播 `BGM_Rainbow_Area1_Pre`（94.18 s 循环，`Pre_TransitionGrid: 16`），经 `BGM_Rainbow_Area1_Bridge`（`Bridge_ToFull = 218,734` 帧 = `4.557 s`）进入 Area 1。
+- **`Area1_Inst` + `Area1_Melody` 双轨锁相与 `Area1 → Area2` 分轨淡出（`0x0243d500`）**：`Area1_Inst` 与 `Area1_Melody` 逐样本锁定 **`7,528,085` 帧**（158 BPM，`loop = 1,986,831..7,528,085`）。越过第 2 段检查点时，**`Area1_Melody` 立即 `0.30 s` 淡出（delay = 0）**，**`Area1_Inst` 播完当前小节后再 `0.30 s`（`14,400` 帧）淡出**，同时 `Area2`（73.15 s）按 `-Area2.phase` 强拍切入。
+- **`Area2 → Area3_Pre → Area3`**：`Area2` 经 5 条 `Full_ToOutro00..04` 进入 `Area2_Outro00..04`，再按各自 `Outro_ToNextPre` 无缝留尾接入 `Area3_Pre`（`Pre_TransitionGrid: 4`）；并在 `Rainbow_00_Fix`（`Y = 4,549 m`）复用 1 枚 `SystemObj_SnowMountainSoundArea_00` 触发 Area 3 声场切换。
+- **`Area3 → Final_Pre`（`0x02439790` / `0x0243c1f4`）**：领先车手距终段检查点 **`-220.0 m`** 时触发——**`Area3` 保持原音量 `1.20 s`（`57,600` 帧）后执行 `3.00 s`（`144,000` 帧）淡出**，同时 **`Final_Pre`（24.30 s）立即执行 `2.50 s`（`120,000` 帧）淡入**（取代了早期 `alpha06` 的 1 秒交叉淡化假设）。
+- **`Final_Pre → FinalLapFanfare → Final`（`0x0243d8e0`）**：`Final_Pre` 执行 **`0.10 s`（`4,800` 帧）**淡出；`BGM_Rainbow_FinalLapFanfare`（7.06 s）按 `Rainbow_FanfareDelay` = **`0.20 s`（`9,600` 帧）**延迟起播；再经上文实测一致的 **`218,734` 帧（`4.557 s`，158 BPM 下精确 12 拍）**于总偏移 `228,334` 帧切入 `BGM_Rainbow_Final`（86.70 s），同时号角余尾自然叠加衰减。

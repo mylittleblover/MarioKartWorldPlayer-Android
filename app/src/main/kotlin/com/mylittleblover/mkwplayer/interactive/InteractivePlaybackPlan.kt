@@ -24,6 +24,8 @@ internal data class InteractivePlaybackPlan(
     val customInitialSegments: List<Int> = emptyList(),
     val overlayTrackIndices: List<Int> = emptyList(),
     val overlayDefaultEnabled: Boolean = false,
+    val splitFadeOnAdvance: Map<Int, Int> = emptyMap(),
+    val splitFadeOverlayMs: Int = 300,
 ) {
     data class Version(val number: Int,val main: Int,val fast: Int?)
 
@@ -32,7 +34,7 @@ internal data class InteractivePlaybackPlan(
         if (customInitialSegments.isNotEmpty()) return customInitialSegments
         val roles=standard?.segmentByRole
         if (roles == null) return (listOf(originalEntry ?: entry) + listOfNotNull(directBridge) +
-            listOf("Area1", "Area2", "Area3_Pre", "Area3", "Final_Pre", "Final").mapNotNull { label -> labels.entries.singleOrNull { it.value == label }?.key }).distinct()
+            listOf("Area1", "Area2", "Area3_Pre", "Area3").mapNotNull { label -> labels.entries.singleOrNull { it.value == label }?.key }).distinct()
         val allowed=listOf(StageFlow.Role.Pre,StageFlow.Role.PreShort)+
             listOfNotNull(directBridge?.let { StageFlow.Role.Bridge })+listOf(StageFlow.Role.Main)+
             listOf(StageFlow.Role.Fast)
@@ -62,7 +64,13 @@ internal data class InteractivePlaybackPlan(
             if (fadeBeats <= 0.0) return spec
             return spec.copy(
                 transitions = spec.transitions.map { rule ->
-                    if (rule.fadeOut.beats > 0.0 || rule.fadeOut.offset != 0.0) {
+                    val isAuthoredStructural =
+                        rule.bridge >= 0 ||
+                            rule.sync == G.SyncPoint.ExitCue ||
+                            rule.sourceCue == "pre.exit" ||
+                            rule.sourceCue?.startsWith("outro.") == true ||
+                            rule.sourceCue?.startsWith("Full_ToOutro") == true
+                    if (isAuthoredStructural || rule.fadeOut.beats > 0.0 || rule.fadeOut.offset != 0.0) {
                         rule
                     } else {
                         rule.copy(
@@ -126,7 +134,14 @@ internal data class InteractivePlaybackPlan(
             val base=InteractivePlaybackPlan(flow.name,prepared.spec,compiled.packet,compiled.assetPaths,entry,next,
                 compiled.segmentByOutro,roles[StageFlow.Role.Fast],labels,compiled,
                 streamed=true,preparedAssets=preparedAssets,entryPreparedAssets=entryPreparedAssets)
-            val regionExtended = DonkeyRegionCompiler.extend(FullVersionCompiler.extend(base,flow,bytes,catalog),flow,bytes,catalog)
+            val versionExtended = FullVersionCompiler.extend(
+                base = base,
+                flow = flow,
+                bytes = bytes,
+                catalog = catalog,
+                includeBeat1Cues = options.perfectBeatEnabled,
+            )
+            val regionExtended = DonkeyRegionCompiler.extend(versionExtended, flow, bytes, catalog)
             val fanfared = FinalLapFanfareCompiler.extend(regionExtended, bytes, perfectBeatEnabled = options.perfectBeatEnabled)
             val bridged = DirectBridgeCompiler.normal(fanfared, flow, catalog)
             return applySwitchFadeToPlan(bridged, options.segmentSwitchFadeOutMs)
@@ -152,10 +167,7 @@ internal data class InteractivePlaybackPlan(
                 "Area3" to "Final_Pre","Final_Pre" to "Final","FinalLapFanfare" to "Final")+
                 (0..4).map { "Area2_Outro%02d".format(it) to "Area3_Pre" }
             val area1SegId = p.segments.getValue("Area1")
-            val melodyAssetIdx = RainbowInteractiveCompiler.roles.indexOf("Area1_Melody")
-            val melodyTrackIds = p.spec.tracks
-                .filter { it.segment == area1SegId && it.clips.any { clip -> clip.asset == melodyAssetIdx } }
-                .map { it.index }
+            val melodyTrackIds = listOfNotNull(RainbowInteractiveCompiler.area1MelodyTrackId(p.spec))
             val fastId = if (options.allowPreludeToFast) p.segments.getValue("Final") else null
             val base = InteractivePlaybackPlan("Rainbow",p.spec,p.packet,p.assets.map { it.fileName },p.segments.getValue("Area1_Pre"),
                 pairs.associate { p.segments.getValue(it.first) to p.segments.getValue(it.second) },
@@ -170,7 +182,9 @@ internal data class InteractivePlaybackPlan(
                 ),
                 advanceViaOutro=setOf(p.segments.getValue("Area2")),
                 overlayTrackIndices=melodyTrackIds,
-                overlayDefaultEnabled=true)
+                overlayDefaultEnabled=true,
+                splitFadeOnAdvance=mapOf(area1SegId to p.segments.getValue("Area2")),
+                splitFadeOverlayMs=RainbowInteractiveCompiler.AREA1_MELODY_FADE_MS)
             return applySwitchFadeToPlan(DirectBridgeCompiler.rainbow(base, catalog), options.segmentSwitchFadeOutMs)
         }
     }

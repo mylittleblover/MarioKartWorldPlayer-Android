@@ -5,7 +5,7 @@
 namespace player2::api {
 // Public command IDs are stable; no C++ or Kotlin declaration-order ABI.
 enum class EngineCommandKind : std::int32_t {
-    Play=0,Stop=1,Pause=2,Resume=3,Event=4,SetSync=5,SetParameter=6,Trigger=7,Performance=8,EntryState=9,LayerGain=10,Automatic=11,StopAutomatic=12,MusicalLoop=13,StopMusicalLoop=14,AlbumFlow=15,AlbumNext=16,CancelPendingTransition=17,OutputGain=18
+    Play=0,Stop=1,Pause=2,Resume=3,Event=4,SetSync=5,SetParameter=6,Trigger=7,Performance=8,EntryState=9,LayerGain=10,Automatic=11,StopAutomatic=12,MusicalLoop=13,StopMusicalLoop=14,AlbumFlow=15,AlbumNext=16,CancelPendingTransition=17,OutputGain=18,LinearFadeWindow=19
 };
 inline bool validEngineCommandKind(std::int32_t id)noexcept {
     switch(static_cast<EngineCommandKind>(id)) {
@@ -14,7 +14,7 @@ inline bool validEngineCommandKind(std::int32_t id)noexcept {
         case EngineCommandKind::Performance:case EngineCommandKind::EntryState:case EngineCommandKind::LayerGain:
         case EngineCommandKind::Automatic:case EngineCommandKind::StopAutomatic:case EngineCommandKind::MusicalLoop:case EngineCommandKind::StopMusicalLoop:
         case EngineCommandKind::AlbumFlow:case EngineCommandKind::AlbumNext:case EngineCommandKind::CancelPendingTransition:
-        case EngineCommandKind::OutputGain:return true;
+        case EngineCommandKind::OutputGain:case EngineCommandKind::LinearFadeWindow:return true;
     }
     return false;
 }

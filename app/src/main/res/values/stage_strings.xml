@@ -26,4 +26,11 @@
     <string name="stage_title_brasscut">Short (Brasscut)</string>
     <string name="stage_battle_fast">Ending Soon</string>
     <string name="stage_outro_numbered">Outro %1$d</string>
+    <string name="stage_pattern_normal">Normal</string>
+    <string name="stage_pattern_water">On the Water</string>
+    <string name="stage_pattern_inside_screen">Inside the Screen</string>
+    <string name="stage_rainbow_area1">Lap 1</string>
+    <string name="stage_rainbow_area1_inst">Lap 1 (Inst Only)</string>
+    <string name="stage_rainbow_area3">Space Station</string>
+    <string name="stage_dk_lap">Lap %1$d</string>
 </resources>

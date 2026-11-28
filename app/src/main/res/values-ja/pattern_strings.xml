@@ -1,9 +1,11 @@
 <resources>
     <string name="recording_version">楽曲バージョン</string>
     <string name="recording_version_number">バージョン %1$d</string>
-    <string name="recording_version_hint">現在の再生位置を保ち、1秒のクロスフェードで切り替えます。</string>
-    <string name="music_region">楽曲エリア</string>
-    <string name="music_region_number">エリア %1$d</string>
-    <string name="music_region_hint">曲の切替点で次のエリアへ進み、エリア 5 の後にファイナルラップへ進みます。</string>
+    <string name="recording_version_hint">現在の再生位置を保ち、滑らかなクロスフェードで切り替えます。</string>
+    <string name="recording_version_hint_snow">同位相クロスフェードで切替（水上へ 0.5 秒／通常へ戻る 2.0 秒）。通常ラップ・ファイナルラップの両方に対応。</string>
+    <string name="recording_version_hint_cinema">通常とスクリーン内を双方向 0.5 秒の同位相クロスフェードで切替。通常ラップ・ファイナルラップの両方に対応。</string>
+    <string name="music_region">周回パート</string>
+    <string name="music_region_number">%1$d周目</string>
+    <string name="music_region_hint">曲の切替点で次の周へ進み、5周目の後にファイナルラップへ進みます。</string>
     <string name="cancel_pending_transition">待機中の切り替えをキャンセル</string>
 </resources>

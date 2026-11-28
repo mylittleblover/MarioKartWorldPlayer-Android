@@ -96,6 +96,7 @@ internal class PlaybackSession(
     private var linearSession: Boolean = false
     private var linearActiveSegment: Int = -1
     private var linearDisplayOffsetFrames: Long = 0L
+    private var linearDisplayTotalFrames: Long = 0L
 
     private val nativeLifecycleLock = Any()
     @Volatile
@@ -139,18 +140,22 @@ internal class PlaybackSession(
         subtitle: String? = _state.value.subtitle,
     ) {
         if (!linearSession) return
-        linearDisplayOffsetFrames = transportOriginFrames.coerceAtLeast(0L)
+        val safeOrigin = transportOriginFrames.coerceAtLeast(0L)
+        val safeTotal = totalFrames.coerceAtLeast(0L)
+        linearDisplayOffsetFrames = safeOrigin
+        linearDisplayTotalFrames = safeTotal
+        controller?.setSeekLimit(safeOrigin + safeTotal)
         val rawPos = controller?.poll()?.let {
             when (it) {
                 is PlaybackController.State.Playing -> it.positionFrames
                 is PlaybackController.State.Paused -> it.positionFrames
-                else -> _state.value.positionFrames + linearDisplayOffsetFrames
+                else -> _state.value.positionFrames + safeOrigin
             }
         } ?: _state.value.positionFrames
         _state.value = _state.value.copy(
             title = title,
-            totalFrames = totalFrames,
-            positionFrames = (rawPos - linearDisplayOffsetFrames).coerceAtLeast(0L),
+            totalFrames = safeTotal,
+            positionFrames = (rawPos - safeOrigin).coerceAtLeast(0L),
             artworkName = artworkName,
             courseCode = courseCode,
             subtitle = subtitle,
@@ -327,6 +332,7 @@ internal class PlaybackSession(
         initialLayerGains: Map<Int, Double> = emptyMap(),
         linear: Boolean = false,
         initialSeekFrames: Long = 0L,
+        seekLimitFrames: Long = 0L,
     ): PrepareResult = prepareFlowInternal(
         title = title,
         packet = packet,
@@ -337,6 +343,7 @@ internal class PlaybackSession(
         initialLayerGains = initialLayerGains,
         linear = linear,
         initialSeekFrames = initialSeekFrames,
+        seekLimitFrames = seekLimitFrames,
     ) bindAssets@{ staged ->
         assets.forEachIndexed { index, (name, bytes) ->
             val status = if (streamed && name !in preparedAssets) {
@@ -368,6 +375,7 @@ internal class PlaybackSession(
         initialLayerGains: Map<Int, Double> = emptyMap(),
         linear: Boolean = false,
         initialSeekFrames: Long = 0L,
+        seekLimitFrames: Long = 0L,
     ): PrepareResult = prepareFlowInternal(
         title = title,
         packet = packet,
@@ -378,6 +386,7 @@ internal class PlaybackSession(
         initialLayerGains = initialLayerGains,
         linear = linear,
         initialSeekFrames = initialSeekFrames,
+        seekLimitFrames = seekLimitFrames,
     ) bindAssets@{ staged ->
         assets.forEachIndexed { index, asset ->
             val isStreamed = streamed && asset.path !in preparedAssets
@@ -414,6 +423,7 @@ internal class PlaybackSession(
         initialLayerGains: Map<Int, Double>,
         linear: Boolean,
         initialSeekFrames: Long,
+        seekLimitFrames: Long = 0L,
         bindAssets: (SessionAudioEngine) -> String?,
     ): PrepareResult {
         val staged = createEngine() ?: return PrepareResult.Failed("Out of memory creating the audio engine.")
@@ -449,6 +459,9 @@ internal class PlaybackSession(
 
         applySessionEffectsToEngine(staged)
         stagedController.setDuration(frames)
+        if (seekLimitFrames > frames) {
+            stagedController.setSeekLimit(seekLimitFrames)
+        }
         val initialState = if (initialSeekFrames > 0L) {
             val clamped = initialSeekFrames.coerceIn(0L, (frames - 1L).coerceAtLeast(0L))
             val sought = stagedController.seek(clamped)
@@ -528,6 +541,9 @@ internal class PlaybackSession(
         loopStart: Long? = null,
         loopEnd: Long? = null,
         initialSeekFrames: Long = 0L,
+        fadeEndFrames: Long = -1L,
+        fadeOutFrames: Long = 0L,
+        displayTotalFrames: Long = frames,
     ): PrepareResult {
         val staged = createEngine() ?: return PrepareResult.Failed("Out of memory creating the audio engine.")
         val stagedController = PlaybackController(staged as PlaybackEngine)
@@ -544,9 +560,14 @@ internal class PlaybackSession(
             val repeated = stagedController.setLinearRepeat(true, loopStart, loopEnd)
             if (repeated is PlaybackController.State.Failed) return abort(repeated.reason)
         }
-        stagedController.setDuration(frames)
+        val effectiveTotal = if (displayTotalFrames > 0L) displayTotalFrames else frames
+        stagedController.setDuration(effectiveTotal)
+        if (fadeEndFrames > 0L) {
+            val faded = stagedController.setLinearFadeWindow(fadeEndFrames, fadeOutFrames, effectiveTotal)
+            if (faded is PlaybackController.State.Failed) return abort(faded.reason)
+        }
         val initialState = if (initialSeekFrames > 0L) {
-            val clamped = initialSeekFrames.coerceIn(0L, (frames - 1L).coerceAtLeast(0L))
+            val clamped = initialSeekFrames.coerceIn(0L, (effectiveTotal - 1L).coerceAtLeast(0L))
             val sought = stagedController.seek(clamped)
             if (sought is PlaybackController.State.Failed) return abort(sought.reason)
             sought
@@ -559,7 +580,7 @@ internal class PlaybackSession(
                 controller = stagedController,
                 started = initialState,
                 title = title,
-                frames = frames,
+                frames = effectiveTotal,
                 linear = true,
                 initialSeeked = initialSeekFrames > 0L,
             ),
@@ -567,14 +588,14 @@ internal class PlaybackSession(
     }
 
     /** Swaps a background-prepared engine into the active session and rebinds or opens output on Main. */
-    fun commitPrepared(prepared: Prepared): State {
+    fun commitPrepared(prepared: Prepared, flushOutput: Boolean = false): State {
         applySessionEffectsToEngine(prepared.engine)
         var oldEngine: SessionAudioEngine? = null
         var oldController: PlaybackController? = null
         synchronized(nativeLifecycleLock) {
             val existingOut = output
             val rebound = existingOut != null &&
-                existingOut.rebindEngine(prepared.engine.nativeHandle(), prepared.engine.sampleRate)
+                existingOut.rebindEngine(prepared.engine.nativeHandle(), prepared.engine.sampleRate, flush = flushOutput)
             if (!rebound) {
                 closeOutput()
             }
@@ -592,6 +613,7 @@ internal class PlaybackSession(
             automaticSource = prepared.initialAutoSource
             automaticPending = null
             linearDisplayOffsetFrames = 0L
+            linearDisplayTotalFrames = 0L
             lastObservedSourceSlot = -1
             linearActiveSegment = if (prepared.linear && prepared.autoAdvance.isNotEmpty()) {
                 interactiveObservation(includeSourceFrame = false)?.segment?.takeIf { it >= 0 } ?: prepared.startSegment
@@ -647,6 +669,8 @@ internal class PlaybackSession(
 
         suspendOrCloseOutput()
         linearSession = false
+        linearDisplayOffsetFrames = 0L
+        linearDisplayTotalFrames = 0L
         val loaded = active.loadGraphOnly(packet, title)
         if (loaded is PlaybackController.State.Failed) return fail(loaded.reason)
 
@@ -722,6 +746,8 @@ internal class PlaybackSession(
         val active = controller ?: return fail("The audio engine is not initialised.")
         suspendOrCloseOutput()
         linearSession = false
+        linearDisplayOffsetFrames = 0L
+        linearDisplayTotalFrames = 0L
         val result = active.load(title, packet, audio, assetId)
         if (result is PlaybackController.State.Failed) {
             return fail(result.reason)
@@ -767,6 +793,8 @@ internal class PlaybackSession(
         val active = controller ?: return fail("The audio engine is not initialised.")
         suspendOrCloseOutput()
         linearSession = true
+        linearDisplayOffsetFrames = 0L
+        linearDisplayTotalFrames = 0L
         val result = active.loadLinear(title, audio, assetId, loop = loop, streamed = streamed)
         if (result is PlaybackController.State.Failed) {
             return fail(result.reason)
@@ -810,6 +838,8 @@ internal class PlaybackSession(
         val active = controller ?: return fail("The audio engine is not initialised.")
         suspendOrCloseOutput()
         linearSession = true
+        linearDisplayOffsetFrames = 0L
+        linearDisplayTotalFrames = 0L
         val loaded = active.loadGraphOnly(packet, title)
         if (loaded is PlaybackController.State.Failed) return fail(loaded.reason)
 
@@ -845,6 +875,38 @@ internal class PlaybackSession(
             engine?.let(::resumeOrOpenOutput)
         }
         return publishState(updated)
+    }
+
+    /**
+     * Updates the finite playback end + fade-out window on a running linear looping track live
+     * (via the lock-free native command queue, without interrupting audio output).
+     */
+    fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long, displayTotalFrames: Long): State {
+        val active = controller ?: return _state.value
+        if (!linearSession) return _state.value
+        val updated = active.setLinearFadeWindow(endFrame, fadeOutFrames, displayTotalFrames)
+        val published = publishState(updated)
+        if (displayTotalFrames > 0L && published.totalFrames != displayTotalFrames) {
+            _state.value = published.copy(totalFrames = displayTotalFrames)
+        }
+        return _state.value
+    }
+
+    /** Returns the current native source frame for slot 0 on a linear runtime, if active. */
+    fun currentLinearSourceFrame(): Long? {
+        val current = engine ?: return null
+        val source = current.sourceSnapshot(0) ?: return null
+        return if (source.size >= 11 && source[1] == 1L) source[10] else null
+    }
+
+    /** Returns the raw monotonic transport frame reported by the engine. */
+    fun currentTransportFrame(): Long {
+        val raw = engine?.snapshot() ?: return _state.value.positionFrames
+        return if (raw.size >= 2 && raw[0] == com.mylittleblover.mkwplayer.audio.EngineSnapshot.WIRE_VERSION) {
+            raw[1]
+        } else {
+            _state.value.positionFrames
+        }
     }
 
     /** Queue cancellation, preserving the current source and transport. Native owns the start boundary. */
@@ -902,7 +964,19 @@ internal class PlaybackSession(
     fun stop(): State {
         if (uninterruptible) return _state.value
         val active = controller ?: return _state.value
-        val published = publishState(active.stop())
+        val stopped = synchronized(nativeLifecycleLock) {
+            engineEpoch++
+            isSeeking = false
+            closeOutput()
+            val result = active.stop()
+            // Output is closed, so drain one control frame on native AudioEngine to execute the
+            // queued Stop command synchronously rather than leaving stale Playing snapshot state.
+            if (engine is AudioEngine) {
+                engine?.renderInto(FloatArray(2), 1)
+            }
+            result
+        }
+        val published = publishState(stopped)
         _state.value = published.copy(loaded = false, naturalEnd = false)
         return _state.value
     }
@@ -917,16 +991,23 @@ internal class PlaybackSession(
         }
         // Native seekEngine refuses while an AudioOutput lease holds engine->outputActive; suspend
         // the output stream across the seek without dropping interactive transition rules.
-        val hadOutput = output != null
-        if (hadOutput) {
-            suspendOrCloseOutput(preserveAutoTransitions = true)
-        }
-        seekSequence++
         val sought = synchronized(nativeLifecycleLock) {
-            active.seek(frame)
-        }
-        if (hadOutput && sought !is PlaybackController.State.Failed) {
-            engine?.let(::resumeOrOpenOutput)
+            val hadOutput = output != null
+            if (hadOutput) {
+                suspendOrCloseOutput(preserveAutoTransitions = true)
+            }
+            seekSequence++
+            val result = active.seek(frame)
+            if (hadOutput) {
+                val current = engine
+                val stillAudible = result !is PlaybackController.State.Failed ||
+                    com.mylittleblover.mkwplayer.audio.EngineSnapshot.read(current?.snapshot())
+                        ?.let { it.isPlaying || it.isPaused } == true
+                if (current != null && stillAudible) {
+                    resumeOrOpenOutput(current)
+                }
+            }
+            result
         }
         return publishState(sought)
     }
@@ -949,52 +1030,68 @@ internal class PlaybackSession(
         val capturedEpoch = engineEpoch
         var sought: PlaybackController.State? = null
         var hadOutput = false
+        var servedGeneration = -1L
         try {
-            if (automaticSource != null) {
-                engine?.cancelPendingTransition()
-                automaticSource = null
-                automaticPending = null
-            }
-            sought = withContext(kotlinx.coroutines.NonCancellable + ioDispatcher) {
-                var latest: PlaybackController.State? = null
-                var servedGeneration = -1L
-                while (servedGeneration != seekRequestGeneration &&
-                    capturedEpoch == engineEpoch &&
-                    controller === active &&
-                    !uninterruptible
-                ) {
-                    servedGeneration = seekRequestGeneration
-                    val target = pendingSeekTarget
-                    latest = synchronized(nativeLifecycleLock) {
-                        if (controller === active && engineEpoch == capturedEpoch) {
-                            if (output != null) {
-                                hadOutput = true
-                                suspendOrCloseOutput(preserveAutoTransitions = true)
+            while (servedGeneration != seekRequestGeneration &&
+                capturedEpoch == engineEpoch &&
+                controller === active &&
+                !uninterruptible
+            ) {
+                if (automaticSource != null) {
+                    engine?.cancelPendingTransition()
+                    automaticSource = null
+                    automaticPending = null
+                }
+                val (latestResult, served) = withContext(kotlinx.coroutines.NonCancellable + ioDispatcher) {
+                    var latest: PlaybackController.State? = null
+                    var localServed = servedGeneration
+                    while (localServed != seekRequestGeneration &&
+                        capturedEpoch == engineEpoch &&
+                        controller === active &&
+                        !uninterruptible
+                    ) {
+                        localServed = seekRequestGeneration
+                        val target = pendingSeekTarget
+                        latest = synchronized(nativeLifecycleLock) {
+                            if (controller === active && engineEpoch == capturedEpoch) {
+                                if (output != null) {
+                                    hadOutput = true
+                                    suspendOrCloseOutput(preserveAutoTransitions = true)
+                                }
+                                seekSequence++
+                                active.seek(target)
+                            } else {
+                                null
                             }
-                            seekSequence++
-                            active.seek(target)
-                        } else {
-                            null
                         }
                     }
+                    latest to localServed
                 }
-                if (hadOutput &&
-                    latest != null &&
-                    latest !is PlaybackController.State.Failed &&
-                    capturedEpoch == engineEpoch &&
-                    controller === active
-                ) {
+                servedGeneration = served
+                if (latestResult != null) {
+                    sought = latestResult
+                }
+            }
+            if (hadOutput &&
+                sought != null &&
+                capturedEpoch == engineEpoch &&
+                controller === active
+            ) {
+                withContext(kotlinx.coroutines.NonCancellable + ioDispatcher) {
                     synchronized(nativeLifecycleLock) {
                         val current = engine
+                        val stillAudible = sought !is PlaybackController.State.Failed ||
+                            com.mylittleblover.mkwplayer.audio.EngineSnapshot.read(current?.snapshot())
+                                ?.let { it.isPlaying || it.isPaused } == true
                         if (current != null &&
                             controller === active &&
-                            engineEpoch == capturedEpoch
+                            engineEpoch == capturedEpoch &&
+                            stillAudible
                         ) {
                             resumeOrOpenOutput(current)
                         }
                     }
                 }
-                latest
             }
         } finally {
             isSeeking = false
@@ -1014,6 +1111,7 @@ internal class PlaybackSession(
      */
     fun poll(): State {
         if (isSeeking) return _state.value
+        if (!_state.value.active) return _state.value
         val active = controller ?: return _state.value
         val current=active.poll()
         if(_state.value.loaded && (!linearSession || automaticTransitions.isNotEmpty())) {
@@ -1080,6 +1178,7 @@ internal class PlaybackSession(
         linearSession = false
         linearActiveSegment = -1
         linearDisplayOffsetFrames = 0L
+        linearDisplayTotalFrames = 0L
         lastObservedSourceSlot = -1
         synchronized(nativeLifecycleLock) {
             controller?.release()
@@ -1170,6 +1269,7 @@ internal class PlaybackSession(
         }.ifBlank { title }
 
         val resolvedTotal = when {
+            linearSession && linearDisplayTotalFrames > 0L -> linearDisplayTotalFrames
             linearSession && linearDisplayOffsetFrames > 0L && prevState.totalFrames > 0L -> prevState.totalFrames
             controllerState is PlaybackController.State.Playing -> controllerState.totalFrames
             controllerState is PlaybackController.State.Paused -> controllerState.totalFrames

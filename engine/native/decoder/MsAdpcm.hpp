@@ -27,6 +27,7 @@ template<class Bytes> MsAdpcmHistory msAdpcmHistory(Bytes& input,std::size_t sta
     return {msAdpcmSigned(input.u16(start+3*channels+channel*2)),msAdpcmSigned(input.u16(start+5*channels+channel*2)),delta,predictor};
 }
 template<class Bytes> void decodeMsAdpcmBlock(Bytes& input,std::size_t start,unsigned channels,std::size_t frames,float* output) {
+    if(channels<1 || channels>2)fail(SourceStatus::UnsupportedChannels);
     std::array<MsAdpcmHistory,2> histories{};
     for(unsigned ch=0;ch<channels;++ch) {
         histories[ch]=msAdpcmHistory(input,start,channels,ch);

@@ -53,9 +53,11 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
 
     private var title: String = ""
     private var totalFrames: Long = 0
+    private var seekLimitFrames: Long = 0
     private var sampleRate: Int = 0
     private var linearMode: Boolean = false
     private var linearRepeating: Boolean = false
+    private var linearFiniteDuration: Boolean = false
     private var userStopped: Boolean = false
     private var sawActivePlayback: Boolean = false
     private var reportedNaturalEnd: Boolean = false
@@ -83,6 +85,8 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
 
         linearMode = false
         linearRepeating = false
+        linearFiniteDuration = false
+        seekLimitFrames = 0
         userStopped = false
         sawActivePlayback = false
         reportedNaturalEnd = false
@@ -115,6 +119,8 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         }
         linearMode = true
         linearRepeating = loop
+        linearFiniteDuration = false
+        seekLimitFrames = 0
         userStopped = false
         sawActivePlayback = false
         reportedNaturalEnd = false
@@ -146,6 +152,8 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         }
         linearMode = true
         linearRepeating = loop
+        linearFiniteDuration = false
+        seekLimitFrames = 0
         userStopped = false
         sawActivePlayback = false
         reportedNaturalEnd = false
@@ -175,6 +183,20 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         return poll()
     }
 
+    /** Configures live finite playback end + fade-out window on a linear looping track. */
+    fun setLinearFadeWindow(endFrame: Long, fadeOutFrames: Long, displayTotalFrames: Long): State {
+        if (!linearMode) return state
+        val status = engine.setLinearFadeWindow(endFrame, fadeOutFrames)
+        if (status != AudioEngine.STATUS_OK) {
+            return fail("Could not update loop duration: ${describe(status)}")
+        }
+        linearFiniteDuration = endFrame > 0L
+        if (displayTotalFrames > 0L) {
+            setDuration(displayTotalFrames)
+        }
+        return state
+    }
+
     /** Records the track length once the caller knows it from the header. */
     fun setDuration(frames: Long): State {
         totalFrames = frames
@@ -186,6 +208,15 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
             else -> current
         }
         return state
+    }
+
+    /**
+     * Expands the addressable native transport range for multi-segment chains (e.g. Survival Rally
+     * Stops 2..6 where native transport frames include prior stops' origins) without altering the
+     * active stop's displayed [totalFrames].
+     */
+    fun setSeekLimit(maxFrames: Long) {
+        seekLimitFrames = maxFrames.coerceAtLeast(0L)
     }
 
     /**
@@ -203,6 +234,8 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         this.title = title
         linearMode = false
         linearRepeating = false
+        linearFiniteDuration = false
+        seekLimitFrames = 0
         userStopped = false
         sawActivePlayback = false
         reportedNaturalEnd = false
@@ -255,15 +288,24 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         val fields = EngineSnapshot.read(engine.snapshot())
             ?: return if (state is State.Idle) state else fail("The engine stopped reporting state.")
 
+        if (userStopped) {
+            state = State.Stopped(title, totalFrames, sampleRate, naturalEnd = false)
+            return state
+        }
+
         val rawPosition = fields.transportFrame
         val position = if (linearMode && totalFrames > 0L) {
-            val source = engine.sourceSnapshot(0)
-            if (source != null && source.size >= 11 && source[1] == 1L) {
-                source[10].coerceIn(0L, totalFrames)
-            } else if (linearRepeating) {
-                rawPosition % totalFrames
-            } else {
+            if (linearFiniteDuration) {
                 rawPosition.coerceIn(0L, totalFrames)
+            } else {
+                val source = engine.sourceSnapshot(0)
+                if (source != null && source.size >= 11 && source[1] == 1L) {
+                    source[10].coerceIn(0L, totalFrames)
+                } else if (linearRepeating) {
+                    rawPosition % totalFrames
+                } else {
+                    rawPosition.coerceIn(0L, totalFrames)
+                }
             }
         } else {
             rawPosition
@@ -310,6 +352,7 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         sawActivePlayback = false
         reportedNaturalEnd = false
         linearRepeating = false
+        linearFiniteDuration = false
         val result = engine.stop()
         if (result != AudioEngine.STATUS_OK) return fail("Could not stop: ${describe(result)}")
         state = State.Stopped(title, totalFrames, sampleRate, naturalEnd = false)
@@ -324,8 +367,9 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
      * upstream is wrong and should be reported, not quietly corrected.
      */
     fun seek(frame: Long): State {
-        if (!SeekTarget.isAddressable(frame, totalFrames)) {
-            return fail("Cannot seek to frame $frame of $totalFrames.")
+        val addressableFrames = maxOf(totalFrames, seekLimitFrames)
+        if (!SeekTarget.isAddressable(frame, addressableFrames)) {
+            return fail("Cannot seek to frame $frame of $addressableFrames.")
         }
         userStopped = false
         reportedNaturalEnd = false
@@ -342,9 +386,11 @@ internal class PlaybackController(private val engine: PlaybackEngine) {
         state = State.Idle
         title = ""
         totalFrames = 0
+        seekLimitFrames = 0
         sampleRate = 0
         linearMode = false
         linearRepeating = false
+        linearFiniteDuration = false
         userStopped = false
         sawActivePlayback = false
         reportedNaturalEnd = false

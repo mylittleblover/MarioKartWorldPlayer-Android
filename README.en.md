@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-Hant.md) | **English** | [日本語](README.ja.md)
 
-**0.1.0-beta05** · Android 8.0 (API 26) and higher
+**Beta 0.1.6** · Android 8.0 (API 26) and higher
 
 JukeKart is an independent Android soundtrack player for *Mario Kart World*. Import your own `.mkwpack` archive to switch course music stages and variants interactively, play course medleys, listen along world-map routes, or organize favorites and playlists in the Jukebox.
 

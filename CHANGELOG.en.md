@@ -4,6 +4,17 @@
 
 The entries below summarize releases and development milestones verifiable from the Git history.
 
+## Beta 0.1.6 · 2026-11-28
+
+> Adopts the new `Beta X.Y.Z` versioning format and consolidates all updates since `v0.1.0-beta05`.
+
+- **MKW v1.8.0 Audio Transitions & Medley Alignment**: Calibrated `Pre_TransitionGrid` (`3`/`4`/`8`/`16`-beat) exits across all courses, final-lap fanfare timing (`0.10 s` fadeout + `0.133 s` delay + `4.05 s` fast entry), Boo Cinema (`0.5 s` crossfade) and Starview Peak (`0.5 s` / `2.0 s` asymmetric crossfade, `Pattern2` restricted to `Outro00..05`), DK Spaceport 5-region beat grids, Koopa Troopa Beach Suite B (matches `A Alt` after `Pre_Short` without Speaker overlay), and Rainbow Road split-stem `Area1 -> Area2` `0.30 s` fadeout and `Area3 -> Final_Pre` timing (removed the Rainbow Road melody switch), with all 4-locale UI hints and built-in medleys aligned.
+- **Native Audio & Seek Reliability Fixes**: Fixed silent playback after scrubbing long tracks (such as Staff Credits) or seeking after Survival Rally track switches (`RuntimeSeek`, `SourcePageCache`, `BwavSource`/`OpusSource`, `PlaybackController`, `AudioOutput` lifecycle recovery); restored 5.1 surround loudness to `beta01` unity parity without clipping.
+- **Staff Credits Dynamic Progress Bar**: Implemented 18-segment course-themed progress bar styling using real in-game course icon colors with left-to-right slide-in wipes, two-segment split display for dual-course overlaps (Acorn Heights + Dandelion Depths, Whistlestop Summit + Faraway Oasis), continuously flowing Rainbow Road cover-art gradient, and automatic 10 ms RMS-envelope offset calibration for Nintendo Music Special (`nm_special_119`).
+- **Free Roam Engine, In-Game Library Mode & World Map**: Fixed 202 directed edges and 10 one-way route badges; added the 13-playlist Free Roam Jukebox engine, Pure Free Roam routes, and a dedicated "In-Game Free Roam Library" playback option across both Free Roam routes and Radio.
+- **Markers, Flow Editor, Quiz, Themes & UI Polish**: Added track markers and "Play from marker", Flow Editor presets and offline WAV/FLAC export, 7 character accent themes in a bottom-sheet drawer, Special Cup & Staff Credits unlock flows with a music recognition quiz, an in-app GitHub update checker supporting both `Beta X.Y.Z` and legacy tags, unified `AppMotion`/`MkwKit` polish, and complete 4-language localization.
+- **Repository Reports & Documentation Sync**: Audited and synchronized `docs/MUSIC-TRANSITIONS.md`, `docs/research/*`, `docs/ARCHITECTURE*.md`, and `docs/USAGE*.md` strictly against the *Mario Kart World* v1.8.0 in-game extracted reports (650 `BgmAll` streams, 24 6ch silent-LFE audit, 344 MINF grids, `Default.game__SoundBgmSetting.bgyml` constants, 202 directed connections, and 13 official Jukebox playlists).
+
 ## 0.1.0-beta05 · 2026-11-23
 
 - Fixed audible seams at loop wraps and track transitions during background and screen-off playback: doubled the streaming page cache to 512 pages with lock-free `futex` worker wakeup, added multi-page lookahead prefetching for loop starts and transition destinations, enabled 2-second `lookAheadFrames` across interactive/medley/route compilers, added single-repeat medley preloading, and made background fast-polling scale with playback speed and A–B loop endpoints.

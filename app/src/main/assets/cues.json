@@ -3,28 +3,28 @@
  "provenance": "L1_MARKER_ONLY",
  "provenanceNote": "Cue positions are AMTA marker records (L1 metadata). Which cue the game schedules, and when, is not established by this source.",
  "source": "M_Bgm.bars.zs + M_BgmRainbow.bars.zs",
- "sourceDate": "2026-10-28",
+ "sourceDate": "2026-11-26",
  "courseCount": 30,
- "cueCount": 174,
+ "cueCount": 222,
  "courses": [
   {
    "code": "FirstCircuit",
    "name": "Mario Bros. Circuit",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 1838,
      "frames": 289909,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 1837,
      "frames": 663934,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 1836,
      "frames": 1037960,
      "sampleRate": 48000
@@ -39,6 +39,12 @@
      "name": "Full_ToOutro04",
      "markerId": 1819,
      "frames": 2384452,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1839,
+     "frames": 2683673,
      "sampleRate": 48000
     }
    ],
@@ -58,27 +64,75 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 1897,
      "frames": 720000,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro00",
      "markerId": 1851,
      "frames": 905625,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro00",
      "markerId": 1835,
      "frames": 1085625,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro03",
      "markerId": 1864,
      "frames": 1254375,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1898,
+     "frames": 1445625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1899,
+     "frames": 1805625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1905,
+     "frames": 1980000,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1900,
+     "frames": 2165625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1903,
+     "frames": 2413125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1901,
+     "frames": 2885625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1902,
+     "frames": 3065625,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1904,
+     "frames": 3240000,
      "sampleRate": 48000
     }
    ],
@@ -92,43 +146,43 @@
    "name": "Whistlestop Summit",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2005,
      "frames": 637714,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 2004,
      "frames": 884571,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 2003,
      "frames": 1460570,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 2002,
      "frames": 2036569,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro00",
      "markerId": 1926,
      "frames": 2345141,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro06",
      "markerId": 2000,
      "frames": 2859426,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro05",
      "markerId": 1969,
      "frames": 3106283,
      "sampleRate": 48000
@@ -144,31 +198,31 @@
    "name": "DK Spaceport",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro02",
      "markerId": 2167,
      "frames": 728275,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro03",
      "markerId": 2166,
      "frames": 1241377,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro01",
      "markerId": 2120,
      "frames": 1522756,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 2149,
      "frames": 1779307,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro06",
      "markerId": 2163,
      "frames": 2044134,
      "sampleRate": 48000
@@ -180,7 +234,7 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro00",
      "markerId": 2041,
      "frames": 2697926,
      "sampleRate": 48000
@@ -196,13 +250,13 @@
    "name": "Desert Hills",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 1761,
      "frames": 443076,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 1760,
      "frames": 753230,
      "sampleRate": 48000
@@ -214,9 +268,33 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro02",
      "markerId": 1728,
      "frames": 1462152,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1763,
+     "frames": 1860921,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1764,
+     "frames": 2215382,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 1765,
+     "frames": 2591997,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1762,
+     "frames": 2813536,
      "sampleRate": 48000
     }
    ],
@@ -230,25 +308,25 @@
    "name": "Shy Guy Bazaar",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 1742,
      "frames": 385553,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 1741,
      "frames": 797142,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 1740,
      "frames": 1208571,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro06",
      "markerId": 1769,
      "frames": 1645713,
      "sampleRate": 48000
@@ -260,19 +338,19 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro07",
      "markerId": 1752,
      "frames": 2237142,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro05",
      "markerId": 1706,
      "frames": 2648570,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro00",
      "markerId": 1615,
      "frames": 3059998,
      "sampleRate": 48000
@@ -288,7 +366,7 @@
    "name": "Wario Stadium",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2190,
      "frames": 349714,
      "sampleRate": 48000
@@ -300,15 +378,45 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro01",
      "markerId": 2158,
      "frames": 1172570,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro01",
      "markerId": 2142,
      "frames": 1501713,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2192,
+     "frames": 1995427,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2195,
+     "frames": 2447998,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2193,
+     "frames": 2818240,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2194,
+     "frames": 3065140,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2191,
+     "frames": 3599996,
      "sampleRate": 48000
     }
    ],
@@ -322,37 +430,37 @@
    "name": "Airship Fortress",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2333,
      "frames": 441600,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 2332,
      "frames": 1147200,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 2331,
      "frames": 1761600,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 2330,
      "frames": 2376000,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro05",
      "markerId": 2329,
      "frames": 2990400,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro00",
      "markerId": 2238,
      "frames": 3590400,
      "sampleRate": 48000
@@ -369,18 +477,12 @@
    "cues": [
     {
      "name": "Full_ToOutro00",
-     "markerId": 1850,
-     "frames": 0,
-     "sampleRate": 48000
-    },
-    {
-     "name": "Full_ToOutro01",
      "markerId": 1729,
      "frames": 661464,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro05",
      "markerId": 1788,
      "frames": 1036098,
      "sampleRate": 48000
@@ -398,15 +500,21 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro01",
      "markerId": 1680,
      "frames": 2066342,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro02",
      "markerId": 1679,
      "frames": 2440976,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro06",
+     "markerId": 1851,
+     "frames": 2534635,
      "sampleRate": 48000
     }
    ],
@@ -420,13 +528,13 @@
    "name": "Starview Peak",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro07",
      "markerId": 2196,
      "frames": 406588,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro05",
      "markerId": 2150,
      "frames": 643764,
      "sampleRate": 48000
@@ -444,25 +552,25 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro06",
      "markerId": 2117,
      "frames": 1761881,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro04",
      "markerId": 2071,
      "frames": 2032940,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro00",
      "markerId": 1995,
      "frames": 2303999,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro01",
      "markerId": 1994,
      "frames": 2575058,
      "sampleRate": 48000
@@ -478,37 +586,37 @@
    "name": "Sky-High Sundae",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro02",
      "markerId": 2332,
      "frames": 574284,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro03",
      "markerId": 2331,
      "frames": 1122854,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro04",
      "markerId": 2330,
      "frames": 1671425,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro05",
      "markerId": 2329,
      "frames": 2219995,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro01",
      "markerId": 2253,
      "frames": 2759993,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro00",
      "markerId": 2222,
      "frames": 3248564,
      "sampleRate": 48000
@@ -524,13 +632,13 @@
    "name": "Wario Shipyard",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2059,
      "frames": 871577,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro04",
      "markerId": 2088,
      "frames": 1155787,
      "sampleRate": 48000
@@ -542,21 +650,27 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro05",
      "markerId": 2071,
      "frames": 1913680,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro03",
      "markerId": 2025,
      "frames": 2425258,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro03",
      "markerId": 2009,
      "frames": 2728415,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2089,
+     "frames": 3183151,
      "sampleRate": 48000
     }
    ],
@@ -570,33 +684,39 @@
    "name": "Koopa Troopa Beach",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro04",
      "markerId": 1419,
      "frames": 255483,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 1373,
      "frames": 719999,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 1372,
      "frames": 1184514,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro01",
      "markerId": 1326,
      "frames": 1370320,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro00",
      "markerId": 1295,
      "frames": 1834835,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 1420,
+     "frames": 2113544,
      "sampleRate": 48000
     }
    ],
@@ -610,31 +730,31 @@
    "name": "Faraway Oasis",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2221,
      "frames": 448346,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 2220,
      "frames": 743730,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 2219,
      "frames": 1039114,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 2218,
      "frames": 1389883,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro06",
      "markerId": 2232,
      "frames": 1685268,
      "sampleRate": 48000
@@ -646,13 +766,13 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro07",
      "markerId": 2215,
      "frames": 2257575,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro00",
      "markerId": 2094,
      "frames": 2848343,
      "sampleRate": 48000
@@ -669,50 +789,50 @@
    "cues": [
     {
      "name": "Full_ToOutro00",
-     "markerId": 2294,
-     "frames": 0,
-     "sampleRate": 48000
-    },
-    {
-     "name": "Full_ToOutro01",
      "markerId": 2158,
      "frames": 433125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro01",
      "markerId": 2157,
      "frames": 721125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro07",
      "markerId": 2231,
      "frames": 1009125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro02",
      "markerId": 2140,
      "frames": 1369125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro04",
      "markerId": 2154,
      "frames": 1720125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro05",
      "markerId": 2153,
      "frames": 2008125,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro06",
      "markerId": 2152,
      "frames": 2233125,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro03",
+     "markerId": 2295,
+     "frames": 2656125,
      "sampleRate": 48000
     }
    ],
@@ -726,49 +846,49 @@
    "name": "Peach Beach",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro03",
      "markerId": 2010,
      "frames": 708480,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro00",
      "markerId": 1949,
      "frames": 1077120,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro01",
      "markerId": 1948,
      "frames": 1445760,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 1977,
      "frames": 1814400,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro05",
      "markerId": 1976,
      "frames": 2183040,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro06",
      "markerId": 1975,
      "frames": 2551680,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro07",
      "markerId": 1974,
      "frames": 2920320,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro02",
      "markerId": 1883,
      "frames": 3288960,
      "sampleRate": 48000
@@ -784,13 +904,13 @@
    "name": "Salty Salty Speedway",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2040,
      "frames": 384657,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro05",
      "markerId": 2084,
      "frames": 700272,
      "sampleRate": 48000
@@ -802,31 +922,31 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro06",
      "markerId": 2067,
      "frames": 1331504,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro03",
      "markerId": 2006,
      "frames": 1647120,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro04",
      "markerId": 2005,
      "frames": 2120543,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro07",
      "markerId": 2034,
      "frames": 2593967,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro07",
+     "name": "Full_ToOutro00",
      "markerId": 1913,
      "frames": 3067391,
      "sampleRate": 48000
@@ -848,15 +968,45 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro00",
      "markerId": 2036,
      "frames": 651679,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro00",
      "markerId": 2020,
      "frames": 1324379,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2056,
+     "frames": 1660729,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2057,
+     "frames": 1997079,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2053,
+     "frames": 2669780,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2054,
+     "frames": 3174305,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2055,
+     "frames": 3342480,
      "sampleRate": 48000
     }
    ],
@@ -870,13 +1020,13 @@
    "name": "Great ? Block Ruins",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro03",
      "markerId": 1803,
      "frames": 315616,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro05",
      "markerId": 1817,
      "frames": 621368,
      "sampleRate": 48000
@@ -888,7 +1038,7 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro06",
      "markerId": 1800,
      "frames": 1420271,
      "sampleRate": 48000
@@ -900,13 +1050,13 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro01",
      "markerId": 1693,
      "frames": 2288214,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro00",
      "markerId": 1662,
      "frames": 2603830,
      "sampleRate": 48000
@@ -974,25 +1124,19 @@
    "name": "Dandelion Depths",
    "cues": [
     {
-     "name": "Full_ToOutro00",
-     "markerId": 1950,
-     "frames": 0,
-     "sampleRate": 48000
-    },
-    {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro03",
      "markerId": 1904,
      "frames": 342500,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro00",
      "markerId": 1843,
      "frames": 702501,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro00",
      "markerId": 1827,
      "frames": 1022501,
      "sampleRate": 48000
@@ -1001,6 +1145,30 @@
      "name": "Full_ToOutro04",
      "markerId": 1871,
      "frames": 1342501,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1953,
+     "frames": 1662501,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 1954,
+     "frames": 2302502,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1951,
+     "frames": 2462502,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1952,
+     "frames": 2702502,
      "sampleRate": 48000
     }
    ],
@@ -1014,39 +1182,39 @@
    "name": "Boo Cinema",
    "cues": [
     {
-     "name": "Full_ToOutro00",
-     "markerId": 2503,
-     "frames": 0,
-     "sampleRate": 48000
-    },
-    {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 2427,
      "frames": 685714,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro05",
      "markerId": 2456,
      "frames": 905142,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro01",
      "markerId": 2380,
      "frames": 1343999,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro00",
      "markerId": 2349,
      "frames": 1782855,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro03",
      "markerId": 2378,
      "frames": 2221712,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro04",
+     "markerId": 2504,
+     "frames": 2660569,
      "sampleRate": 48000
     }
    ],
@@ -1066,9 +1234,45 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro00",
      "markerId": 1524,
      "frames": 736615,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1541,
+     "frames": 1002461,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 1546,
+     "frames": 1246153,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1542,
+     "frames": 1799998,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1543,
+     "frames": 2065844,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1544,
+     "frames": 2331690,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1545,
+     "frames": 2597536,
      "sampleRate": 48000
     }
    ],
@@ -1082,7 +1286,7 @@
    "name": "Moo Moo Meadows",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro05",
      "markerId": 1944,
      "frames": 534375,
      "sampleRate": 48000
@@ -1100,25 +1304,25 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro06",
      "markerId": 1911,
      "frames": 1501875,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro03",
      "markerId": 1850,
      "frames": 1974375,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro04",
      "markerId": 1849,
      "frames": 2334375,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro00",
      "markerId": 1773,
      "frames": 2694375,
      "sampleRate": 48000
@@ -1134,43 +1338,43 @@
    "name": "Choco Mountain",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 2770,
      "frames": 614400,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro02",
      "markerId": 2769,
      "frames": 1228800,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro03",
      "markerId": 2768,
      "frames": 1843200,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro04",
      "markerId": 2767,
      "frames": 2476800,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro04",
+     "name": "Full_ToOutro05",
      "markerId": 2766,
      "frames": 3091200,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro05",
+     "name": "Full_ToOutro06",
      "markerId": 2765,
      "frames": 3705600,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro06",
+     "name": "Full_ToOutro00",
      "markerId": 2659,
      "frames": 4300800,
      "sampleRate": 48000
@@ -1190,6 +1394,54 @@
      "markerId": 3133,
      "frames": 162818,
      "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3134,
+     "frames": 634090,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3135,
+     "frames": 1052999,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3136,
+     "frames": 1471908,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3137,
+     "frames": 1890816,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3138,
+     "frames": 2466816,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3139,
+     "frames": 3042815,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3140,
+     "frames": 3252269,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 3141,
+     "frames": 3723542,
+     "sampleRate": 48000
     }
    ],
    "outroCount": 1,
@@ -1208,7 +1460,7 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro01",
+     "name": "Full_ToOutro00",
      "markerId": 2347,
      "frames": 961999,
      "sampleRate": 48000
@@ -1217,6 +1469,24 @@
      "name": "Full_ToOutro02",
      "markerId": 2361,
      "frames": 1729998,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2364,
+     "frames": 2305998,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2365,
+     "frames": 3073997,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro01",
+     "markerId": 2366,
+     "frames": 3329997,
      "sampleRate": 48000
     }
    ],
@@ -1230,7 +1500,7 @@
    "name": "Acorn Heights",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro03",
      "markerId": 2923,
      "frames": 417857,
      "sampleRate": 48000
@@ -1242,13 +1512,13 @@
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro02",
+     "name": "Full_ToOutro01",
      "markerId": 2861,
      "frames": 732857,
      "sampleRate": 48000
     },
     {
-     "name": "Full_ToOutro03",
+     "name": "Full_ToOutro01",
      "markerId": 2845,
      "frames": 887142,
      "sampleRate": 48000
@@ -1270,6 +1540,18 @@
      "markerId": 2872,
      "frames": 2114999,
      "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 2924,
+     "frames": 2584284,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro02",
+     "markerId": 2925,
+     "frames": 3047141,
+     "sampleRate": 48000
     }
    ],
    "outroCount": 7,
@@ -1282,7 +1564,7 @@
    "name": "Mario Circuit",
    "cues": [
     {
-     "name": "Full_ToOutro00",
+     "name": "Full_ToOutro01",
      "markerId": 1169,
      "frames": 354461,
      "sampleRate": 48000
@@ -1303,6 +1585,12 @@
      "name": "Full_ToOutro03",
      "markerId": 1151,
      "frames": 1395691,
+     "sampleRate": 48000
+    },
+    {
+     "name": "Full_ToOutro00",
+     "markerId": 1170,
+     "frames": 1750152,
      "sampleRate": 48000
     }
    ],

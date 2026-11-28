@@ -136,4 +136,25 @@ class PlaybackControllerSeekTest {
         assertTrue(state is PlaybackController.State.Paused, "got $state")
         assertEquals(250_000L, (state as PlaybackController.State.Paused).positionFrames)
     }
+
+    @Test
+    fun seekLimitAllowsMultiStopChainTransportFramesWithoutChangingDisplayDuration() {
+        val engine = FakeEngine()
+        val controller = started(engine)
+        // Simulate Stop 2..6 in a 6-stop Survival Rally chain whose native transport offset
+        // exceeds Stop 1's totalFrames (1_000_000), while display totalFrames remains 1_000_000.
+        controller.setSeekLimit(40_000_000L)
+
+        val state = controller.seek(35_000_000L)
+        assertTrue(state is PlaybackController.State.Playing, "got $state")
+        val playing = state as PlaybackController.State.Playing
+        assertEquals(35_000_000L, playing.positionFrames)
+        assertEquals(1_000_000L, playing.totalFrames)
+        assertEquals(1, engine.seekCalls)
+
+        // Past the expanded seek limit must still be refused without hitting native.
+        val outOfRange = controller.seek(40_000_001L)
+        assertTrue(outOfRange is PlaybackController.State.Failed, "got $outOfRange")
+        assertEquals(1, engine.seekCalls)
+    }
 }

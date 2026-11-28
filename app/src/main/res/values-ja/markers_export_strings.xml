@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="marker_add_chip">+ マーカーを追加</string>
+    <string name="marker_add_dialog_title">トラックマーカーを追加</string>
+    <string name="marker_timestamp_label">タイムスタンプ</string>
+    <string name="marker_name_label">マーカー名</string>
+    <string name="marker_default_name_fmt">マーカー %1$d</string>
+    <string name="marker_color_label">マーカーカラー</string>
+    <string name="marker_action_save">保存</string>
+    <string name="marker_action_cancel">キャンセル</string>
+    <string name="marker_action_delete">削除</string>
+    <string name="marker_play_from_menu">マーカー位置から再生</string>
+    <string name="marker_play_from_title">マーカー位置から再生</string>
+    <string name="marker_sheet_empty">このトラックにはまだマーカーがありません。再生画面の「+ マーカーを追加」からお気に入りの箇所を保存できます。</string>
+    <string name="marker_delete_title">マーカーを削除しますか？</string>
+    <string name="marker_delete_body_fmt">「%1$s」（%2$s）を削除しますか？</string>
+    <string name="marker_delete_cd">マーカー「%1$s」を削除</string>
+    <string name="marker_chip_cd_fmt">%1$s（%2$s）、タップでジャンプ、長押しで削除</string>
+    <string name="marker_color_crimson">クリムゾン</string>
+    <string name="marker_color_amber">アンバー</string>
+    <string name="marker_color_emerald">エメラルド</string>
+    <string name="marker_color_sky">スカイ</string>
+    <string name="marker_color_violet">バイオレット</string>
+    <string name="marker_color_pink">ピンク</string>
+    <string name="marker_color_orange">オレンジ</string>
+    <string name="marker_color_slate">スレート</string>
+
+    <string name="flow_editor_builtin_suites_title">内蔵メドレープリセット</string>
+    <string name="flow_editor_builtin_suite_applied_fmt">%1$s を読み込みました</string>
+    <string name="flow_render_button">オーディオに書き出し</string>
+    <string name="flow_render_button_progress_fmt">書き出し中 %1$d%%</string>
+    <string name="flow_render_dialog_title">フローをオーディオに書き出し</string>
+    <string name="flow_render_format_summary_fmt">WAV · 16-bit ステレオ · %1$d kHz · %2$s</string>
+    <string name="flow_render_gain_label">出力レベル</string>
+    <string name="flow_render_gain_enabled">デフォルト +10 dB ゲインとリミッターが有効</string>
+    <string name="flow_render_gain_flat">ゲイン無効・元のレベルで書き出し</string>
+    <string name="flow_render_folder_label">書き出し先フォルダー</string>
+    <string name="flow_render_start">書き出し開始</string>
+    <string name="flow_render_in_progress">オーディオをオフライン書き出し中…</string>
+    <string name="flow_render_cancel">書き出しをキャンセル</string>
+    <string name="flow_render_success_title">書き出し完了</string>
+    <string name="flow_render_output_path_label">保存先</string>
+    <string name="flow_render_error_title">書き出しに失敗しました</string>
+    <string name="flow_render_retry">再試行</string>
+    <string name="flow_render_done">完了</string>
+    <string name="flow_render_close">閉じる</string>
+</resources>

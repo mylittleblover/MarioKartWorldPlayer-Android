@@ -22,7 +22,7 @@ class FinalLapFanfarePlanTest {
             assertNotNull(ff,"$stage must use the shared FinalLapFF")
             assertFalse(ff in p.initialSegments)
             val segment=p.spec.segments.single { it.index==ff }
-            assertEquals(188880L,segment.exit)
+            assertEquals(FinalLapFanfareCompiler.FANFARE_EXIT_FRAMES,segment.exit)
             assertNull(segment.loop)
             val clip=p.spec.tracks.single { it.segment==ff }.clips.single()
             assertEquals(268759L,clip.sourceLength)
@@ -33,10 +33,18 @@ class FinalLapFanfarePlanTest {
             for(rule in edges) {
                 assertEquals(G.SyncPoint.Immediate,rule.sync)
                 assertNull(rule.sourceCue)
-                assertEquals(G.Fade(),rule.fadeOut)
+                assertEquals(G.Fade(beats = FinalLapFanfareCompiler.FULL_FADE_OUT_SEC * p.spec.bpm / 60.0),rule.fadeOut)
                 assertEquals(G.Fade(),rule.fadeIn)
                 assertTrue(rule.postExit,"FF tail must survive Fast entry")
-                assertEquals(G.TransitionTimeline(0,188880,188880,0),rule.timeline)
+                assertEquals(
+                    G.TransitionTimeline(
+                        FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES,
+                        FinalLapFanfareCompiler.FAST_DELAY_FRAMES,
+                        FinalLapFanfareCompiler.FAST_DELAY_FRAMES,
+                        0L,
+                    ),
+                    rule.timeline,
+                )
             }
             if(stage=="DonkeyKong") assertEquals(listOf(p.regions.getValue(5)),edges.single().sources)
             if(stage in listOf("Cinema","SnowMountain")) {

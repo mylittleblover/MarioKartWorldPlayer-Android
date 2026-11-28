@@ -1,5 +1,7 @@
 # 互动音频接入与验收状态（2026-11-12）
 
+> **历史快照说明（已于 `Beta 0.1.6` 全面对齐 MKW v1.8.0 游戏内提取报告）**：本文为 2026-11-12 `alpha06` 阶段验收记录。文中部分早期过渡假设——例如彩虹之路 `Area3 → Final_Pre` 1 秒交叉淡化（实机为 `-220 m` 触发、1.20 s 延迟后 3.00 s 淡出 / 2.50 s 淡入）及 `Area1 → Area2` 未分轨淡出（实机为 `Melody` 立即 0.30 s + `Inst` 小节末 0.30 s）——均已在 `Beta 0.1.6` 中严格按 v1.8.0 逆向参数更新并通过 `VerifiedV180TransitionsTest` 钉死，最新机制以 [MUSIC-TRANSITIONS.md](../MUSIC-TRANSITIONS.md) 为准。
+
 代码对应 alpha06。本页把声源、样本调度、Android 运行与听感证据分开记录。
 
 ## 本轮实现

@@ -99,11 +99,12 @@ public:
         if (!enabled_.load(std::memory_order_relaxed) || !stereo || frames == 0 || rate <= 0) return;
 
         seq_.fetch_add(1, std::memory_order_acq_rel);
+        std::atomic_thread_fence(std::memory_order_release);
         sampleRate_.store(rate, std::memory_order_relaxed);
 
-        const std::size_t step = frames > kFftSize ? (frames / kFftSize) : 1;
+        const std::size_t start = frames > kFftSize ? (frames - kFftSize) : 0;
         std::size_t pos = cursor_.load(std::memory_order_relaxed);
-        for (std::size_t n = 0; n < frames; n += step) {
+        for (std::size_t n = start; n < frames; ++n) {
             const float mono = 0.5f * (stereo[n * 2] + stereo[n * 2 + 1]);
             samples_[pos & (kFftSize - 1)].store(floatToBits(mono), std::memory_order_relaxed);
             ++pos;
@@ -114,6 +115,7 @@ public:
 
     void reset() noexcept {
         seq_.fetch_add(1, std::memory_order_acq_rel);
+        std::atomic_thread_fence(std::memory_order_release);
         for (auto& s : samples_) s.store(0u, std::memory_order_relaxed);
         cursor_.store(0, std::memory_order_relaxed);
         seq_.fetch_add(1, std::memory_order_release);

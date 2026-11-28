@@ -1,10 +1,12 @@
 package com.mylittleblover.mkwplayer.routes
 
+import com.mylittleblover.mkwplayer.jukebox.FreeRoamJukeboxCatalog
 import com.mylittleblover.mkwplayer.library.StageConnections
 import com.mylittleblover.mkwplayer.pack.PackManifest
 import com.mylittleblover.mkwplayer.registry.AudioAssetId
 import com.mylittleblover.mkwplayer.registry.ResourceKind
 import com.mylittleblover.mkwplayer.ui.home.JukeboxCatalog
+import org.json.JSONObject
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
@@ -300,7 +302,9 @@ class RoadJukeboxCatalogTest {
         val desertDay = assertIs<RoadJukeboxCatalog.EdgeMusicResolution.KnownPoolComplete>(rallyVsDay.legs.single().resolution)
         assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_DAY, desertDay.ruleModeUsed)
         assertTrue(desertDay.candidateTiers.values.any { it == RoadJukeboxCatalog.CandidateTier.EXCLUSIVE_ORDER })
-        assertTrue(desertDay.candidateTiers.values.any { it == RoadJukeboxCatalog.CandidateTier.THEMED_BOOSTED })
+        // v1.8.0 romfs verified all 19 previously "likely" biome tracks as confirmed EXCLUSIVE_ORDER (0 guesses left).
+        assertFalse(desertDay.candidateTiers.values.any { it == RoadJukeboxCatalog.CandidateTier.THEMED_BOOSTED })
+        assertEquals(10, desertDay.candidateTiers.values.count { it == RoadJukeboxCatalog.CandidateTier.EXCLUSIVE_ORDER })
         assertTrue(desertDay.candidateTiers.values.any { it == RoadJukeboxCatalog.CandidateTier.MAIN_ORDER })
         assertTrue(desertDay.candidateWeights.zip(desertDay.candidates).all { (w, item) ->
             val tier = desertDay.candidateTiers[item.key]
@@ -311,7 +315,7 @@ class RoadJukeboxCatalogTest {
             }
         })
 
-        // 3. Custom route in VS_NIGHT uses NIGHT_ORDER exclusively
+        // 3. Custom route in VS_NIGHT uses NIGHT_ORDER with exact 3x/2x slot weights from 24040117_J25YUWHR (111 slots / 38 tracks)
         val customNight = CustomRoute(
             id = "custom_night",
             name = "Night Cruise",
@@ -333,7 +337,10 @@ class RoadJukeboxCatalogTest {
         )
         val nightRes = assertIs<RoadJukeboxCatalog.EdgeMusicResolution.KnownPoolComplete>(nightReport.legs.single().resolution)
         assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_NIGHT, nightRes.ruleModeUsed)
-        assertEquals(wiki.tracks.count { it.anyOriginNight }, nightRes.candidates.size)
+        assertEquals(38, nightRes.candidates.size)
+        assertEquals(111, nightRes.candidateWeights.sum())
+        assertEquals(35, nightRes.candidateWeights.count { it == 3 })
+        assertEquals(3, nightRes.candidateWeights.count { it == 2 })
         assertTrue(nightRes.candidateTiers.values.all { it == RoadJukeboxCatalog.CandidateTier.NIGHT_ORDER })
     }
 
@@ -359,7 +366,7 @@ class RoadJukeboxCatalogTest {
     fun routeSuiteModeSelectsCorrectVariantsForGrandPrixRallyCustomAndCompleteSuite() {
         val gpStops = listOf("FirstCircuit", "WestCity", "Coaster", "DonkeyKong")
         assertEquals(
-            listOf("c", "a", "a", "a_alt"),
+            listOf("c", "a", "a", "a"),
             gpStops.mapIndexed { idx, code ->
                 RoadJukeboxCatalog.resolveSuiteVariantForStop(
                     officialKind = OfficialRouteKind.GRAND_PRIX,
@@ -370,7 +377,7 @@ class RoadJukeboxCatalogTest {
                 )
             },
         )
-        // Middle DonkeyKong in GP uses A (A Alt is specifically for DonkeyKong at the GP ending)
+        // Non-first DonkeyKong in GP uses A (multi-stage rocket climb medley, no GP special-case)
         assertEquals(
             "a",
             RoadJukeboxCatalog.resolveSuiteVariantForStop(
@@ -381,17 +388,19 @@ class RoadJukeboxCatalogTest {
                 stageCode = "DonkeyKong",
             ),
         )
-        // Non-DonkeyKong GP ending uses A, not A Alt (even for courses with a_alt like Cinema or SnowMountain)
-        assertEquals(
-            "a",
-            RoadJukeboxCatalog.resolveSuiteVariantForStop(
-                officialKind = OfficialRouteKind.GRAND_PRIX,
-                suiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
-                stopIndex = 3,
-                stopCount = 4,
-                stageCode = "Cinema",
-            ),
-        )
+        // Non-first GP stops use A, not A Alt (even for courses with a_alt like Cinema, SnowMountain, or KoopaTroopaBeach)
+        for (course in listOf("Cinema", "SnowMountain", "KoopaTroopaBeach")) {
+            assertEquals(
+                "a",
+                RoadJukeboxCatalog.resolveSuiteVariantForStop(
+                    officialKind = OfficialRouteKind.GRAND_PRIX,
+                    suiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+                    stopIndex = 3,
+                    stopCount = 4,
+                    stageCode = course,
+                ),
+            )
+        }
         // First stop DonkeyKong still uses C
         assertEquals(
             "c",
@@ -404,9 +413,17 @@ class RoadJukeboxCatalogTest {
             ),
         )
 
-        val rallyStops = listOf("DesertHills", "DonkeyKong", "ChocoMountain", "MooMooFarm", "SFCMarioCircuit", "BigTree")
+        val rallyStops = listOf(
+            "DesertHills",
+            "DonkeyKong",
+            "SnowMountain",
+            "Cinema",
+            "KoopaTroopaBeach",
+            "SFCMarioCircuit",
+            "BigTree",
+        )
         assertEquals(
-            listOf("b", "a", "a", "a", "a", "d"),
+            listOf("b", "a_alt", "a_alt", "a_alt", "a_alt", "a", "d"),
             rallyStops.mapIndexed { idx, code ->
                 RoadJukeboxCatalog.resolveSuiteVariantForStop(
                     officialKind = OfficialRouteKind.RALLY,
@@ -418,7 +435,7 @@ class RoadJukeboxCatalogTest {
             },
         )
 
-        // Custom route (officialKind = null) under Game Suite uses GP stop rule (0 = C, ending DonkeyKong = A Alt, others = A)
+        // Custom route (officialKind = null) under Game Suite uses GP stop rule (0 = C, > 0 = A for all courses including DonkeyKong)
         assertEquals(
             listOf("c", "a", "a"),
             listOf("PeachBeach", "DonkeyKong", "WestCity").mapIndexed { idx, code ->
@@ -432,7 +449,7 @@ class RoadJukeboxCatalogTest {
             },
         )
         assertEquals(
-            listOf("c", "a", "a_alt"),
+            listOf("c", "a", "a"),
             listOf("PeachBeach", "WestCity", "DonkeyKong").mapIndexed { idx, code ->
                 RoadJukeboxCatalog.resolveSuiteVariantForStop(
                     officialKind = null,
@@ -459,6 +476,391 @@ class RoadJukeboxCatalogTest {
                 },
             )
         }
+
+        // Custom route with KNOCKOUT_DIRECT road rule follows Knockout Tour suite progression (b, a / a_alt, d)
+        assertEquals(
+            listOf("b", "a", "a_alt", "a_alt", "d"),
+            listOf("DesertHills", "FirstCircuit", "DonkeyKong", "KoopaTroopaBeach", "ChocoMountain").mapIndexed { idx, code ->
+                RoadJukeboxCatalog.resolveSuiteVariantForStop(
+                    officialKind = null,
+                    suiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
+                    stopIndex = idx,
+                    stopCount = 5,
+                    stageCode = code,
+                    roadRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.KNOCKOUT_DIRECT,
+                )
+            },
+        )
+    }
+
+    @Test
+    fun vsAutoClockAndKnockoutDirectWorkOnCustomAndOfficialRoutesWithBiomeMetadata() {
+        val connections = connectionsCatalog()
+        val wiki = RoadJukeboxCatalog.RouteMusicCatalog.parse(
+            File("src/main/assets/route_music_catalog.json").readText(),
+        )!!
+        val installed = wiki.tracks.map { rule ->
+            trackItem(
+                key = "jb_${rule.jukeboxCode}",
+                hexDigit = 'b',
+                jukeboxCode = rule.jukeboxCode,
+                name = "Track ${rule.jukeboxCode}",
+            )
+        }
+
+        // 03:00–19:00 Day, 19:00–03:00 Night
+        assertFalse(RoadJukeboxCatalog.isNightHour(3))
+        assertFalse(RoadJukeboxCatalog.isNightHour(18))
+        assertTrue(RoadJukeboxCatalog.isNightHour(19))
+        assertTrue(RoadJukeboxCatalog.isNightHour(2))
+
+        val route = CustomRoute(
+            id = "auto_clock",
+            name = "Auto Clock",
+            stops = listOf(CustomRouteStop("FirstCircuit"), CustomRouteStop("WestCity")),
+            edges = listOf(CustomRouteEdgeConfig("FirstCircuit", "WestCity")),
+            roadRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO,
+        )
+        val dayReport = RoadJukeboxCatalog.inspectCustomRoute(
+            route = route,
+            connections = connections,
+            pool = RoadJukeboxCatalog.CandidatePool(),
+            installedJukebox = installed,
+            isStagePlayable = { true },
+            isStageHidden = { false },
+            wikiCatalog = wiki,
+            isNightNow = false,
+        )
+        val dayRes = assertIs<RoadJukeboxCatalog.EdgeMusicResolution.KnownPoolComplete>(dayReport.legs.single().resolution)
+        assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_DAY, dayRes.ruleModeUsed)
+        assertEquals("mesa", dayRes.originBiomeKey)
+
+        val nightReport = RoadJukeboxCatalog.inspectCustomRoute(
+            route = route,
+            connections = connections,
+            pool = RoadJukeboxCatalog.CandidatePool(),
+            installedJukebox = installed,
+            isStagePlayable = { true },
+            isStageHidden = { false },
+            wikiCatalog = wiki,
+            isNightNow = true,
+        )
+        val nightRes = assertIs<RoadJukeboxCatalog.EdgeMusicResolution.KnownPoolComplete>(nightReport.legs.single().resolution)
+        assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_NIGHT, nightRes.ruleModeUsed)
+        assertEquals(null, nightRes.originBiomeKey)
+
+        val knockoutCustom = route.copy(roadRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.KNOCKOUT_DIRECT)
+        val koReport = RoadJukeboxCatalog.inspectCustomRoute(
+            route = knockoutCustom,
+            connections = connections,
+            pool = RoadJukeboxCatalog.CandidatePool(),
+            installedJukebox = installed,
+            isStagePlayable = { true },
+            isStageHidden = { false },
+            wikiCatalog = wiki,
+        )
+        assertTrue(koReport.canPlay)
+        assertIs<RoadJukeboxCatalog.EdgeMusicResolution.KnockoutTourDirect>(koReport.legs.single().resolution)
+    }
+
+    @Test
+    fun defaultRoadRuleIsVsAutoAndFromStoredPreservesExplicitAuto() {
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, RoadJukeboxCatalog.DEFAULT_ROAD_RULE_MODE)
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, RoadJukeboxCatalog.RoadMusicRuleMode.fromStored(null))
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, RoadJukeboxCatalog.RoadMusicRuleMode.fromStored(""))
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, RoadJukeboxCatalog.RoadMusicRuleMode.fromStored("unknown"))
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.AUTO, RoadJukeboxCatalog.RoadMusicRuleMode.fromStored("AUTO"))
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.GRAND_PRIX, RoadJukeboxCatalog.RoadMusicRuleMode.fromStored("GRAND_PRIX"))
+
+        val defaultCustom = CustomRoute(
+            id = "def",
+            name = "Default Route",
+            stops = listOf(CustomRouteStop("FirstCircuit"), CustomRouteStop("WestCity")),
+            edges = listOf(CustomRouteEdgeConfig("FirstCircuit", "WestCity")),
+        )
+        assertEquals(RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO, defaultCustom.roadRuleMode)
+        assertFalse(defaultCustom.pureFreeRoamConfig.enabled)
+    }
+
+    @Test
+    fun pureFreeRoamLegPlansRespectCountDurationOverridesAndKnockoutGpFallbacks() {
+        val connections = connectionsCatalog()
+        val wiki = RoadJukeboxCatalog.RouteMusicCatalog.parse(
+            File("src/main/assets/route_music_catalog.json").readText(),
+        )!!
+        val installed = wiki.tracks.map { rule ->
+            trackItem(
+                key = "jb_${rule.jukeboxCode}",
+                hexDigit = 'c',
+                jukeboxCode = rule.jukeboxCode,
+                name = "Track ${rule.jukeboxCode}",
+            )
+        }
+
+        // Config normalization + JSON round-trip
+        val clamped = RoadJukeboxCatalog.PureFreeRoamConfig(
+            enabled = true,
+            controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION,
+            defaultTracksPerLeg = 99,
+            defaultMinutesPerLeg = 0,
+        ).normalized()
+        assertEquals(10, clamped.defaultTracksPerLeg)
+        assertEquals(1, clamped.defaultMinutesPerLeg)
+        val roundTripped = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(clamped.toJsonObject())
+        assertEquals(clamped, roundTripped)
+        assertFalse(RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(null).enabled)
+
+        // Custom route with 3 legs: leg 0 has custom track override, leg 1 muted, leg 2 uses default
+        val custom = CustomRoute(
+            id = "fr_custom",
+            name = "Free Roam Tour",
+            stops = listOf(
+                CustomRouteStop("FirstCircuit"),
+                CustomRouteStop("WestCity"),
+                CustomRouteStop("Central"),
+                CustomRouteStop("Rainbow"),
+            ),
+            edges = listOf(
+                CustomRouteEdgeConfig("FirstCircuit", "WestCity", musicEnabled = true, freeRoamTrackCountOverride = 4, freeRoamDurationMinutesOverride = 12),
+                CustomRouteEdgeConfig("WestCity", "Central", musicEnabled = false),
+                CustomRouteEdgeConfig("Central", "Rainbow", musicEnabled = true),
+            ),
+            roadRuleMode = RoadJukeboxCatalog.RoadMusicRuleMode.VS_AUTO,
+            pureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(
+                enabled = true,
+                controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT,
+                defaultTracksPerLeg = 2,
+                defaultMinutesPerLeg = 5,
+            ),
+        )
+        val dayPlans = RoadJukeboxCatalog.buildPureFreeRoamLegPlans(custom, wikiCatalog = wiki, isNightNow = false)
+        assertEquals(2, dayPlans.size) // muted leg 1 skipped
+        assertEquals(0, dayPlans[0].edgeIndex)
+        assertEquals(4, dayPlans[0].trackCount)
+        assertEquals(12 * 60_000L, dayPlans[0].durationMs)
+        assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_DAY, dayPlans[0].effectiveRule)
+        assertEquals(RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT, dayPlans[0].controlMode)
+        assertTrue(dayPlans[0].rankedCandidates.isNotEmpty())
+
+        assertEquals(2, dayPlans[1].edgeIndex)
+        assertEquals(2, dayPlans[1].trackCount)
+        assertEquals(5 * 60_000L, dayPlans[1].durationMs)
+        assertTrue(dayPlans[1].rankedCandidates.isNotEmpty())
+
+        // Official Rally under AUTO (normally KNOCKOUT_DIRECT) falls back to VS_NIGHT at night in Pure Free Roam
+        val rally = OfficialRoute(
+            id = "golden_rally",
+            kind = OfficialRouteKind.RALLY,
+            names = mapOf("en" to "Golden Rally"),
+            stops = listOf(
+                OfficialStop("r1", 1, "DesertHills"),
+                OfficialStop("r2", 2, "ShyGuyBazaar"),
+            ),
+            requiresSpecialUnlock = false,
+            sourceUrl = "https://www.mariowiki.com/Golden_Rally",
+        )
+        val rallyPlans = RoadJukeboxCatalog.buildPureFreeRoamLegPlans(
+            route = rally,
+            config = RoadJukeboxCatalog.PureFreeRoamConfig(
+                enabled = true,
+                controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION,
+                defaultMinutesPerLeg = 7,
+            ),
+            ruleMode = RoadJukeboxCatalog.RoadMusicRuleMode.AUTO,
+            edgeOverrides = mapOf(0 to RoadJukeboxCatalog.EdgeFreeRoamOverride(durationMinutesOverride = 15)),
+            wikiCatalog = wiki,
+            isNightNow = true,
+        )
+        assertEquals(1, rallyPlans.size)
+        assertEquals(RoadJukeboxCatalog.EffectiveRuleMode.VS_NIGHT, rallyPlans[0].effectiveRule)
+        assertEquals(RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION, rallyPlans[0].controlMode)
+        assertEquals(15 * 60_000L, rallyPlans[0].durationMs)
+        assertEquals(38, rallyPlans[0].rankedCandidates.size)
+
+        // Inspection in Pure Free Roam skips course-audio playability check but still enforces Special Cup lock
+        val playableEvenWithoutCourseAudio = RoadJukeboxCatalog.inspectCustomRoute(
+            route = custom,
+            connections = connections,
+            pool = RoadJukeboxCatalog.CandidatePool(),
+            installedJukebox = installed,
+            isStagePlayable = { false },
+            isStageHidden = { false },
+            wikiCatalog = wiki,
+            isNightNow = false,
+        )
+        assertTrue(playableEvenWithoutCourseAudio.canPlay)
+
+        val stillBlockedWhenLocked = RoadJukeboxCatalog.inspectCustomRoute(
+            route = custom,
+            connections = connections,
+            pool = RoadJukeboxCatalog.CandidatePool(),
+            installedJukebox = installed,
+            isStagePlayable = { false },
+            isStageHidden = { it == "Rainbow" },
+            wikiCatalog = wiki,
+            isNightNow = false,
+        )
+        assertFalse(stillBlockedWhenLocked.canPlay)
+        assertIs<RoadJukeboxCatalog.BlockingCause.UnplayableStages>(stillBlockedWhenLocked.blockingCause)
+    }
+
+    @Test
+    fun pureFreeRoamTrackPoolJsonRoundTripBackwardCompatAndInGameModeCoercion() {
+        // Legacy JSON missing trackPool & freeRoamMode defaults cleanly to ROUTE_RULES + AUTO_CLOCK
+        val legacyJson = JSONObject()
+            .put("enabled", true)
+            .put("controlMode", "DURATION")
+            .put("defaultTracksPerLeg", 3)
+            .put("defaultMinutesPerLeg", 8)
+        val parsedLegacy = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(legacyJson)
+        assertTrue(parsedLegacy.enabled)
+        assertEquals(RoadJukeboxCatalog.PureFreeRoamControlMode.DURATION, parsedLegacy.controlMode)
+        assertEquals(3, parsedLegacy.defaultTracksPerLeg)
+        assertEquals(8, parsedLegacy.defaultMinutesPerLeg)
+        assertEquals(RoadJukeboxCatalog.PureFreeRoamTrackPool.ROUTE_RULES, parsedLegacy.trackPool)
+        assertEquals(FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK, parsedLegacy.freeRoamMode)
+
+        // Full round-trip for GAME_FREE_ROAM + SOLO_ALL and FREEROAM_ONLY
+        for (mode in listOf(
+            FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK,
+            FreeRoamJukeboxCatalog.FreeRoamMode.SOLO_DAY,
+            FreeRoamJukeboxCatalog.FreeRoamMode.SOLO_NIGHT,
+            FreeRoamJukeboxCatalog.FreeRoamMode.SOLO_ALL,
+            FreeRoamJukeboxCatalog.FreeRoamMode.FREEROAM_ONLY,
+        )) {
+            val cfg = RoadJukeboxCatalog.PureFreeRoamConfig(
+                enabled = true,
+                controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT,
+                defaultTracksPerLeg = 4,
+                defaultMinutesPerLeg = 6,
+                trackPool = RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM,
+                freeRoamMode = mode,
+            )
+            val roundTripped = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(cfg.toJsonObject())
+            assertEquals(cfg, roundTripped)
+        }
+
+        // Storing ONLINE_DAY or ONLINE_NIGHT coerces back to AUTO_CLOCK for in-game Free Roam config
+        val onlineCoerced = RoadJukeboxCatalog.PureFreeRoamConfig(
+            enabled = true,
+            trackPool = RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM,
+            freeRoamMode = FreeRoamJukeboxCatalog.FreeRoamMode.ONLINE_NIGHT,
+        ).normalized()
+        assertEquals(FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK, onlineCoerced.freeRoamMode)
+
+        val onlineJson = JSONObject()
+            .put("enabled", true)
+            .put("trackPool", "GAME_FREE_ROAM")
+            .put("freeRoamMode", "ONLINE_DAY")
+        val parsedOnline = RoadJukeboxCatalog.PureFreeRoamConfig.fromJsonObject(onlineJson)
+        assertEquals(RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM, parsedOnline.trackPool)
+        assertEquals(FreeRoamJukeboxCatalog.FreeRoamMode.AUTO_CLOCK, parsedOnline.freeRoamMode)
+    }
+
+    @Test
+    fun pureFreeRoamGameFreeRoamPoolLegPlansAndRouteValidation() {
+        val connections = connectionsCatalog()
+        val wiki = RoadJukeboxCatalog.RouteMusicCatalog.parse(
+            File("src/main/assets/route_music_catalog.json").readText(),
+        )!!
+        val item1 = trackItem("track_1", '1', "JB01", "Road Tune 1")
+        val item2 = trackItem("track_2", '2', "JB02", "Road Tune 2")
+        val installed = listOf(item1, item2)
+
+        // Incomplete per-edge pool on DonkeyKong -> FirstCircuit (JB02 unreadable)
+        val pool = RoadJukeboxCatalog.CandidatePool(
+            dataVersion = 1,
+            entries = mapOf(
+                RoadJukeboxCatalog.EdgeKey("DonkeyKong", "FirstCircuit") to listOf("JB01", "JB02"),
+            ),
+        )
+
+        val gamePoolConfig = RoadJukeboxCatalog.PureFreeRoamConfig(
+            enabled = true,
+            controlMode = RoadJukeboxCatalog.PureFreeRoamControlMode.TRACK_COUNT,
+            defaultTracksPerLeg = 3,
+            defaultMinutesPerLeg = 9,
+            trackPool = RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM,
+            freeRoamMode = FreeRoamJukeboxCatalog.FreeRoamMode.FREEROAM_ONLY,
+        )
+        val custom = CustomRoute(
+            id = "fr_game_pool",
+            name = "Game Free Roam Drive",
+            stops = listOf(
+                CustomRouteStop("DonkeyKong"),
+                CustomRouteStop("FirstCircuit"),
+                CustomRouteStop("WestCity"),
+            ),
+            edges = listOf(
+                CustomRouteEdgeConfig("DonkeyKong", "FirstCircuit", musicEnabled = true, freeRoamTrackCountOverride = 5),
+                CustomRouteEdgeConfig("FirstCircuit", "WestCity", musicEnabled = true),
+            ),
+            pureFreeRoamConfig = gamePoolConfig,
+        )
+
+        val plans = RoadJukeboxCatalog.buildPureFreeRoamLegPlans(custom, wikiCatalog = wiki, isNightNow = false)
+        assertEquals(2, plans.size)
+        for (plan in plans) {
+            assertEquals(RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM, plan.trackPool)
+            assertEquals(FreeRoamJukeboxCatalog.FreeRoamMode.FREEROAM_ONLY, plan.freeRoamMode)
+            assertTrue(plan.rankedCandidates.isEmpty(), "GAME_FREE_ROAM leg plans must not pull route-rule candidates")
+        }
+        assertEquals(5, plans[0].trackCount)
+        assertEquals(3, plans[1].trackCount)
+
+        // With GAME_FREE_ROAM, incomplete per-edge road pool does NOT block validation while Jukebox is installed
+        val gamePoolReport = RoadJukeboxCatalog.inspectCustomRoute(
+            route = custom,
+            connections = connections,
+            pool = pool,
+            installedJukebox = installed,
+            isStagePlayable = { false },
+            isStageHidden = { false },
+            isJukeboxReadable = { it.key == "track_1" },
+            wikiCatalog = wiki,
+        )
+        assertTrue(gamePoolReport.canPlay)
+        assertTrue(gamePoolReport.incompletePoolEdges.isEmpty())
+
+        // Without any readable Jukebox tracks at all, GAME_FREE_ROAM blocks playback
+        val noJukeboxReport = RoadJukeboxCatalog.inspectCustomRoute(
+            route = custom,
+            connections = connections,
+            pool = pool,
+            installedJukebox = installed,
+            isStagePlayable = { true },
+            isStageHidden = { false },
+            isJukeboxReadable = { false },
+            wikiCatalog = wiki,
+        )
+        assertFalse(noJukeboxReport.canPlay)
+
+        // Official route with GAME_FREE_ROAM also bypasses incomplete per-edge pool when Jukebox is readable
+        val official = OfficialRoute(
+            id = "dk_test_cup",
+            kind = OfficialRouteKind.GRAND_PRIX,
+            names = mapOf("en" to "DK Test Cup"),
+            stops = listOf(
+                OfficialStop("s1", 1, "DonkeyKong"),
+                OfficialStop("s2", 2, "FirstCircuit"),
+            ),
+            requiresSpecialUnlock = false,
+            sourceUrl = "https://www.mariowiki.com/",
+        )
+        val officialGamePoolReport = RoadJukeboxCatalog.inspectOfficialRoute(
+            route = official,
+            connections = connections,
+            pool = pool,
+            installedJukebox = installed,
+            isStagePlayable = { false },
+            isStageHidden = { false },
+            isJukeboxReadable = { it.key == "track_1" },
+            wikiCatalog = wiki,
+            pureFreeRoamEnabled = true,
+            pureFreeRoamTrackPool = RoadJukeboxCatalog.PureFreeRoamTrackPool.GAME_FREE_ROAM,
+        )
+        assertTrue(officialGamePoolReport.canPlay)
+        assertTrue(officialGamePoolReport.incompletePoolEdges.isEmpty())
     }
 }
 

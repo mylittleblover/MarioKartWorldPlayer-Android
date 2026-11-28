@@ -20,7 +20,7 @@
     <string name="unlock_ceremony_subtitle">请欣赏特别杯登场演出——乐曲结束后即可继续操作。</string>
     <string name="unlock_ceremony_locked_hint">解锁演出进行中 · 无法停止或切换曲目</string>
     <string name="unlock_congrats_title">特别杯已解锁！</string>
-    <string name="unlock_congrats_body">你已收听所有符合条件的赛道。特别杯、彩虹之路及其相关纪念曲目现已在播放器中全面开放。</string>
+    <string name="unlock_congrats_body">感谢您对《马力欧卡丁车》音乐与本软件的支持与热爱，接下来请聆听最后的大奖赛——特别杯。</string>
     <string name="unlock_congrats_enter">前往特别杯</string>
     <string name="unlock_congrats_close">关闭</string>
     <string name="settings_unlock_reset_btn">重置解锁进度</string>
@@ -28,4 +28,6 @@
     <string name="settings_unlock_reset_confirm_body">将清空全部赛道收听进度记录，重新锁定特别杯与彩虹之路，并将测试模式恢复为正常。</string>
     <string name="settings_unlock_reset_confirm_action">确认重置</string>
     <string name="settings_unlock_reset_done">已重置解锁进度</string>
+    <string name="unlock_err_audio_missing">已安装的资源包缺少特别杯解锁演出音频。</string>
+    <string name="unlock_test_err_missing_111">请导入包含 #111 号曲目的资源包以测试解锁演出。</string>
 </resources>

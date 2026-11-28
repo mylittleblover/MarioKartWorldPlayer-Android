@@ -1,5 +1,7 @@
 # Rainbow 参考录音对齐复核
 
+> **历史撤回记录说明（MKW v1.8.0 已全量证实）**：本文记录 2026-11-12 对早期错误参考录音的分析与 81,620 帧结论撤回过程。彩虹之路全部 15 条流与实机逆向参数（`Area1_Pre` 16 拍、`Area1 → Area2` 分轨 0.30 s 淡出、`Area3 → Final_Pre` `-220 m` / 1.20 s + 3.00 s 淡出 / 2.50 s 淡入、`Final_Pre → Final` `0.10 s` 淡出 + `Rainbow_FanfareDelay = 0.20 s` + `218,734` 帧）已由游戏内提取报告与正确参考对齐完整锁定，详见 [2026-11-12-rainbow-correct-reference.md](2026-11-12-rainbow-correct-reference.md) 与 [MUSIC-TRANSITIONS.md](../MUSIC-TRANSITIONS.md)。
+
 参考 FLAC SHA-256 `92b53fde…eafdef`，解码为 48 kHz 双声道 16-bit PCM，共 23,279,931 帧。音源由固定 Native 工具分别解码，未拼接。分析只对齐参考混音中的声源，没有修改 app 或 engine 文件。
 
 ## 目前可确认的源起点

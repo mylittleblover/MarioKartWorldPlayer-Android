@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | **繁體中文** | [English](README.en.md) | [日本語](README.ja.md)
 
-**0.1.0-beta05** · Android 8.0（API 26）以上
+**Beta 0.1.6** · Android 8.0（API 26）以上
 
 JukeKart 是專為《瑪利歐賽車 世界》配樂打造的獨立 Android 播放器。匯入自己的 `.mkwpack` 後，即可切換賽道音樂的階段與版本、播放賽道組曲、沿世界地圖路線聆聽道路音樂，或透過點唱機管理收藏與播放清單。
 

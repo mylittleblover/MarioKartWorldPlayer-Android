@@ -550,6 +550,28 @@
       },
       "sourceUrl": "https://www.mariowiki.com/Turnip_Rally",
       "sourceSha256": "515614a4317cb64feb47067eaee9172469ab4e2e23201ce4563d6287fd2ce597"
+    },
+    {
+      "id": "feather_rally",
+      "names": {
+        "en": "Feather Rally",
+        "ja": "ハネラリー",
+        "zh-Hans": "羽毛拉力赛",
+        "zh-Hant": "羽毛拉力賽"
+      },
+      "sourceUrl": "https://www.mariowiki.com/Feather_Rally",
+      "sourceSha256": "323ab0cb501415bf17d77550e8f57a7a19584f2ad72a2b9ce51ca846efa1ce2d"
+    },
+    {
+      "id": "lucky_cat_rally",
+      "names": {
+        "en": "Lucky Cat Rally",
+        "ja": "まねきネコラリー",
+        "zh-Hans": "招财猫拉力赛",
+        "zh-Hant": "招財貓拉力賽"
+      },
+      "sourceUrl": "https://www.mariowiki.com/Lucky_Cat_Rally",
+      "sourceSha256": "081db02e3c88902dd37e789456fb33ad37252e05832e3659d6f966f170cb591c"
     }
   ]
 }

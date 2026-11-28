@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -48,10 +49,10 @@ class CourseMedleyCompilerTest {
         val extra = ExtraMedleyCatalog.parse(File("src/main/assets/extra_medley_catalog.json").readText())
         val ids = identities()
         val extraAudio = extraMusic()
-        val aAltCourses = setOf("DonkeyKong", "SnowMountain", "Cinema")
+        val aAltCourses = setOf("DonkeyKong", "SnowMountain", "Cinema", "KoopaTroopaBeach")
         val courseCodes = cat.medleys.map { it.courseCode }.distinct()
         assertEquals(30, courseCodes.size)
-        assertEquals(120, cat.medleys.size)
+        assertEquals(121, cat.medleys.size)
         assertEquals(14, extra.entries.size)
         for (code in courseCodes) {
             val expected = when (code) {
@@ -155,7 +156,7 @@ class CourseMedleyCompilerTest {
     @Test
     fun strictTransitionRulesAllowOnlyValidFadesVolumeEnvelopesAndPreservedCourses() {
         val cat = catalog()
-        assertEquals(120, cat.medleys.size)
+        assertEquals(121, cat.medleys.size)
         for (medley in cat.medleys) {
             assertEquals(
                 medley.clips.maxOf { it.start + it.sourceLength },
@@ -175,18 +176,34 @@ class CourseMedleyCompilerTest {
             }
         }
         val cinemaClips = cat.forCourse("Cinema").single { it.normalizedSuiteVariant == "a" }.clips
-        assertEquals(48_000L, cinemaClips.last { it.stem == "BGM_Stage_Cinema" }.fadeOut)
-        assertEquals(48_000L, cinemaClips.first { it.stem == "BGM_Stage_Cinema_Pattern2" }.fadeIn)
+        assertEquals(24_000L, cinemaClips.last { it.stem == "BGM_Stage_Cinema" }.fadeOut)
+        assertEquals(24_000L, cinemaClips.first { it.stem == "BGM_Stage_Cinema_Pattern2" }.fadeIn)
+
+        val rainbowClips = cat.forCourse("Rainbow").single { it.normalizedSuiteVariant == "a" }.clips
+        assertEquals(14_400L, rainbowClips.single { it.stem == "BGM_Rainbow_Area1_Inst" }.fadeOut)
+        assertEquals(14_400L, rainbowClips.single { it.stem == "BGM_Rainbow_Area1_Melody" }.fadeOut)
+        assertEquals(144_000L, rainbowClips.single { it.stem == "BGM_Rainbow_Area3" }.fadeOut)
+        assertEquals(120_000L, rainbowClips.single { it.stem == "BGM_Rainbow_Final_Pre" }.fadeIn)
+        assertEquals(4_800L, rainbowClips.single { it.stem == "BGM_Rainbow_Final_Pre" }.fadeOut)
+        val rbFf = rainbowClips.single { it.stem == "BGM_Rainbow_FinalLapFanfare" }
+        val rbFinal = rainbowClips.first { it.stem == "BGM_Rainbow_Final" }
+        assertEquals(RainbowInteractiveCompiler.FINAL_FROM_FANFARE_FRAMES, rbFinal.start - rbFf.start)
+
+        val cinemaAAlt = cat.forCourse("Cinema").single { it.normalizedSuiteVariant == "a_alt" }
+        assertEquals(1_815_426L, cinemaAAlt.clips.first().sourceLength, "Cinema Suite A Alt Pre must exit on verified 8-beat grid")
+        assertEquals(7_794_855L, cinemaAAlt.totalFrames, "Cinema Suite A Alt totalFrames must align with Cinema Suite A")
 
         val koopaA = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "a" }
+        val koopaAAlt = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "a_alt" }
         val koopaB = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "b" }
-        val koopaSpeaker = koopaA.clips.single { it.stem == "SE_Stage_KoopaTroopaBeach_Speaker_Normal" }
-        assertEquals(48_000L, koopaSpeaker.fadeIn)
-        assertEquals(48_000L, koopaSpeaker.fadeOut)
+        val koopaSpeakers = koopaA.clips.filter { it.stem == "SE_Stage_KoopaTroopaBeach_Speaker_Normal" }
+        assertEquals(2, koopaSpeakers.size)
+        assertEquals(48_000L, koopaSpeakers.first().fadeIn)
+        assertEquals(48_000L, koopaSpeakers.last().fadeOut)
         assertEquals(
-            koopaA.clips.drop(1).map { it.copy(start = it.start - 1L) },
+            koopaAAlt.clips.drop(1).map { it.copy(start = it.start - 1L) },
             koopaB.clips.drop(2),
-            "KoopaTroopaBeach Suite B after Pre_Short must match Suite A after Pre",
+            "KoopaTroopaBeach Suite B after Pre_Short must match non-Speaker Suite A Alt after Pre",
         )
 
         val dkJpA = cat.forCourse("DKJungleParkway").single { it.normalizedSuiteVariant == "a" }
@@ -227,20 +244,86 @@ class CourseMedleyCompilerTest {
         val cat = catalog()
         assertTrue(cat.medleys.none { it.isKnockoutVariant })
         assertEquals(listOf("a"), cat.forCourse("Rainbow").map { it.normalizedSuiteVariant })
-        for (altCourse in listOf("DonkeyKong", "SnowMountain", "Cinema")) {
+        for (altCourse in listOf("DonkeyKong", "SnowMountain", "Cinema", "KoopaTroopaBeach")) {
             assertEquals(listOf("a", "a_alt", "b", "c", "d"), cat.forCourse(altCourse).map { it.normalizedSuiteVariant })
         }
-        assertEquals(listOf("a", "b", "c", "d"), cat.forCourse("KoopaTroopaBeach").map { it.normalizedSuiteVariant })
+
+        val dkA = cat.forCourse("DonkeyKong").single { it.normalizedSuiteVariant == "a" }
+        assertEquals("13_DonkeyKong_a", dkA.id)
+        assertEquals(10_235_514L, dkA.totalFrames)
+        assertEquals(
+            listOf(
+                "BGM_Stage_DonkeyKong_Pre",
+                "BGM_Stage_DonkeyKong",
+                "BGM_Stage_DonkeyKong_Pattern2",
+                "BGM_Stage_DonkeyKong_Pattern3",
+                "BGM_Stage_DonkeyKong_Pattern4",
+                "BGM_Stage_DonkeyKong_Pattern5",
+                "BGM_Seq_FinalLapFF",
+                "BGM_Stage_DonkeyKong_Fast",
+                "BGM_Stage_DonkeyKong_Fast",
+                "BGM_Stage_DonkeyKong_Fast",
+            ),
+            dkA.clips.map { it.stem },
+            "DK A must be the 10-clip multi-stage climb (Pre -> Main -> Pattern2..5 -> FinalLapFF -> Fast)",
+        )
 
         val dkAAlt = cat.forCourse("DonkeyKong").single { it.normalizedSuiteVariant == "a_alt" }
-        assertEquals("BGM_Stage_DonkeyKong_Pre", dkAAlt.clips.first().stem, "DK A Alt must keep Pre + rocket climb intro")
-        assertTrue(dkAAlt.clips.any { it.stem == "BGM_Stage_DonkeyKong_Pattern5" }, "DK A Alt must keep rocket climb Pattern5")
+        assertEquals("14_DonkeyKong_a_alt", dkAAlt.id)
+        assertEquals(8_151_710L, dkAAlt.totalFrames)
+        assertEquals(
+            listOf(
+                "BGM_Stage_DonkeyKong_Pre",
+                "BGM_Stage_DonkeyKong",
+                "BGM_Stage_DonkeyKong",
+                "BGM_Stage_DonkeyKong_Outro00",
+            ),
+            dkAAlt.clips.map { it.stem },
+            "DK A Alt must be the 4-clip 1-loop Main + Outro00 rally arrangement",
+        )
+
+        val dkB = cat.forCourse("DonkeyKong").single { it.normalizedSuiteVariant == "b" }
+        assertEquals("15_DonkeyKong_b", dkB.id)
+        assertEquals(7_092_401L, dkB.totalFrames)
+        assertEquals(
+            listOf(
+                "BGM_Stage_DonkeyKong_Pre_Short",
+                "BGM_Stage_DonkeyKong_Pre_Short",
+                "BGM_Stage_DonkeyKong",
+                "BGM_Stage_DonkeyKong",
+                "BGM_Stage_DonkeyKong_Outro00",
+            ),
+            dkB.clips.map { it.stem },
+            "DK B must be the restored 5-clip Pre_Short arrangement",
+        )
+
         val dkC = cat.forCourse("DonkeyKong").single { it.normalizedSuiteVariant == "c" }
+        assertEquals("16_DonkeyKong_c", dkC.id)
         assertEquals("BGM_Stage_DonkeyKong", dkC.clips.first().stem, "DK C from 1412 backup should start directly at Main")
         assertTrue(dkC.clips.last().volumePoints.isNotEmpty(), "DK C from 1412 backup should end with 10s fade-out envelope")
 
-        // Verify resolveMedley resolves KoopaTroopaBeach speaker stems via extraCatalog
+        // Verify KoopaTroopaBeach A, B, A Alt match corrected full-length Speaker / non-Speaker arrangements
         val koopaA = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "a" }
+        val koopaAAlt = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "a_alt" }
+        val koopaB = cat.forCourse("KoopaTroopaBeach").single { it.normalizedSuiteVariant == "b" }
+        assertEquals("51_KoopaTroopaBeach_a", koopaA.id)
+        assertEquals("52_KoopaTroopaBeach_a_alt", koopaAAlt.id)
+        assertEquals("53_KoopaTroopaBeach_b", koopaB.id)
+        assertEquals(5_436_595L, koopaA.totalFrames)
+        assertEquals(5_436_595L, koopaAAlt.totalFrames)
+        assertEquals(5_436_594L, koopaB.totalFrames)
+        assertEquals(8, koopaA.clips.size)
+        assertEquals(5, koopaAAlt.clips.size)
+        assertEquals(6, koopaB.clips.size)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Pre", koopaA.clips.first().stem)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Pre", koopaAAlt.clips.first().stem)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Pre_Short", koopaB.clips.first().stem)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Outro00", koopaA.clips.last().stem)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Outro00", koopaAAlt.clips.last().stem)
+        assertEquals("BGM_Stage_KoopaTroopaBeach_Outro00", koopaB.clips.last().stem)
+        assertTrue(koopaA.uniqueStems.contains("SE_Stage_KoopaTroopaBeach_Speaker_Normal"))
+        assertFalse(koopaB.uniqueStems.contains("SE_Stage_KoopaTroopaBeach_Speaker_Normal"))
+        assertFalse(koopaAAlt.uniqueStems.contains("SE_Stage_KoopaTroopaBeach_Speaker_Normal"))
         val ids = identities()
         val extraAudio = extraMusic()
         val tmpDir = kotlin.io.path.createTempDirectory("koopa-resolve-test-").toFile()

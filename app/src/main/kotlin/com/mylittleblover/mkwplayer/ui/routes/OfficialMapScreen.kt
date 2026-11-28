@@ -96,7 +96,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clipToBounds
@@ -155,10 +154,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import com.mylittleblover.mkwplayer.ui.art.StageArt
 import java.io.File
+import android.graphics.Bitmap
+import android.util.LruCache
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import com.mylittleblover.mkwplayer.routes.OfficialRouteFreeRoamEntry
+import com.mylittleblover.mkwplayer.ui.kit.MkwMotion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -181,19 +190,30 @@ internal fun OfficialMapScreen(
     onPlayOfficialRoute: (OfficialRoute, Boolean, Map<Int, String>, RoadJukeboxCatalog.RoadMusicRuleMode, RoadJukeboxCatalog.RouteSuiteMode) -> Unit = { _, _, _, _, _ -> },
     onSaveCustomRoute: (routeId: String?, name: String, stops: List<CustomRouteStop>, edges: List<CustomRouteEdgeConfig>, loopWholeRoute: Boolean, roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode, routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode) -> Unit = { _, _, _, _, _, _, _ -> },
     onPlayCustomDraft: (name: String, stops: List<CustomRouteStop>, edges: List<CustomRouteEdgeConfig>, loopWholeRoute: Boolean, roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode, routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode) -> Unit = { _, _, _, _, _, _ -> },
+    officialFreeRoamEntryFor: (routeId: String) -> OfficialRouteFreeRoamEntry = { OfficialRouteFreeRoamEntry() },
+    onOfficialFreeRoamConfigChange: (routeId: String, config: RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit = { _, _ -> },
+    onOfficialFreeRoamEdgeOverrideChange: (routeId: String, edgeIndex: Int, override: RoadJukeboxCatalog.EdgeFreeRoamOverride?) -> Unit = { _, _, _ -> },
+    onPlayOfficialRouteWithFreeRoam: ((OfficialRoute, Boolean, Map<Int, String>, RoadJukeboxCatalog.RoadMusicRuleMode, RoadJukeboxCatalog.RouteSuiteMode, RoadJukeboxCatalog.PureFreeRoamConfig, Map<Int, RoadJukeboxCatalog.EdgeFreeRoamOverride>) -> Unit)? = null,
+    onSaveCustomRouteWithFreeRoam: ((routeId: String?, name: String, stops: List<CustomRouteStop>, edges: List<CustomRouteEdgeConfig>, loopWholeRoute: Boolean, roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode, routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode, pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit)? = null,
+    onPlayCustomDraftWithFreeRoam: ((name: String, stops: List<CustomRouteStop>, edges: List<CustomRouteEdgeConfig>, loopWholeRoute: Boolean, roadRuleMode: RoadJukeboxCatalog.RoadMusicRuleMode, routeSuiteMode: RoadJukeboxCatalog.RouteSuiteMode, pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit)? = null,
 ) {
     val visibleRoutes = routes.visible(specialUnlocked)
     val visibleStages = routes.stageCodes(specialUnlocked)
     val pins = anchors.stages.filter { it.code.removeSuffix("_00") in visibleStages }
     val route = visibleRoutes.firstOrNull { it.id == state.selectedRouteId }
     val course = state.selectedCourseCode?.takeIf { it in visibleStages }
-    // The real connections of the selected course, as the game defines them. Empty when nothing is
-    // selected, when no table shipped, or when the course is a sink such as Rainbow Road -- which is a
-    // real answer rather than a missing one.
-    val neighbours = remember(course, connections, visibleStages) {
+    // Text metadata for the selected course's detail card; NEVER drawn on the map outside edit mode (#2).
+    val courseNeighbours = remember(course, connections, visibleStages) {
         course?.let { connections?.neighbours(it) }
             ?.filter { it in visibleStages }
             .orEmpty()
+    }
+    // Map canvas outgoing connections: shown ONLY for the active stop while connecting/editing (#2).
+    val mapReachableOrigin = remember(state.editing, state.editFrom, visibleStages) {
+        activeMapReachableOrigin(state.editing, state.editFrom, visibleStages)
+    }
+    val mapReachableNeighbours = remember(state.editing, state.editFrom, connections, visibleStages) {
+        activeMapReachableNeighbours(state.editing, state.editFrom, connections, visibleStages)
     }
     val sink = course != null && connections != null && connections.outgoing(course).isEmpty()
     var picker by rememberSaveable { mutableStateOf(false) }
@@ -205,6 +225,17 @@ internal fun OfficialMapScreen(
     var officialLoop by rememberSaveable(route?.id) { mutableStateOf(false) }
     var officialRuleMode by rememberSaveable(route?.id) { mutableStateOf(RoadJukeboxCatalog.RoadMusicRuleMode.AUTO) }
     var officialSuiteMode by rememberSaveable(route?.id) { mutableStateOf(RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE) }
+    var officialFreeRoamConfig by remember(route?.id) {
+        mutableStateOf(
+            route?.let { officialFreeRoamEntryFor(it.id).config.normalized() }
+                ?: RoadJukeboxCatalog.PureFreeRoamConfig(),
+        )
+    }
+    val officialFreeRoamOverrides = remember(route?.id) {
+        mutableStateMapOf<Int, RoadJukeboxCatalog.EdgeFreeRoamOverride>().apply {
+            route?.let { putAll(officialFreeRoamEntryFor(it.id).edgeOverrides) }
+        }
+    }
     val sessionOverrides = remember(route?.id) { mutableStateMapOf<Int, String>() }
     var pickingEdgeIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var pickingOfficialLeg by rememberSaveable { mutableStateOf(false) }
@@ -212,10 +243,76 @@ internal fun OfficialMapScreen(
     var saveDraftName by rememberSaveable(state.editingRouteId) { mutableStateOf(state.editingRouteName) }
     val defaultRouteName = stringResource(R.string.route_default_name)
 
-    val officialReport = remember(route, sessionOverrides.toMap(), officialRuleMode, packDirectory, installedJukebox) {
+    val playActiveOfficialRoute: (OfficialRoute) -> Unit = { targetRoute ->
+        val customCb = onPlayOfficialRouteWithFreeRoam
+        if (customCb != null) {
+            customCb(
+                targetRoute,
+                officialLoop,
+                sessionOverrides.toMap(),
+                officialRuleMode,
+                officialSuiteMode,
+                officialFreeRoamConfig.normalized(),
+                officialFreeRoamOverrides.toMap(),
+            )
+        } else {
+            onPlayOfficialRoute(targetRoute, officialLoop, sessionOverrides.toMap(), officialRuleMode, officialSuiteMode)
+        }
+    }
+    val playActiveCustomDraft: () -> Unit = {
+        val routeName = state.editingRouteName.ifBlank { defaultRouteName }
+        val customCb = onPlayCustomDraftWithFreeRoam
+        if (customCb != null) {
+            customCb(
+                routeName,
+                state.toCustomRouteStops(),
+                state.toCustomRouteEdges(),
+                state.draftLoopWholeRoute,
+                state.draftRoadRuleMode,
+                state.draftRouteSuiteMode,
+                state.draftPureFreeRoamConfig.normalized(),
+            )
+        } else {
+            onPlayCustomDraft(
+                routeName,
+                state.toCustomRouteStops(),
+                state.toCustomRouteEdges(),
+                state.draftLoopWholeRoute,
+                state.draftRoadRuleMode,
+                state.draftRouteSuiteMode,
+            )
+        }
+    }
+    val saveActiveCustomDraft: (String) -> Unit = { trimmed ->
+        val customCb = onSaveCustomRouteWithFreeRoam
+        if (customCb != null) {
+            customCb(
+                state.editingRouteId,
+                trimmed,
+                state.toCustomRouteStops(),
+                state.toCustomRouteEdges(),
+                state.draftLoopWholeRoute,
+                state.draftRoadRuleMode,
+                state.draftRouteSuiteMode,
+                state.draftPureFreeRoamConfig.normalized(),
+            )
+        } else {
+            onSaveCustomRoute(
+                state.editingRouteId,
+                trimmed,
+                state.toCustomRouteStops(),
+                state.toCustomRouteEdges(),
+                state.draftLoopWholeRoute,
+                state.draftRoadRuleMode,
+                state.draftRouteSuiteMode,
+            )
+        }
+    }
+
+    val officialReport = remember(route, sessionOverrides.toMap(), officialRuleMode, officialFreeRoamConfig.enabled, officialFreeRoamConfig.trackPool, packDirectory, installedJukebox) {
         route?.let { inspectOfficialRoute(it, sessionOverrides.toMap(), officialRuleMode) }
     }
-    val draftReport = remember(state.draft, state.draftEdgeConfigs, state.draftRoadRuleMode, packDirectory, installedJukebox) {
+    val draftReport = remember(state.draft, state.draftEdgeConfigs, state.draftRoadRuleMode, state.draftPureFreeRoamConfig.enabled, state.draftPureFreeRoamConfig.trackPool, packDirectory, installedJukebox) {
         if (state.draft.isNotEmpty()) inspectDraftRoute(state.draft, state.draftEdgeConfigs, state.draftRoadRuleMode) else null
     }
     val fallbackName = stringResource(R.string.map_course)
@@ -258,14 +355,26 @@ internal fun OfficialMapScreen(
         Row(Modifier.fillMaxSize()) {
             BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
                 val viewportMaxHeight = maxHeight
-                MapCanvas(image, anchors.canvasWidth.toFloat(), pins, route, state, name, Modifier.fillMaxSize(),
-                    neighbours = neighbours, onPinTap = onPinTap, draft = state.draft, editFrom = state.editFrom,
+                MapCanvas(
+                    image = image,
+                    sourceCanvasWidth = anchors.canvasWidth.toFloat(),
+                    pins = pins,
+                    route = route,
+                    state = state,
+                    name = name,
+                    modifier = Modifier.fillMaxSize(),
+                    reachableOrigin = mapReachableOrigin,
+                    reachableNeighbours = mapReachableNeighbours,
+                    onPinTap = onPinTap,
+                    draft = state.draft,
+                    editFrom = state.editFrom,
                     draftEdgeConfigs = state.draftEdgeConfigs,
                     packDirectory = packDirectory,
                     onDraftEdgeTap = { idx ->
                         pickingOfficialLeg = false
                         pickingEdgeIndex = idx
-                    })
+                    },
+                )
                 val horizontalControls = maxHeight < 240.dp || (!wide && maxHeight < 400.dp)
                 MkwFloatingPanel(
                     modifier = Modifier.align(Alignment.TopStart).padding(10.dp)
@@ -402,17 +511,7 @@ internal fun OfficialMapScreen(
                                                 saveDraftName = state.editingRouteName.ifBlank { defaultRouteName }
                                                 saveDialogOpen = true
                                             },
-                                            onPlayDraft = {
-                                                val routeName = state.editingRouteName.ifBlank { defaultRouteName }
-                                                onPlayCustomDraft(
-                                                    routeName,
-                                                    state.toCustomRouteStops(),
-                                                    state.toCustomRouteEdges(),
-                                                    state.draftLoopWholeRoute,
-                                                    state.draftRoadRuleMode,
-                                                    state.draftRouteSuiteMode,
-                                                )
-                                            },
+                                            onPlayDraft = playActiveCustomDraft,
                                             onOpenSettings = { draftSettingsOpen = true },
                                             onDone = {
                                                 stops = false
@@ -425,9 +524,8 @@ internal fun OfficialMapScreen(
                                             languageTag = languageTag,
                                             name = name,
                                             officialReport = officialReport,
-                                            onPlayRoute = {
-                                                onPlayOfficialRoute(route, officialLoop, sessionOverrides.toMap(), officialRuleMode, officialSuiteMode)
-                                            },
+                                            pureFreeRoamEnabled = officialFreeRoamConfig.enabled,
+                                            onPlayRoute = { playActiveOfficialRoute(route) },
                                             onOpenStopsSheet = { stops = true },
                                             onClearRoute = { state.clearSelection() },
                                         )
@@ -441,7 +539,7 @@ internal fun OfficialMapScreen(
                                             state = state,
                                             onStops = { stops = true },
                                             onOpenCourse = onOpenCourse,
-                                            neighbours = neighbours,
+                                            neighbours = courseNeighbours,
                                             sink = sink,
                                             connections = connections,
                                             officialReport = officialReport,
@@ -454,10 +552,14 @@ internal fun OfficialMapScreen(
                                             },
                                             suiteMode = officialSuiteMode,
                                             onSuiteModeChange = { officialSuiteMode = it },
+                                            pureFreeRoamConfig = officialFreeRoamConfig,
+                                            onPureFreeRoamConfigChange = { next ->
+                                                val clean = next.normalized()
+                                                officialFreeRoamConfig = clean
+                                                route?.let { onOfficialFreeRoamConfigChange(it.id, clean) }
+                                            },
                                             onPlayRoute = {
-                                                if (route != null) {
-                                                    onPlayOfficialRoute(route, officialLoop, sessionOverrides.toMap(), officialRuleMode, officialSuiteMode)
-                                                }
+                                                if (route != null) playActiveOfficialRoute(route)
                                             },
                                         )
                                     }
@@ -494,17 +596,7 @@ internal fun OfficialMapScreen(
                                 saveDraftName = state.editingRouteName.ifBlank { defaultRouteName }
                                 saveDialogOpen = true
                             },
-                            onPlayDraft = {
-                                val routeName = state.editingRouteName.ifBlank { defaultRouteName }
-                                onPlayCustomDraft(
-                                    routeName,
-                                    state.toCustomRouteStops(),
-                                    state.toCustomRouteEdges(),
-                                    state.draftLoopWholeRoute,
-                                    state.draftRoadRuleMode,
-                                    state.draftRouteSuiteMode,
-                                )
-                            },
+                            onPlayDraft = playActiveCustomDraft,
                             onDone = { stops = false },
                             scrollable = false,
                         )
@@ -518,7 +610,7 @@ internal fun OfficialMapScreen(
                             state = state,
                             onStops = { stops = true },
                             onOpenCourse = onOpenCourse,
-                            neighbours = neighbours,
+                            neighbours = courseNeighbours,
                             sink = sink,
                             connections = connections,
                             officialReport = officialReport,
@@ -531,10 +623,14 @@ internal fun OfficialMapScreen(
                             },
                             suiteMode = officialSuiteMode,
                             onSuiteModeChange = { officialSuiteMode = it },
+                            pureFreeRoamConfig = officialFreeRoamConfig,
+                            onPureFreeRoamConfigChange = { next ->
+                                val clean = next.normalized()
+                                officialFreeRoamConfig = clean
+                                route?.let { onOfficialFreeRoamConfigChange(it.id, clean) }
+                            },
                             onPlayRoute = {
-                                if (route != null) {
-                                    onPlayOfficialRoute(route, officialLoop, sessionOverrides.toMap(), officialRuleMode, officialSuiteMode)
-                                }
+                                if (route != null) playActiveOfficialRoute(route)
                             },
                             scrollable = false,
                         )
@@ -665,6 +761,8 @@ internal fun OfficialMapScreen(
         }
     }
     if (stops && route != null) {
+        var expandedOfficialFreeRoamLeg by rememberSaveable(route.id) { mutableStateOf<Int?>(null) }
+        val sheetReducedMotion = MkwMotion.rememberPrefersReducedMotion()
         MkwBottomSheet(
             onDismissRequest = { stops = false },
             title = route.displayName(languageTag),
@@ -679,7 +777,7 @@ internal fun OfficialMapScreen(
             ) {
                 if (officialReport?.canPlay == false) {
                     Text(
-                        officialReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                        localizedRouteBlockingReason(officialReport, R.string.route_blocked_incomplete_pool, name),
                         style = MaterialTheme.typography.bodySmall,
                         color = MkwKitTokens.Palette.danger,
                     )
@@ -694,9 +792,7 @@ internal fun OfficialMapScreen(
                     }
                     MkwPrimaryButton(
                         text = stringResource(R.string.route_play),
-                        onClick = {
-                            onPlayOfficialRoute(route, officialLoop, sessionOverrides.toMap(), officialRuleMode, officialSuiteMode)
-                        },
+                        onClick = { playActiveOfficialRoute(route) },
                         enabled = officialReport?.canPlay != false,
                         leadingIcon = Icons.Filled.PlayArrow,
                         size = MkwButtonSize.Compact,
@@ -708,18 +804,6 @@ internal fun OfficialMapScreen(
                         onClick = { officialLoop = !officialLoop },
                     )
                 }
-                RoadMusicRuleModeSelector(
-                    selectedMode = officialRuleMode,
-                    officialKind = route.kind,
-                    onSelectMode = {
-                        officialRuleMode = it
-                        sessionOverrides.clear()
-                    },
-                )
-                RouteSuiteModeSelector(
-                    selectedMode = officialSuiteMode,
-                    onSelectMode = { officialSuiteMode = it },
-                )
             }
             MkwDivider(modifier = Modifier.padding(top = 4.dp))
             LazyColumn(
@@ -727,6 +811,44 @@ internal fun OfficialMapScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                item(key = "official-route-rules") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                            .animateContentSize(animationSpec = MkwMotion.sizeSpring()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PureFreeRoamConfigCard(
+                            config = officialFreeRoamConfig,
+                            onConfigChange = { next ->
+                                val clean = next.normalized()
+                                officialFreeRoamConfig = clean
+                                if (!clean.enabled) expandedOfficialFreeRoamLeg = null
+                                onOfficialFreeRoamConfigChange(route.id, clean)
+                            },
+                            compact = true,
+                        )
+                        RoadMusicRuleModeSelector(
+                            selectedMode = officialRuleMode,
+                            officialKind = route.kind,
+                            onSelectMode = {
+                                officialRuleMode = it
+                                sessionOverrides.clear()
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = !officialFreeRoamConfig.enabled,
+                            enter = if (sheetReducedMotion) fadeIn(tween(120)) else fadeIn(tween(MkwMotion.StandardMs, easing = MkwMotion.EaseOut)) + expandVertically(MkwMotion.sizeSpring()),
+                            exit = if (sheetReducedMotion) fadeOut(tween(100)) else fadeOut(tween(MkwMotion.ExitMs, easing = MkwMotion.EaseOut)) + shrinkVertically(MkwMotion.sizeSpring()),
+                        ) {
+                            RouteSuiteModeSelector(
+                                selectedMode = officialSuiteMode,
+                                onSelectMode = { officialSuiteMode = it },
+                            )
+                        }
+                    }
+                }
                 item(key = "stops-schematic-note") {
                     Text(
                         "${stringResource(R.string.map_route_readonly)} ${stringResource(R.string.map_schematic)}",
@@ -782,6 +904,8 @@ internal fun OfficialMapScreen(
                     val leg = officialReport?.legs?.getOrNull(idx)
                     if (leg != null) {
                         val summary = edgeResolutionSummary(leg.resolution, languageTag)
+                        val isLegFreeRoamExpanded = officialFreeRoamConfig.enabled && expandedOfficialFreeRoamLeg == idx
+                        val legOverride = officialFreeRoamOverrides[idx]
                         MkwCard(
                             onClick = {
                                 pickingOfficialLeg = true
@@ -790,7 +914,10 @@ internal fun OfficialMapScreen(
                             tone = MkwSurfaceTone.White,
                             shape = MkwKitTokens.Shape.thumb,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 4.dp)
+                                .animateContentSize(animationSpec = MkwMotion.sizeSpring()),
                         ) {
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -818,7 +945,16 @@ internal fun OfficialMapScreen(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                if (leg.resolution.hasKnownPool()) {
+                                if (officialFreeRoamConfig.enabled) {
+                                    PureFreeRoamLegOverrideChip(
+                                        config = officialFreeRoamConfig,
+                                        override = legOverride,
+                                        expanded = isLegFreeRoamExpanded,
+                                        onClick = {
+                                            expandedOfficialFreeRoamLeg = if (isLegFreeRoamExpanded) null else idx
+                                        },
+                                    )
+                                } else if (leg.resolution.hasKnownPool()) {
                                     Text(
                                         stringResource(R.string.preset_edit),
                                         style = MaterialTheme.typography.labelMedium,
@@ -826,6 +962,22 @@ internal fun OfficialMapScreen(
                                         color = MkwKitTokens.Palette.crimson,
                                     )
                                 }
+                            }
+                            if (officialFreeRoamConfig.enabled) {
+                                PureFreeRoamLegInlineEditor(
+                                    visible = isLegFreeRoamExpanded,
+                                    config = officialFreeRoamConfig,
+                                    override = legOverride,
+                                    onOverrideChange = { nextOv ->
+                                        val cleanOv = nextOv?.normalized()?.takeUnless { it.isEmpty }
+                                        if (cleanOv == null) {
+                                            officialFreeRoamOverrides.remove(idx)
+                                        } else {
+                                            officialFreeRoamOverrides[idx] = cleanOv
+                                        }
+                                        onOfficialFreeRoamEdgeOverrideChange(route.id, idx, cleanOv)
+                                    },
+                                )
                             }
                         }
                     }
@@ -848,17 +1000,7 @@ internal fun OfficialMapScreen(
                 saveDraftName = state.editingRouteName.ifBlank { defaultRouteName }
                 saveDialogOpen = true
             },
-            onPlayDraft = {
-                val routeName = state.editingRouteName.ifBlank { defaultRouteName }
-                onPlayCustomDraft(
-                    routeName,
-                    state.toCustomRouteStops(),
-                    state.toCustomRouteEdges(),
-                    state.draftLoopWholeRoute,
-                    state.draftRoadRuleMode,
-                    state.draftRouteSuiteMode,
-                )
-            },
+            onPlayDraft = playActiveCustomDraft,
             onDismiss = { draftSettingsOpen = false },
         )
     }
@@ -918,15 +1060,7 @@ internal fun OfficialMapScreen(
                     onClick = {
                         val trimmed = saveDraftName.trim().ifEmpty { defaultRouteName }
                         state.editingRouteName = trimmed
-                        onSaveCustomRoute(
-                            state.editingRouteId,
-                            trimmed,
-                            state.toCustomRouteStops(),
-                            state.toCustomRouteEdges(),
-                            state.draftLoopWholeRoute,
-                            state.draftRoadRuleMode,
-                            state.draftRouteSuiteMode,
-                        )
+                        saveActiveCustomDraft(trimmed)
                         saveDialogOpen = false
                     },
                     enabled = state.draft.isNotEmpty(),
@@ -984,7 +1118,7 @@ private fun DraftRouteCompactDock(
         else -> "${name(effectiveStops.first())} → ${name(effectiveStops.last())}"
     }
     val errorText = state.editRefusal ?: if (draftReport?.canPlay == false) {
-        draftReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool)
+        localizedRouteBlockingReason(draftReport, R.string.route_blocked_incomplete_pool, name)
     } else null
 
     Column(
@@ -1011,6 +1145,13 @@ private fun DraftRouteCompactDock(
                         tone = MkwBadgeTone.Crimson,
                         tabular = effectiveStops.isNotEmpty(),
                     )
+                    if (state.draftPureFreeRoamConfig.enabled) {
+                        MkwBadge(
+                            text = stringResource(R.string.route_pure_freeroam_badge),
+                            tone = MkwBadgeTone.Rose,
+                            tabular = false,
+                        )
+                    }
                     Text(
                         text = statusLine,
                         style = MaterialTheme.typography.titleSmall,
@@ -1248,6 +1389,11 @@ private fun DraftEdgeLegCard(
     musicEnabled: Boolean,
     languageTag: String,
     onClick: () -> Unit,
+    pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(),
+    freeRoamOverride: RoadJukeboxCatalog.EdgeFreeRoamOverride? = null,
+    freeRoamExpanded: Boolean = false,
+    onToggleFreeRoamExpand: () -> Unit = {},
+    onFreeRoamOverrideChange: (RoadJukeboxCatalog.EdgeFreeRoamOverride?) -> Unit = {},
 ) {
     val edgeTitle = "${edgeIdx + 1}. $fromName → $toName"
     val edgeSub = if (leg != null) {
@@ -1261,6 +1407,9 @@ private fun DraftEdgeLegCard(
         tone = MkwSurfaceTone.Porcelain,
         shape = MkwKitTokens.Shape.thumb,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = MkwMotion.sizeSpring()),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1290,7 +1439,14 @@ private fun DraftEdgeLegCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (leg?.resolution?.hasKnownPool() == true) {
+            if (pureFreeRoamConfig.enabled && musicEnabled) {
+                PureFreeRoamLegOverrideChip(
+                    config = pureFreeRoamConfig,
+                    override = freeRoamOverride,
+                    expanded = freeRoamExpanded,
+                    onClick = onToggleFreeRoamExpand,
+                )
+            } else if (leg?.resolution?.hasKnownPool() == true) {
                 Text(
                     text = stringResource(R.string.preset_edit),
                     style = MaterialTheme.typography.labelMedium,
@@ -1298,6 +1454,14 @@ private fun DraftEdgeLegCard(
                     color = MkwKitTokens.Palette.crimson,
                 )
             }
+        }
+        if (pureFreeRoamConfig.enabled && musicEnabled) {
+            PureFreeRoamLegInlineEditor(
+                visible = freeRoamExpanded,
+                config = pureFreeRoamConfig,
+                override = freeRoamOverride,
+                onOverrideChange = onFreeRoamOverrideChange,
+            )
         }
     }
 }
@@ -1315,6 +1479,8 @@ private fun DraftRouteSettingsSheet(
     onDismiss: () -> Unit,
 ) {
     val stops = state.draftStops()
+    val reducedMotion = MkwMotion.rememberPrefersReducedMotion()
+    var expandedFreeRoamLeg by rememberSaveable { mutableStateOf<Int?>(null) }
     val summarySubtitle = if (stops.isNotEmpty()) {
         "${stringResource(R.string.map_route_stops, stops.size)} · ${stringResource(R.string.route_legs_count, state.draft.size)}"
     } else if (state.editFrom != null) {
@@ -1326,7 +1492,7 @@ private fun DraftRouteSettingsSheet(
         onDismissRequest = onDismiss,
         title = state.editingRouteName.ifBlank { stringResource(R.string.map_edit_settings_title) },
         subtitle = summarySubtitle,
-        modifier = Modifier.fillMaxHeight(0.82f),
+        modifier = Modifier.fillMaxHeight(0.84f),
     ) {
         Column(
             modifier = Modifier
@@ -1336,7 +1502,7 @@ private fun DraftRouteSettingsSheet(
         ) {
             if (draftReport?.canPlay == false) {
                 Text(
-                    text = draftReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                    text = localizedRouteBlockingReason(draftReport, R.string.route_blocked_incomplete_pool, name),
                     style = MaterialTheme.typography.bodySmall,
                     color = MkwKitTokens.Palette.danger,
                 )
@@ -1363,60 +1529,84 @@ private fun DraftRouteSettingsSheet(
                     modifier = Modifier.weight(1f),
                 )
             }
-            MkwCard(
-                tone = MkwSurfaceTone.Recessed,
-                shape = MkwKitTokens.Shape.control,
-                contentPadding = PaddingValues(10.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MkwKitTokens.Shape.thumb)
-                        .clickable { state.draftLoopWholeRoute = !state.draftLoopWholeRoute }
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f).padding(end = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Loop,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MkwKitTokens.Palette.crimson,
-                        )
-                        Text(
-                            text = stringResource(R.string.route_loop_whole),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MkwKitTokens.Palette.ink,
-                        )
-                    }
-                    MkwSwitch(
-                        checked = state.draftLoopWholeRoute,
-                        onCheckedChange = { state.draftLoopWholeRoute = it },
-                    )
-                }
-                RoadMusicRuleModeSelector(
-                    selectedMode = state.draftRoadRuleMode,
-                    officialKind = null,
-                    onSelectMode = { state.draftRoadRuleMode = it },
-                )
-                RouteSuiteModeSelector(
-                    selectedMode = state.draftRouteSuiteMode,
-                    onSelectMode = { state.draftRouteSuiteMode = it },
-                )
-            }
         }
         MkwDivider(modifier = Modifier.padding(top = 4.dp))
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            item(key = "draft-settings-controls") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(animationSpec = MkwMotion.sizeSpring()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PureFreeRoamConfigCard(
+                        config = state.draftPureFreeRoamConfig,
+                        onConfigChange = { next ->
+                            val clean = next.normalized()
+                            state.draftPureFreeRoamConfig = clean
+                            if (!clean.enabled) expandedFreeRoamLeg = null
+                        },
+                        compact = true,
+                    )
+                    MkwCard(
+                        tone = MkwSurfaceTone.Recessed,
+                        shape = MkwKitTokens.Shape.control,
+                        contentPadding = PaddingValues(10.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MkwKitTokens.Shape.thumb)
+                                .clickable { state.draftLoopWholeRoute = !state.draftLoopWholeRoute }
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Loop,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MkwKitTokens.Palette.crimson,
+                                )
+                                Text(
+                                    text = stringResource(R.string.route_loop_whole),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MkwKitTokens.Palette.ink,
+                                )
+                            }
+                            MkwSwitch(
+                                checked = state.draftLoopWholeRoute,
+                                onCheckedChange = { state.draftLoopWholeRoute = it },
+                            )
+                        }
+                        RoadMusicRuleModeSelector(
+                            selectedMode = state.draftRoadRuleMode,
+                            officialKind = null,
+                            onSelectMode = { state.draftRoadRuleMode = it },
+                        )
+                        AnimatedVisibility(
+                            visible = !state.draftPureFreeRoamConfig.enabled,
+                            enter = if (reducedMotion) fadeIn(tween(120)) else fadeIn(tween(MkwMotion.StandardMs, easing = MkwMotion.EaseOut)) + expandVertically(MkwMotion.sizeSpring()),
+                            exit = if (reducedMotion) fadeOut(tween(100)) else fadeOut(tween(MkwMotion.ExitMs, easing = MkwMotion.EaseOut)) + shrinkVertically(MkwMotion.sizeSpring()),
+                        ) {
+                            RouteSuiteModeSelector(
+                                selectedMode = state.draftRouteSuiteMode,
+                                onSelectMode = { state.draftRouteSuiteMode = it },
+                            )
+                        }
+                    }
+                }
+            }
             if (state.editingRouteId != null) {
                 item(key = "tail-only-note") {
                     Text(
@@ -1455,6 +1645,7 @@ private fun DraftRouteSettingsSheet(
                     val edge = state.draft[edgeIdx]
                     val leg = draftReport?.legs?.getOrNull(edgeIdx)
                     val cfg = state.edgeConfigAt(edgeIdx)
+                    val isExpanded = state.draftPureFreeRoamConfig.enabled && expandedFreeRoamLeg == edgeIdx
                     DraftEdgeLegCard(
                         edgeIdx = edgeIdx,
                         fromName = name(edge.first),
@@ -1463,6 +1654,19 @@ private fun DraftRouteSettingsSheet(
                         musicEnabled = cfg.musicEnabled,
                         languageTag = languageTag,
                         onClick = { onPickEdgeMusic(edgeIdx) },
+                        pureFreeRoamConfig = state.draftPureFreeRoamConfig,
+                        freeRoamOverride = cfg.toFreeRoamOverride(),
+                        freeRoamExpanded = isExpanded,
+                        onToggleFreeRoamExpand = {
+                            expandedFreeRoamLeg = if (isExpanded) null else edgeIdx
+                        },
+                        onFreeRoamOverrideChange = { ov ->
+                            state.setEdgeFreeRoamOverride(
+                                edgeIndex = edgeIdx,
+                                trackCountOverride = ov?.trackCountOverride,
+                                durationMinutesOverride = ov?.durationMinutesOverride,
+                            )
+                        },
                     )
                 }
             }
@@ -1534,10 +1738,21 @@ private fun ConnectionEditorPanel(
         } else {
             Modifier.fillMaxWidth()
         }
+        val editorReducedMotion = MkwMotion.rememberPrefersReducedMotion()
+        var expandedFreeRoamLeg by rememberSaveable { mutableStateOf<Int?>(null) }
         Column(
-            modifier = bodyScrollMod,
+            modifier = bodyScrollMod.animateContentSize(animationSpec = MkwMotion.sizeSpring()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PureFreeRoamConfigCard(
+                config = state.draftPureFreeRoamConfig,
+                onConfigChange = { next ->
+                    val clean = next.normalized()
+                    state.draftPureFreeRoamConfig = clean
+                    if (!clean.enabled) expandedFreeRoamLeg = null
+                },
+                compact = true,
+            )
             MkwCard(
                 tone = MkwSurfaceTone.Recessed,
                 shape = MkwKitTokens.Shape.control,
@@ -1548,10 +1763,16 @@ private fun ConnectionEditorPanel(
                     officialKind = null,
                     onSelectMode = { state.draftRoadRuleMode = it },
                 )
-                RouteSuiteModeSelector(
-                    selectedMode = state.draftRouteSuiteMode,
-                    onSelectMode = { state.draftRouteSuiteMode = it },
-                )
+                AnimatedVisibility(
+                    visible = !state.draftPureFreeRoamConfig.enabled,
+                    enter = if (editorReducedMotion) fadeIn(tween(120)) else fadeIn(tween(MkwMotion.StandardMs, easing = MkwMotion.EaseOut)) + expandVertically(MkwMotion.sizeSpring()),
+                    exit = if (editorReducedMotion) fadeOut(tween(100)) else fadeOut(tween(MkwMotion.ExitMs, easing = MkwMotion.EaseOut)) + shrinkVertically(MkwMotion.sizeSpring()),
+                ) {
+                    RouteSuiteModeSelector(
+                        selectedMode = state.draftRouteSuiteMode,
+                        onSelectMode = { state.draftRouteSuiteMode = it },
+                    )
+                }
                 if (stops.isNotEmpty()) {
                     Row(
                         Modifier
@@ -1599,6 +1820,7 @@ private fun ConnectionEditorPanel(
                 for ((edgeIdx, edge) in state.draft.withIndex()) {
                     val leg = draftReport?.legs?.getOrNull(edgeIdx)
                     val cfg = state.edgeConfigAt(edgeIdx)
+                    val isExpanded = state.draftPureFreeRoamConfig.enabled && expandedFreeRoamLeg == edgeIdx
                     DraftEdgeLegCard(
                         edgeIdx = edgeIdx,
                         fromName = name(edge.first),
@@ -1607,11 +1829,24 @@ private fun ConnectionEditorPanel(
                         musicEnabled = cfg.musicEnabled,
                         languageTag = languageTag,
                         onClick = { onPickEdgeMusic(edgeIdx) },
+                        pureFreeRoamConfig = state.draftPureFreeRoamConfig,
+                        freeRoamOverride = cfg.toFreeRoamOverride(),
+                        freeRoamExpanded = isExpanded,
+                        onToggleFreeRoamExpand = {
+                            expandedFreeRoamLeg = if (isExpanded) null else edgeIdx
+                        },
+                        onFreeRoamOverrideChange = { ov ->
+                            state.setEdgeFreeRoamOverride(
+                                edgeIndex = edgeIdx,
+                                trackCountOverride = ov?.trackCountOverride,
+                                durationMinutesOverride = ov?.durationMinutesOverride,
+                            )
+                        },
                     )
                 }
                 if (draftReport?.canPlay == false) {
                     Text(
-                        draftReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                        localizedRouteBlockingReason(draftReport, R.string.route_blocked_incomplete_pool, name),
                         style = MaterialTheme.typography.bodySmall,
                         color = MkwKitTokens.Palette.danger,
                     )
@@ -1667,6 +1902,7 @@ private fun OfficialRouteCompactDock(
     languageTag: String,
     name: (String) -> String,
     officialReport: RoadJukeboxCatalog.RouteValidationReport?,
+    pureFreeRoamEnabled: Boolean = false,
     onPlayRoute: () -> Unit,
     onOpenStopsSheet: () -> Unit,
     onClearRoute: () -> Unit,
@@ -1686,14 +1922,27 @@ private fun OfficialRouteCompactDock(
                 ResourceArtwork(emblem, Modifier.size(40.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = route.displayName(languageTag),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MkwKitTokens.Palette.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = route.displayName(languageTag),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MkwKitTokens.Palette.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (pureFreeRoamEnabled) {
+                        MkwBadge(
+                            text = stringResource(R.string.route_pure_freeroam_badge),
+                            tone = MkwBadgeTone.Rose,
+                            tabular = false,
+                        )
+                    }
+                }
                 Text(
                     text = "${name(route.start.stageCode)} → ${name(route.end.stageCode)} · ${stringResource(R.string.map_route_stops, route.stops.size)}",
                     style = MkwKitTokens.tabular(MaterialTheme.typography.bodySmall),
@@ -1713,7 +1962,7 @@ private fun OfficialRouteCompactDock(
         }
         if (officialReport?.canPlay == false) {
             Text(
-                text = officialReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                text = localizedRouteBlockingReason(officialReport, R.string.route_blocked_incomplete_pool, name),
                 style = MaterialTheme.typography.bodySmall,
                 color = MkwKitTokens.Palette.danger,
                 maxLines = 1,
@@ -1757,6 +2006,8 @@ private fun MapSelectionPanel(
     onRuleModeChange: (RoadJukeboxCatalog.RoadMusicRuleMode) -> Unit = {},
     suiteMode: RoadJukeboxCatalog.RouteSuiteMode = RoadJukeboxCatalog.RouteSuiteMode.GAME_SUITE,
     onSuiteModeChange: (RoadJukeboxCatalog.RouteSuiteMode) -> Unit = {},
+    pureFreeRoamConfig: RoadJukeboxCatalog.PureFreeRoamConfig = RoadJukeboxCatalog.PureFreeRoamConfig(),
+    onPureFreeRoamConfigChange: (RoadJukeboxCatalog.PureFreeRoamConfig) -> Unit = {},
     onPlayRoute: () -> Unit = {},
     scrollable: Boolean = true,
 ) {
@@ -1804,6 +2055,7 @@ private fun MapSelectionPanel(
                         // from the map but still exists in the export, and reporting "7 connections" when the
                         // game defines 8 would be a quieter lie than hiding the pin.
                         val total = connections?.outgoing(course)?.size ?: neighbours.size
+                        val oneWaySuffix = stringResource(R.string.map_connection_one_way_suffix)
                         Row(
                             Modifier.fillMaxWidth()
                                 .clip(MkwKitTokens.Shape.thumb)
@@ -1816,7 +2068,13 @@ private fun MapSelectionPanel(
                                 stringResource(
                                     R.string.map_course_connections,
                                     total,
-                                    neighbours.joinToString(" · ") { name(it) },
+                                    neighbours.joinToString(" · ") { target ->
+                                        if (connections?.isOneWay(course, target) == true) {
+                                            name(target) + oneWaySuffix
+                                        } else {
+                                            name(target)
+                                        }
+                                    },
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1882,7 +2140,7 @@ private fun MapSelectionPanel(
                 }
                 if (officialReport?.canPlay == false) {
                     Text(
-                        officialReport.blockingReason ?: stringResource(R.string.route_blocked_incomplete_pool),
+                        localizedRouteBlockingReason(officialReport, R.string.route_blocked_incomplete_pool, name),
                         style = MaterialTheme.typography.bodySmall,
                         color = MkwKitTokens.Palette.danger,
                     )
@@ -1918,15 +2176,27 @@ private fun MapSelectionPanel(
                     )
                     MkwSwitch(checked = loopRoute, onCheckedChange = onLoopChange)
                 }
+                PureFreeRoamConfigCard(
+                    config = pureFreeRoamConfig,
+                    onConfigChange = onPureFreeRoamConfigChange,
+                    compact = true,
+                )
                 RoadMusicRuleModeSelector(
                     selectedMode = ruleMode,
                     officialKind = route.kind,
                     onSelectMode = onRuleModeChange,
                 )
-                RouteSuiteModeSelector(
-                    selectedMode = suiteMode,
-                    onSelectMode = onSuiteModeChange,
-                )
+                val panelReducedMotion = MkwMotion.rememberPrefersReducedMotion()
+                AnimatedVisibility(
+                    visible = !pureFreeRoamConfig.enabled,
+                    enter = if (panelReducedMotion) fadeIn(tween(120)) else fadeIn(tween(MkwMotion.StandardMs, easing = MkwMotion.EaseOut)) + expandVertically(MkwMotion.sizeSpring()),
+                    exit = if (panelReducedMotion) fadeOut(tween(100)) else fadeOut(tween(MkwMotion.ExitMs, easing = MkwMotion.EaseOut)) + shrinkVertically(MkwMotion.sizeSpring()),
+                ) {
+                    RouteSuiteModeSelector(
+                        selectedMode = suiteMode,
+                        onSelectMode = onSuiteModeChange,
+                    )
+                }
             }
             else -> Text(stringResource(R.string.map_browse_hint), style = MaterialTheme.typography.bodyMedium)
         }
@@ -1966,7 +2236,8 @@ private fun MapControl(
 private fun MapCanvas(
     image: ImageBitmap, sourceCanvasWidth: Float, pins: List<MapAnchors.Anchor>, route: OfficialRoute?, state: WorldMapState,
     name: (String) -> String, modifier: Modifier,
-    neighbours: List<String> = emptyList(),
+    reachableOrigin: String? = null,
+    reachableNeighbours: List<String> = emptyList(),
     onPinTap: (String) -> Unit = { state.selectCourse(it) },
     draft: List<Pair<String, String>> = emptyList(),
     editFrom: String? = null,
@@ -1981,7 +2252,7 @@ private fun MapCanvas(
     val accent = MaterialTheme.colorScheme.primary
     // Connections are drawn in the secondary colour so a real road never reads as an official route line.
     val connectionAccent = MaterialTheme.colorScheme.secondary.copy(alpha = .85f)
-    val routeSprites = if (route != null || state.selectedCourseCode != null || draft.isNotEmpty() || editFrom != null) {
+    val routeSprites = if (route != null || draft.isNotEmpty() || (state.editing && reachableOrigin != null)) {
         val sprites by produceState<MapArtworkCache.RouteSprites?>(null, context, packDirectory) {
             value = MapArtworkCache.loadRouteSprites(context, packDirectory)
         }
@@ -1991,7 +2262,7 @@ private fun MapCanvas(
     val reducedMotion = rememberReducedMotion()
 
     // Non-flickering official highlight mask loading + true dual-layer crossfade
-    val highlightRouteId = route?.id
+    val highlightRouteId = if (!state.editing) route?.id else null
     val loadedMask by produceState<Pair<String, ImageBitmap>?>(null, context, packDirectory, highlightRouteId) {
         value = if (highlightRouteId != null) {
             MapArtworkCache.loadHighlightMask(context, packDirectory, highlightRouteId)?.let { highlightRouteId to it }
@@ -2036,8 +2307,11 @@ private fun MapCanvas(
         }
     }
 
-    // Dynamic spotlight shadow mask when inspecting a route, course, or editing a custom route
-    val spotlightActive = loadedMask == null && (route != null || state.selectedCourseCode != null || editFrom != null)
+    // Dynamic spotlight shadow mask when inspecting a route, course, or actively editing a custom route
+    val spotlightActive = loadedMask == null && (
+        (!state.editing && (route != null || state.selectedCourseCode != null)) ||
+            (state.editing && (editFrom != null || draft.isNotEmpty()))
+        )
     val spotlightAlpha by animateFloatAsState(
         targetValue = if (spotlightActive) 1f else 0f,
         animationSpec = tween(durationMillis = if (reducedMotion) 0 else 280, easing = FastOutSlowInEasing),
@@ -2070,32 +2344,32 @@ private fun MapCanvas(
         }
     }
 
-    // Smooth radial growth AND retraction for selected course's reachable neighbours
-    var renderedCourse by remember { mutableStateOf(state.selectedCourseCode) }
-    var renderedNeighbours by remember { mutableStateOf(neighbours) }
-    val neighbourReveal = remember { Animatable(if (state.selectedCourseCode != null && neighbours.isNotEmpty()) 1f else 0f) }
-    LaunchedEffect(state.selectedCourseCode, neighbours, reducedMotion) {
-        val selectedCode = state.selectedCourseCode
-        if (selectedCode != null) {
-            renderedCourse = selectedCode
-            renderedNeighbours = neighbours
-            if (neighbours.isNotEmpty()) {
+    // Smooth radial growth AND retraction strictly for the active stop's reachable outgoing roads in edit mode (#2).
+    // Outside edit mode, reachableOrigin is always null so tapping a course never displays outgoing segments.
+    var renderedOrigin by remember { mutableStateOf(reachableOrigin) }
+    var renderedNeighbours by remember { mutableStateOf(reachableNeighbours) }
+    val neighbourReveal = remember { Animatable(if (reachableOrigin != null && reachableNeighbours.isNotEmpty()) 1f else 0f) }
+    LaunchedEffect(reachableOrigin, reachableNeighbours, reducedMotion) {
+        if (reachableOrigin != null) {
+            renderedOrigin = reachableOrigin
+            renderedNeighbours = reachableNeighbours
+            if (reachableNeighbours.isNotEmpty()) {
                 if (reducedMotion) {
                     neighbourReveal.snapTo(1f)
                 } else {
                     neighbourReveal.snapTo(0f)
-                    neighbourReveal.animateTo(1f, tween(durationMillis = 320, easing = AppMotion.easeOut))
+                    neighbourReveal.animateTo(1f, tween(durationMillis = 260, easing = MkwMotion.EaseOut))
                 }
             } else {
                 neighbourReveal.snapTo(0f)
             }
-        } else if (renderedCourse != null) {
+        } else if (renderedOrigin != null) {
             if (!reducedMotion && renderedNeighbours.isNotEmpty() && neighbourReveal.value > 0.01f) {
-                neighbourReveal.animateTo(0f, tween(durationMillis = 200, easing = AppMotion.easeOut))
+                neighbourReveal.animateTo(0f, tween(durationMillis = 160, easing = MkwMotion.EaseOut))
             } else {
                 neighbourReveal.snapTo(0f)
             }
-            renderedCourse = null
+            renderedOrigin = null
             renderedNeighbours = emptyList()
         }
     }
@@ -2114,7 +2388,8 @@ private fun MapCanvas(
     }
 
     // Gentle breathing pulse for active/editing pin halo
-    val hasActivePin = state.selectedCourseCode != null || editFrom != null
+    val activeFocusCode = if (state.editing) editFrom else state.selectedCourseCode
+    val hasActivePin = activeFocusCode != null
     val infiniteTransition = rememberInfiniteTransition(label = "pin-halo-pulse")
     val pulsePhase by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -2256,20 +2531,41 @@ private fun MapCanvas(
                 padding,
             )
         }
-        val highlightedStages = remember(route?.id, state.selectedCourseCode, neighbours, editFrom, draft) {
+        val selectedRouteStages = remember(route?.id) {
+            route?.stops?.mapTo(linkedSetOf()) { it.stageCode.removeSuffix("_00") }.orEmpty()
+        }
+        val draftStages = remember(draft) {
             buildSet {
-                route?.stops?.forEach { add(it.stageCode) }
-                state.selectedCourseCode?.let(::add)
-                addAll(neighbours)
-                editFrom?.let(::add)
-                draft.forEach { (a, b) -> add(a); add(b) }
+                draft.forEach { (a, b) ->
+                    add(a.removeSuffix("_00"))
+                    add(b.removeSuffix("_00"))
+                }
+            }
+        }
+        val reachableEditNeighbourSet = remember(state.editing, reachableOrigin, reachableNeighbours) {
+            if (state.editing && reachableOrigin != null) {
+                reachableNeighbours.mapTo(linkedSetOf()) { it.removeSuffix("_00") }
+            } else {
+                emptySet()
+            }
+        }
+        val highlightedStages = remember(state.editing, selectedRouteStages, state.selectedCourseCode, editFrom, draftStages, reachableEditNeighbourSet) {
+            buildSet {
+                if (!state.editing) {
+                    addAll(selectedRouteStages)
+                    state.selectedCourseCode?.let { add(it.removeSuffix("_00")) }
+                } else {
+                    editFrom?.let { add(it.removeSuffix("_00")) }
+                    addAll(draftStages)
+                    addAll(reachableEditNeighbourSet)
+                }
             }
         }
         var lastSpotlightStages by remember { mutableStateOf<Set<String>>(emptySet()) }
         var lastSpotlightFocus by remember { mutableStateOf<String?>(null) }
         if (highlightedStages.isNotEmpty()) {
             lastSpotlightStages = highlightedStages
-            lastSpotlightFocus = state.selectedCourseCode ?: editFrom
+            lastSpotlightFocus = activeFocusCode?.removeSuffix("_00")
         } else if (spotlightAlpha <= 0.01f) {
             lastSpotlightStages = emptySet()
             lastSpotlightFocus = null
@@ -2320,7 +2616,7 @@ private fun MapCanvas(
                     for (code in activeSpotlightStages) {
                         val pin = pins.firstOrNull { it.code.removeSuffix("_00") == code } ?: continue
                         val center = transform.project(pin.u, pin.v)
-                        val focusCode = state.selectedCourseCode ?: editFrom ?: lastSpotlightFocus
+                        val focusCode = activeFocusCode?.removeSuffix("_00") ?: lastSpotlightFocus
                         val isPrimaryFocus = code == focusCode
                         val spotRadius = transform.sourcePixelsToScreen(
                             pin.artSize * if (isPrimaryFocus) 1.55f else 1.05f,
@@ -2367,11 +2663,10 @@ private fun MapCanvas(
                     )
                 }
             }
-            // The selected course's real connections, drawn with straight lines so they stay distinct
-            // from official tour ribbons. Each line matches an export row; a sink course draws none.
-            val selected = renderedCourse
-            if (selected != null && renderedNeighbours.isNotEmpty() && neighbourReveal.value > 0.01f) {
-                val origin = pins.firstOrNull { it.code.removeSuffix("_00") == selected }
+            // Reachable outgoing road connections drawn ONLY in edit/connecting mode for the active stop (#2).
+            val activeOrigin = renderedOrigin
+            if (activeOrigin != null && renderedNeighbours.isNotEmpty() && neighbourReveal.value > 0.01f) {
+                val origin = pins.firstOrNull { it.code.removeSuffix("_00") == activeOrigin }
                 if (origin != null) {
                     val start = transform.project(origin.u, origin.v)
                     val startRadius = transform.sourcePixelsToScreen(origin.artSize * .38f, sourceCanvasWidth)
@@ -2426,7 +2721,7 @@ private fun MapCanvas(
             }
             // Pulsing halo ring around currently selected or active-editing course pin
             if (hasActivePin) {
-                val focusCode = editFrom ?: state.selectedCourseCode
+                val focusCode = activeFocusCode?.removeSuffix("_00")
                 val focusPin = focusCode?.let { fc -> pins.firstOrNull { it.code.removeSuffix("_00") == fc } }
                 if (focusPin != null) {
                     val center = transform.project(focusPin.u, focusPin.v)
@@ -2446,49 +2741,111 @@ private fun MapCanvas(
             val point = transform.project(pin.u, pin.v)
             val iconPixels = transform.sourcePixelsToScreen(pin.artSize, sourceCanvasWidth)
             val iconSize = with(density) { iconPixels.toDp() }
-            val visits = occurrences[code].orEmpty()
-            val selected = state.selectedCourseCode == code
-            val editingHere = editFrom == code
+            val visits = if (state.editing) emptyList() else occurrences[code].orEmpty()
+            val pinVisual = computeMapPinVisualState(
+                stageCode = code,
+                editing = state.editing,
+                selectedCourseCode = state.selectedCourseCode,
+                selectedRouteStages = selectedRouteStages,
+                editFrom = editFrom,
+                draftStages = draftStages,
+                reachableEditNeighbours = reachableEditNeighbourSet,
+            )
+            val isActive = pinVisual.isSelectedOrActive
             val selectionScale by animateFloatAsState(
-                targetValue = if (selected || editingHere) 1.24f else 1f,
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+                targetValue = if (isActive) 1.24f else 1f,
+                animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
                 label = "course-selection",
+            )
+            val outlineAlpha by animateFloatAsState(
+                targetValue = if (isActive) 1f else 0f,
+                animationSpec = tween(durationMillis = if (reducedMotion) 0 else MkwMotion.MicroMs, easing = MkwMotion.EaseOut),
+                label = "course-outline-alpha",
+            )
+            val dimProgress by animateFloatAsState(
+                targetValue = if (pinVisual.isDimmed) 1f else 0f,
+                animationSpec = tween(durationMillis = if (reducedMotion) 0 else 280, easing = FastOutSlowInEasing),
+                label = "course-dim",
             )
             val badgeScale by animateFloatAsState(
                 targetValue = if (visits.isNotEmpty()) 1f else 0f,
-                animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
+                animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
                 label = "visit-badge-scale",
             )
             val description = if (visits.isEmpty()) name(code) else stringResource(R.string.map_pin_occurrences, name(code), visits.joinToString(stringResource(R.string.map_stop_separator)) { it.ordinal.toString() })
             Box(
                 Modifier.offset { IntOffset((point.x - iconPixels / 2f).roundToInt(), (point.y - iconPixels / 2f).roundToInt()) }
                     .size(iconSize)
-                    .zIndex(if (selected || editingHere) 1f else 0f)
+                    .zIndex(if (isActive) 1f else 0f)
                     .clickable(role = Role.Button) { onPinTap(code) }
-                    .semantics { contentDescription = description; this.selected = selected || editingHere },
+                    .semantics { contentDescription = description; this.selected = isActive },
                 contentAlignment = Alignment.Center,
             ) {
                 StageArt.resolve(code)?.let { art ->
                     ArtworkSlot(Modifier.fillMaxSize()) { edgePx ->
-                    val artwork = rememberResourceArtwork(art, edgePx)
-                    if (artwork != null) {
-                    val painter = remember(artwork) { BitmapPainter(artwork.bitmap, filterQuality = FilterQuality.High) }
-                    Image(painter, contentDescription = null, modifier = Modifier.fillMaxSize()
-                        .then(artworkFade(artwork.bitmap))
-                        .graphicsLayer { scaleX = selectionScale; scaleY = selectionScale }
-                        .drawWithContent {
-                            if (selected || editingHere) {
-                                // Draw the source alpha silhouette, rather than a circular marker.
-                                val edge = size.minDimension * .035f
-                                for (dx in -1..1) for (dy in -1..1) if (dx != 0 || dy != 0) {
-                                    withTransform({ translate(dx * edge, dy * edge) }) {
-                                        with(painter) { draw(size = size, colorFilter = ColorFilter.tint(Color.White)) }
-                                    }
-                                }
-                            }
-                            drawContent()
-                        })
-                    }
+                        val artwork = rememberResourceArtwork(art, edgePx)
+                        if (artwork != null) {
+                            val painter = remember(artwork) { BitmapPainter(artwork.bitmap, filterQuality = FilterQuality.High) }
+                            val smoothOutline = rememberSmoothIconOutline(
+                                code = code,
+                                bitmap = artwork.bitmap,
+                                needed = isActive || outlineAlpha > 0.005f,
+                            )
+                            Image(
+                                painter = painter,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(artworkFade(artwork.bitmap))
+                                    .graphicsLayer { scaleX = selectionScale; scaleY = selectionScale }
+                                    .drawWithContent {
+                                        val padX = smoothOutline?.let { size.width * it.padFracX } ?: 0f
+                                        val padY = smoothOutline?.let { size.height * it.padFracY } ?: 0f
+                                        val layerRect = Rect(
+                                            left = -padX,
+                                            top = -padY,
+                                            right = size.width + padX,
+                                            bottom = size.height + padY,
+                                        )
+                                        val applyDimLayer = dimProgress > 0.005f
+                                        if (applyDimLayer) {
+                                            // Composite outline + icon atomically so both dim together (#3).
+                                            val layerPaint = Paint().apply {
+                                                alpha = (1f - 0.16f * dimProgress).coerceIn(0f, 1f)
+                                            }
+                                            drawContext.canvas.saveLayer(layerRect, layerPaint)
+                                        }
+                                        if (smoothOutline != null && outlineAlpha > 0.005f) {
+                                            val dstW = size.width + padX * 2f
+                                            val dstH = size.height + padY * 2f
+                                            withTransform({
+                                                translate(left = -padX, top = -padY)
+                                                scale(
+                                                    scaleX = dstW / smoothOutline.bitmap.width.coerceAtLeast(1),
+                                                    scaleY = dstH / smoothOutline.bitmap.height.coerceAtLeast(1),
+                                                    pivot = Offset.Zero,
+                                                )
+                                            }) {
+                                                drawImage(
+                                                    image = smoothOutline.bitmap,
+                                                    alpha = outlineAlpha.coerceIn(0f, 1f),
+                                                    filterQuality = FilterQuality.High,
+                                                )
+                                            }
+                                        }
+                                        drawContent()
+                                        if (applyDimLayer) {
+                                            drawRect(
+                                                color = Color(0xFF060C1A).copy(alpha = 0.56f * dimProgress),
+                                                topLeft = layerRect.topLeft,
+                                                size = layerRect.size,
+                                                blendMode = BlendMode.SrcAtop,
+                                            )
+                                            drawContext.canvas.restore()
+                                        }
+                                    },
+                            )
+                        }
                     }
                 }
                 if (visits.isNotEmpty() && badgeScale > 0.02f) {
@@ -2634,4 +2991,206 @@ private fun DrawScope.drawRouteConnection(
             )
         }
     }
+}
+
+private const val EDT_INF = 1_000_000f
+private const val OUTLINE_WORK_MAX_EDGE = 256
+private const val OUTLINE_STROKE_RATIO = 0.044f
+private const val OUTLINE_AA_FEATHER_PX = 2.0f
+
+private val smoothIconOutlineCache = LruCache<String, SmoothIconOutline>(48)
+
+internal data class SmoothIconOutline(
+    val bitmap: ImageBitmap,
+    val padFracX: Float,
+    val padFracY: Float,
+)
+
+/**
+ * 1D squared Euclidean distance transform (Felzenszwalb & Huttenlocher, 2012):
+ * computes `out[q] = min_p ((q - p)^2 + f[p])` in O(n) time without Inf-Inf precision issues.
+ */
+internal fun edt1d(
+    f: FloatArray,
+    out: FloatArray,
+    n: Int,
+    v: IntArray,
+    z: FloatArray,
+) {
+    var k = -1
+    for (q in 0 until n) {
+        val fq = f[q]
+        if (fq >= EDT_INF) continue
+        if (k < 0) {
+            k = 0
+            v[0] = q
+            z[0] = Float.NEGATIVE_INFINITY
+            z[1] = Float.POSITIVE_INFINITY
+            continue
+        }
+        var s = 0f
+        while (k >= 0) {
+            val vk = v[k]
+            s = (((fq.toDouble() + q.toDouble() * q) - (f[vk].toDouble() + vk.toDouble() * vk)) / (2.0 * (q - vk))).toFloat()
+            if (s <= z[k]) {
+                k--
+            } else {
+                break
+            }
+        }
+        k++
+        v[k] = q
+        z[k] = if (k == 0) Float.NEGATIVE_INFINITY else s
+        z[k + 1] = Float.POSITIVE_INFINITY
+    }
+    if (k < 0) {
+        for (q in 0 until n) out[q] = EDT_INF
+        return
+    }
+    var idx = 0
+    for (q in 0 until n) {
+        while (z[idx + 1] < q) idx++
+        val d = (q - v[idx]).toFloat()
+        out[q] = d * d + f[v[idx]]
+    }
+}
+
+/**
+ * Computes a smooth 2D Euclidean distance field outside an icon's alpha silhouette (`alpha >= 0.45f`),
+ * followed by two separable `[1, 2, 1]/4` Gaussian smoothing passes that preserve linear distances
+ * while eliminating pixel-grid stair-step aliasing along arbitrary curves and corners (#3).
+ */
+internal fun computeSmoothedEuclideanDistance2d(
+    alpha: FloatArray,
+    width: Int,
+    height: Int,
+    maxCap: Float,
+): FloatArray {
+    val total = width * height
+    val grid = FloatArray(total) { i -> if (alpha[i] >= 0.45f) 0f else EDT_INF }
+    val maxDim = maxOf(width, height).coerceAtLeast(1)
+    val fBuf = FloatArray(maxDim)
+    val outBuf = FloatArray(maxDim)
+    val vBuf = IntArray(maxDim)
+    val zBuf = FloatArray(maxDim + 1)
+
+    for (y in 0 until height) {
+        val rowOff = y * width
+        for (x in 0 until width) fBuf[x] = grid[rowOff + x]
+        edt1d(fBuf, outBuf, width, vBuf, zBuf)
+        for (x in 0 until width) grid[rowOff + x] = outBuf[x]
+    }
+
+    for (x in 0 until width) {
+        for (y in 0 until height) fBuf[y] = grid[y * width + x]
+        edt1d(fBuf, outBuf, height, vBuf, zBuf)
+        for (y in 0 until height) {
+            val sq = outBuf[y]
+            grid[y * width + x] = if (sq >= EDT_INF) maxCap else sqrt(sq).coerceAtMost(maxCap)
+        }
+    }
+
+    val scratch = FloatArray(total)
+    repeat(2) {
+        for (y in 0 until height) {
+            val rowOff = y * width
+            for (x in 0 until width) {
+                val xm = if (x > 0) x - 1 else 0
+                val xp = if (x + 1 < width) x + 1 else width - 1
+                scratch[rowOff + x] = (grid[rowOff + xm] + 2f * grid[rowOff + x] + grid[rowOff + xp]) * 0.25f
+            }
+        }
+        for (y in 0 until height) {
+            val ym = if (y > 0) y - 1 else 0
+            val yp = if (y + 1 < height) y + 1 else height - 1
+            val r0 = ym * width
+            val r1 = y * width
+            val r2 = yp * width
+            for (x in 0 until width) {
+                grid[r1 + x] = (scratch[r0 + x] + 2f * scratch[r1 + x] + scratch[r2 + x]) * 0.25f
+            }
+        }
+    }
+    return grid
+}
+
+private fun buildSmoothWhiteOutline(src: ImageBitmap): SmoothIconOutline? = runCatching {
+    val rawAndroid = src.asAndroidBitmap()
+    val swSrc = if (rawAndroid.config == Bitmap.Config.HARDWARE) {
+        rawAndroid.copy(Bitmap.Config.ARGB_8888, false)
+    } else {
+        rawAndroid
+    }
+    val origW = swSrc.width.coerceAtLeast(1)
+    val origH = swSrc.height.coerceAtLeast(1)
+    val longest = maxOf(origW, origH)
+    val scale = OUTLINE_WORK_MAX_EDGE.toFloat() / longest.toFloat()
+    val workW = (origW * scale).roundToInt().coerceAtLeast(1)
+    val workH = (origH * scale).roundToInt().coerceAtLeast(1)
+    val working = if (workW != origW || workH != origH) {
+        Bitmap.createScaledBitmap(swSrc, workW, workH, true)
+    } else {
+        swSrc
+    }
+    try {
+        val strokeRadius = maxOf(workW, workH) * OUTLINE_STROKE_RATIO
+        val pad = ceil(strokeRadius + OUTLINE_AA_FEATHER_PX + 3f).toInt().coerceAtLeast(4)
+        val pw = workW + pad * 2
+        val ph = workH + pad * 2
+        val srcPixels = IntArray(workW * workH)
+        working.getPixels(srcPixels, 0, workW, 0, 0, workW, workH)
+        val alpha = FloatArray(pw * ph)
+        for (y in 0 until workH) {
+            val dstRow = (y + pad) * pw + pad
+            val srcRow = y * workW
+            for (x in 0 until workW) {
+                alpha[dstRow + x] = ((srcPixels[srcRow + x] ushr 24) and 0xFF) / 255f
+            }
+        }
+        val cap = strokeRadius + OUTLINE_AA_FEATHER_PX + 4f
+        val dist = computeSmoothedEuclideanDistance2d(alpha, pw, ph, maxCap = cap)
+        val outPixels = IntArray(pw * ph)
+        val halfFeather = OUTLINE_AA_FEATHER_PX * 0.5f
+        for (i in dist.indices) {
+            val cov = ((strokeRadius + halfFeather - dist[i]) / OUTLINE_AA_FEATHER_PX).coerceIn(0f, 1f)
+            if (cov > 0f) {
+                val smoothA = cov * cov * (3f - 2f * cov)
+                val aByte = (smoothA * 255f).roundToInt().coerceIn(0, 255)
+                if (aByte > 0) {
+                    outPixels[i] = (aByte shl 24) or 0x00FFFFFF
+                }
+            }
+        }
+        val outBmp = Bitmap.createBitmap(outPixels, pw, ph, Bitmap.Config.ARGB_8888)
+        SmoothIconOutline(
+            bitmap = outBmp.asImageBitmap(),
+            padFracX = pad.toFloat() / workW.toFloat(),
+            padFracY = pad.toFloat() / workH.toFloat(),
+        )
+    } finally {
+        if (working !== swSrc) working.recycle()
+        if (swSrc !== rawAndroid) swSrc.recycle()
+    }
+}.getOrNull()
+
+@Composable
+private fun rememberSmoothIconOutline(
+    code: String,
+    bitmap: ImageBitmap,
+    needed: Boolean,
+): SmoothIconOutline? {
+    val cacheKey = remember(code, bitmap) {
+        "$code@${bitmap.width}x${bitmap.height}#${System.identityHashCode(bitmap)}"
+    }
+    val cached = remember(cacheKey) { smoothIconOutlineCache.get(cacheKey) }
+    if (cached != null) return cached
+    if (!needed) return null
+    val generated by produceState<SmoothIconOutline?>(null, cacheKey, bitmap) {
+        value = smoothIconOutlineCache.get(cacheKey) ?: withContext(Dispatchers.Default) {
+            buildSmoothWhiteOutline(bitmap)?.also { outline ->
+                smoothIconOutlineCache.put(cacheKey, outline)
+            }
+        }
+    }
+    return generated
 }

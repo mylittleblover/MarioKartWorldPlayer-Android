@@ -97,9 +97,9 @@ class MeasuredTransitionTest {
         assertTrue(
             MeasuredTransition.planFor(flow("Cave"), bridgeSegment).explanation.contains("grid node"),
         )
-        // AirshipFortress is one of the three inferred positions and must say so.
+        // ChocoMountain has an empty Bridge_ToFull event (inferred position) and must say so.
         assertTrue(
-            MeasuredTransition.planFor(flow("AirshipFortress"), bridgeSegment).explanation
+            MeasuredTransition.planFor(flow("ChocoMountain"), bridgeSegment).explanation
                 .contains("inferred"),
         )
     }
@@ -124,8 +124,8 @@ class MeasuredTransitionTest {
     }
 
     @Test
-    fun allFourLayeredStagesAreHandledTheSameWay() {
-        for (stage in listOf("DesertHills", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit")) {
+    fun allSixLayeredStagesAreHandledTheSameWay() {
+        for (stage in listOf("AirshipFortress", "DesertHills", "DinoBones", "FirstCircuit", "MooMooFarm", "SFCMarioCircuit")) {
             val plan = MeasuredTransition.planFor(flow(stage), bridgeSegment)
             assertEquals(-1, plan.bridgeSegment, "$stage should not schedule its layered bridge")
         }

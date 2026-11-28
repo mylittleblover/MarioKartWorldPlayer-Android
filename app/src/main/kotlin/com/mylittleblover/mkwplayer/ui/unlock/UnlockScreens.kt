@@ -1,5 +1,11 @@
 package com.mylittleblover.mkwplayer.ui.unlock
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +21,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,89 +32,55 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mylittleblover.mkwplayer.R
+import com.mylittleblover.mkwplayer.ui.AppMotion
 import com.mylittleblover.mkwplayer.ui.Tokens
 import com.mylittleblover.mkwplayer.ui.art.CupArt
 import com.mylittleblover.mkwplayer.ui.art.ResourceArtwork
 import com.mylittleblover.mkwplayer.ui.kit.MkwButtonSize
 import com.mylittleblover.mkwplayer.ui.kit.MkwDialog
+import com.mylittleblover.mkwplayer.ui.kit.MkwDivider
 import com.mylittleblover.mkwplayer.ui.kit.MkwGhostButton
-import com.mylittleblover.mkwplayer.ui.kit.MkwInkButton
 import com.mylittleblover.mkwplayer.ui.kit.MkwKitTokens
+import com.mylittleblover.mkwplayer.ui.kit.MkwPrimaryButton
+import com.mylittleblover.mkwplayer.ui.rememberReducedMotion
 import com.mylittleblover.mkwplayer.unlock.UnlockPresentation
 
 /*
- * UI-11 (the top notification), UI-12 (the ceremony) and UI-13 (the congratulations), drawn from the
- * state in CeremonyState.kt.
+ * UI-11 (the persistent top ceremony notice), UI-12 (the ceremony) and UI-13 (the congratulations),
+ * drawn from the state in CeremonyState.kt.
  *
- * These composables decide nothing they could get wrong. Which controls exist, whether the progress
- * bar accepts a drag, whether the first-time dialog belongs on screen and what the notification may
- * reveal are all settled before the layout sees them; what is left here is where the pixels go and
- * which elements are touch targets.
- *
- * Three things the layout does own, because they are about honesty rather than measurement:
- *
- * - A control whose flag is false is ABSENT, not disabled. A greyed-out pause button still tells the
- *   user that pause exists and that something is currently holding it back; the audio layer will
- *   never perform that pause, so the control is a promise nothing keeps. The ceremony screen has no
- *   pause, skip, seek or track-change callback at all, and it says so in words instead.
- * - The progress bar is read-only. There is no drag gesture, no clickable and no slider: the bar
- *   reports where the ceremony is, and the only way out is the exit button.
- * - The cup artwork never appears without [CupArt.NOTICE] beside it. The notice is the statement that
- *   the emblem is Nintendo's and that this is a private research build; a screen that dropped it
- *   would present borrowed art as the app's own.
+ * Three rules owned by the layout:
+ * - The top unlock notice is PERSISTENT and NON-DISMISSIBLE until the ceremony is watched.
+ * - During ceremony playback, controls that cannot fire (pause, seek, skip, track change) are
+ *   ABSENT rather than disabled, and the progress bar is read-only.
+ * - The Special Cup emblem never appears without [CupArt.NOTICE] beside it.
  */
 
-/**
- * The notification's badge mark. A gold disc, not the cup's emblem: the cup must not be revealed.
- *
- * Taken from the pack's one small-artwork measurement rather than invented, because the badge is an
- * artwork slot and not a spacing decision of this screen.
- */
 private val NOTICE_BADGE = Tokens.Component.miniPlayerArtwork
-
-/**
- * The ceremony's emblem.
- *
- * The pack measures no emblem, so this borrows the pack's largest control measurement rather than
- * introducing a number: a size that is not in the token set should still come from a size that is.
- * It is the panel's only artwork, so it takes the largest one the pack names.
- */
 private val CEREMONY_EMBLEM = Tokens.Component.mainPlaybackButton
-
-/**
- * The dialog's emblem.
- *
- * Same reasoning, one step down: the dialog already carries a title, an explanation, a provenance
- * line and two actions, so its artwork is the pack's small artwork slot rather than its largest.
- */
 private val DIALOG_EMBLEM = Tokens.Component.miniPlayerArtwork
 
 /**
- * UI-11, the top notification announcing that the hidden cup has appeared.
+ * UI-11, the persistent, non-dismissible top notification announcing that the Mystery Course
+ * unlock ceremony is ready.
  *
- * Drawn as a solid navy card so it reads as an announcement rather than as page content, with the
- * action in the pack's yellow. It never cuts the current music: the caller decides when the ceremony
- * starts, and the offer explicitly waits.
- *
- * The badge is a plain gold disc rather than the cup's emblem on purpose. An emblem here would reveal
- * the hidden cup before the user has opened it, which is the one thing the notification must not do;
- * `noticeFor` refuses to produce a view at all until the cup has been earned, and the artwork follows
- * the same rule.
- *
- * The close control is drawn only when [NoticeView.dismissible] is true. Closing hides the
- * notification and nothing else -- the cup stays earned and keeps its entry point -- so this is a
- * display fact, not a permission the screen can withhold.
+ * Deliberately renders NO close/dismiss button: the banner stays pinned until the user watches
+ * the unlock ceremony to completion. [onDismiss] is retained only as an optional unused parameter
+ * for signature compatibility with existing callers.
  */
 @Composable
 internal fun UnlockNotice(
     view: NoticeView,
     onAction: () -> Unit,
-    onDismiss: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onDismiss: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -129,10 +105,8 @@ internal fun UnlockNotice(
                     .background(Tokens.Palette.yellow500),
                 contentAlignment = Alignment.Center,
             ) {
-                // A word, not only a colour: the disc has to mean something to a reader who cannot
-                // tell gold from navy.
                 Text(
-                    text = "NEW",
+                    text = stringResource(R.string.unlock_notice_badge_new),
                     color = Tokens.Palette.navy900,
                     fontSize = Tokens.Type.caption,
                     fontWeight = FontWeight.Bold,
@@ -157,7 +131,9 @@ internal fun UnlockNotice(
                 shape = MkwKitTokens.Shape.pill,
                 color = Tokens.Palette.yellow500,
                 contentColor = Tokens.Palette.navy900,
-                modifier = Modifier.heightIn(min = Tokens.Component.touchTargetMin).semantics { role = Role.Button },
+                modifier = Modifier
+                    .heightIn(min = Tokens.Component.touchTargetMin)
+                    .semantics { role = Role.Button },
             ) {
                 Box(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
@@ -170,22 +146,90 @@ internal fun UnlockNotice(
                     )
                 }
             }
+        }
+    }
+}
 
-            if (view.dismissible) {
-                Surface(
-                    onClick = onDismiss,
-                    shape = MkwKitTokens.Shape.pill,
-                    color = androidx.compose.ui.graphics.Color.Transparent,
-                    contentColor = Tokens.Palette.cream100,
-                    modifier = Modifier.heightIn(min = Tokens.Component.touchTargetMin).semantics { role = Role.Button },
+/**
+ * Porcelain & theme-accent persistent, non-dismissible top banner for the app shell (`MkwApp`).
+ *
+ * Announces that the Mystery Course unlock condition is met without revealing Rainbow Road or
+ * Special Cup, and intentionally omits any close/dismiss control until the ceremony is watched.
+ */
+@Composable
+internal fun PersistentUnlockCeremonyBanner(
+    visible: Boolean,
+    onEnterCeremony: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val reducedMotion = rememberReducedMotion()
+    AnimatedVisibility(
+        visible = visible,
+        enter = if (reducedMotion) {
+            fadeIn(tween(100))
+        } else {
+            expandVertically(
+                animationSpec = tween(180, easing = AppMotion.easeOut),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(tween(150, easing = AppMotion.easeOut))
+        },
+        exit = if (reducedMotion) {
+            fadeOut(tween(90))
+        } else {
+            shrinkVertically(
+                animationSpec = tween(140, easing = AppMotion.easeOut),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(tween(120))
+        },
+        modifier = modifier,
+    ) {
+        Surface(
+            color = MkwKitTokens.Palette.rose,
+            contentColor = MkwKitTokens.Palette.crimsonDeep,
+            tonalElevation = 0.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = MkwKitTokens.Palette.crimson,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Text(text = "Close", fontSize = Tokens.Type.secondary)
+                        Text(
+                            text = stringResource(R.string.unlock_mystery_banner_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MkwKitTokens.Palette.crimsonDeep,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = stringResource(R.string.unlock_mystery_banner_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MkwKitTokens.Palette.crimsonDeep.copy(alpha = 0.85f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                    MkwPrimaryButton(
+                        text = stringResource(R.string.unlock_mystery_banner_action),
+                        onClick = onEnterCeremony,
+                        size = MkwButtonSize.Compact,
+                    )
                 }
+                MkwDivider(color = MkwKitTokens.Palette.crimson.copy(alpha = 0.18f))
             }
         }
     }
@@ -193,18 +237,6 @@ internal fun UnlockNotice(
 
 /**
  * UI-12, the ceremony panel.
- *
- * The bar is a [LinearProgressIndicator] with a plain progress lambda rather than a slider: a slider
- * would be draggable by default, and offering a drag during the one piece of audio whose completion
- * cannot be faked is exactly how the completion becomes fake.
- *
- * What is drawn is driven by [CeremonyView.controls], and only in the negative direction: the panel
- * states the absence of pause, seek, skip and track change when the flags are false. It never draws
- * those controls at all -- the only action this screen accepts is [onExit] -- so a reader cannot press
- * something that does nothing, and a screenshot cannot suggest a control that does not exist.
- *
- * The exit button is unconditional. Leaving stops the music without granting completion and the cup
- * stays earned, so there is no phase in which holding the user here would be right.
  */
 @Composable
 internal fun CeremonyScreen(
@@ -216,8 +248,6 @@ internal fun CeremonyScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Tokens.Palette.navy900)
-            // Scrolls rather than clips: at a large font scale the caveat and the exit control must
-            // stay reachable, and the pack's layout note allows the information to scroll.
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Tokens.Spacing.md, vertical = Tokens.Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Tokens.Spacing.md),
@@ -245,8 +275,6 @@ internal fun CeremonyScreen(
                     contentScale = ContentScale.Fit,
                 )
             }
-            // The provenance statement travels with the artwork. Without it the emblem reads as the
-            // app's own image, which this build cannot claim.
             Text(
                 text = CupArt.NOTICE,
                 color = Tokens.Palette.cream100,
@@ -254,9 +282,6 @@ internal fun CeremonyScreen(
             )
         }
 
-        // The caveat is the reason the panel exists in this cautious form: the cue is this app's
-        // confirmed file, not a verified copy of the game's own ceremony audio. Dropping it would
-        // present a guess as the game's behaviour.
         Text(
             text = UnlockPresentation.CEREMONY_AUDIO_CAVEAT,
             color = Tokens.Palette.warning,
@@ -284,7 +309,6 @@ internal fun CeremonyScreen(
             )
         }
 
-        // Read-only by construction: no gesture modifier of any kind is attached to this bar.
         com.mylittleblover.mkwplayer.ui.SmoothProgressIndicator(
             progress = view.progress.fraction,
             modifier = Modifier.fillMaxWidth(),
@@ -294,18 +318,15 @@ internal fun CeremonyScreen(
 
         if (!view.controls.canSeek) {
             Text(
-                text = "The progress bar is read-only. There is nothing here to drag or tap.",
+                text = stringResource(R.string.unlock_ceremony_screen_readonly_hint),
                 color = Tokens.Palette.cream100,
                 fontSize = Tokens.Type.caption,
             )
         }
 
         if (!view.controls.canPause) {
-            // One sentence covering the whole absent row. Four "Pause is unavailable" lines would
-            // read as four broken controls rather than as a deliberate design.
             Text(
-                text = "There is no pause, skip or track change while the ceremony plays. " +
-                    "Only leaving is offered.",
+                text = stringResource(R.string.unlock_ceremony_screen_controls_hint),
                 color = Tokens.Palette.cream100,
                 fontSize = Tokens.Type.caption,
             )
@@ -331,11 +352,13 @@ internal fun CeremonyScreen(
                 .semantics { role = Role.Button },
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "Leave the ceremony",
+                    text = stringResource(R.string.unlock_ceremony_screen_leave),
                     fontSize = Tokens.Type.body,
                     fontWeight = FontWeight.Bold,
                 )
@@ -345,35 +368,25 @@ internal fun CeremonyScreen(
 }
 
 /**
- * UI-13, the first-time congratulations.
+ * UI-13, the first-time post-ceremony congratulations dialog.
  *
- * Only ever shown for a completed ceremony that has not been congratulated yet; the caller passes
- * [visible], which comes from [shouldShowCongratulation]. This composable does not re-decide that:
- * a second copy of the rule is how a replay ends up re-sending the first-time dialog.
- *
- * Both actions are offered as peers. "Enter the cup" is primary because that is what the dialog is
- * announcing, and "Back to the library" is a real choice rather than an escape hatch -- the cup stays
- * open, so leaving the dialog loses nothing.
- *
- * The provenance line under the explanation is not decoration: the emblem is Nintendo artwork, and the
- * statement that fact is the condition on which the pack allows the art in the build.
+ * Displays the localized gratitude message inviting the listener to enjoy the final Grand Prix —
+ * the Special Cup.
  */
 @Composable
 internal fun CongratulationDialog(
     visible: Boolean,
-    cupName: String,
+    cupName: String = "",
     onEnterCup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // Nothing is composed at all when hidden, so the dialog cannot appear in the semantics tree
-    // before the ceremony has actually finished.
     if (!visible) return
 
-    val name = cupName.trim().ifEmpty { CupArt.special.label }
+    val title = cupName.trim().ifEmpty { stringResource(R.string.unlock_ceremony_congrats_title) }
 
     MkwDialog(
         onDismissRequest = onDismiss,
-        title = "$name unlocked!",
+        title = title,
         icon = {
             ResourceArtwork(
                 resourceId = CupArt.special.drawable,
@@ -382,31 +395,30 @@ internal fun CongratulationDialog(
             )
         },
         confirmButton = {
-            MkwInkButton(
-                text = "Enter the cup",
+            MkwPrimaryButton(
+                text = stringResource(R.string.unlock_ceremony_congrats_enter),
                 onClick = onEnterCup,
-                size = MkwButtonSize.Regular,
+                size = MkwButtonSize.Compact,
             )
         },
         dismissButton = {
             MkwGhostButton(
-                text = "Back to the library",
+                text = stringResource(R.string.unlock_ceremony_congrats_close),
                 onClick = onDismiss,
-                size = MkwButtonSize.Regular,
+                size = MkwButtonSize.Compact,
             )
         },
     ) {
         Text(
-            text = "Every stage you had music for has been heard, and the ceremony played " +
-                "to the end. The cup is open from now on, and this message appears once.",
-            color = Tokens.Palette.ink900,
-            fontSize = Tokens.Type.secondary,
+            text = stringResource(R.string.unlock_ceremony_congrats_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MkwKitTokens.Palette.ink,
         )
         Spacer(Modifier.size(Tokens.Spacing.xs))
         Text(
             text = CupArt.NOTICE,
-            color = Tokens.Palette.navy700,
-            fontSize = Tokens.Type.caption,
+            style = MaterialTheme.typography.labelSmall,
+            color = MkwKitTokens.Palette.inkSecondary,
         )
     }
 }

@@ -58,58 +58,95 @@ class TwoStateFinalLapFanfareTest {
     )
 
     @Test
-    fun battleAndSfcPlansRouteMainToFastThroughSharedFinalLapFanfare() {
+    fun battleSwitchesDirectlyWithoutFinalLapFanfare() {
+        val track = twoStateFixture("battle_smk", "BGM_Battle_01", "BGM_Battle_01_FL")
+        val bytes = mapOf(
+            "BGM_Battle_01" to bwavHeaderOnly(frames = 480_000L),
+            "BGM_Battle_01_FL" to bwavHeaderOnly(frames = 360_000L),
+        )
+        val plan = ExtraInteractiveCompilers.compileTwoStateLoopPlan(
+            track = track,
+            isBattle = true,
+            bytesByStem = bytes,
+        )
+        assertNull(plan.labels.entries.singleOrNull { it.value == "FinalLapFF" }, "Battle must not attach FinalLapFF")
+        assertEquals("BattleFast", plan.labels[ExtraInteractiveCompilers.TWO_STATE_SEG_FAST])
+        val rule = plan.spec.transitions.single {
+            it.sources == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_MAIN) &&
+                it.destinations == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_FAST)
+        }
+        assertEquals(-1, rule.bridge)
+        assertEquals(G.SyncPoint.Immediate, rule.sync)
+        assertTrue(rule.postExit)
+        assertEquals(G.Fade(beats = FinalLapFanfareCompiler.FULL_FADE_OUT_SEC * 140.0 / 60.0), rule.fadeOut)
+
+        val perfectPlan = ExtraInteractiveCompilers.compileTwoStateLoopPlan(
+            track = track,
+            isBattle = true,
+            bytesByStem = bytes,
+            perfectBeatEnabled = true,
+        )
+        val perfectRule = perfectPlan.spec.transitions.single()
+        assertEquals(G.SyncPoint.NextBar, perfectRule.sync)
+        assertEquals(-1, perfectRule.bridge)
+    }
+
+    @Test
+    fun sfcPlanRoutesMainToFastThroughSharedFinalLapFanfare() {
         val ffFile = File("src/main/assets/audio/BGM_Seq_FinalLapFF.bwav")
         assumeTrue(ffFile.isFile)
         val ffBytes = ffFile.readBytes()
 
-        for ((isBattle, id, mainStem, fastStem, fastLabel) in listOf(
-            TwoStateCase(false, "sfc_choco_island", "BGM_Stage_ChocoMountain_SFC", "BGM_Stage_ChocoMountain_SFC_Fast", "Fast"),
-            TwoStateCase(true, "battle_smk", "BGM_Battle_01", "BGM_Battle_01_FL", "BattleFast"),
-        )) {
-            val track = twoStateFixture(id, mainStem, fastStem)
-            val bytes = mapOf(
-                mainStem to bwavHeaderOnly(frames = 480_000L),
-                fastStem to bwavHeaderOnly(frames = 360_000L),
-                FinalLapFanfareCompiler.ASSET to ffBytes,
-            )
-            val plan = ExtraInteractiveCompilers.compileTwoStateLoopPlan(
-                track = track,
-                isBattle = isBattle,
-                bytesByStem = bytes,
-            )
+        val track = twoStateFixture("sfc_choco_island", "BGM_Stage_ChocoMountain_SFC", "BGM_Stage_ChocoMountain_SFC_Fast")
+        val bytes = mapOf(
+            "BGM_Stage_ChocoMountain_SFC" to bwavHeaderOnly(frames = 480_000L),
+            "BGM_Stage_ChocoMountain_SFC_Fast" to bwavHeaderOnly(frames = 360_000L),
+            FinalLapFanfareCompiler.ASSET to ffBytes,
+        )
+        val plan = ExtraInteractiveCompilers.compileTwoStateLoopPlan(
+            track = track,
+            isBattle = false,
+            bytesByStem = bytes,
+        )
 
-            val ff = plan.labels.entries.singleOrNull { it.value == "FinalLapFF" }?.key
-            assertNotNull(ff, "$id must attach FinalLapFF bridge")
-            assertFalse(ff in plan.initialSegments, "FinalLapFF must not appear in starting stage selector")
-            assertEquals(fastLabel, plan.labels[ExtraInteractiveCompilers.TWO_STATE_SEG_FAST])
+        val ff = plan.labels.entries.singleOrNull { it.value == "FinalLapFF" }?.key
+        assertNotNull(ff, "SFC track must attach FinalLapFF bridge")
+        assertFalse(ff in plan.initialSegments, "FinalLapFF must not appear in starting stage selector")
+        assertEquals("Fast", plan.labels[ExtraInteractiveCompilers.TWO_STATE_SEG_FAST])
 
-            val ffSegment = plan.spec.segments.single { it.index == ff }
-            assertEquals(188_880L, ffSegment.exit)
-            assertNull(ffSegment.loop)
+        val ffSegment = plan.spec.segments.single { it.index == ff }
+        assertEquals(FinalLapFanfareCompiler.FANFARE_EXIT_FRAMES, ffSegment.exit)
+        assertNull(ffSegment.loop)
 
-            val ffClip = plan.spec.tracks.single { it.segment == ff }.clips.single()
-            assertEquals(268_759L, ffClip.sourceLength)
-            assertEquals(FinalLapFanfareCompiler.ASSET, plan.spec.assets[ffClip.asset].path)
+        val ffClip = plan.spec.tracks.single { it.segment == ff }.clips.single()
+        assertEquals(268_759L, ffClip.sourceLength)
+        assertEquals(FinalLapFanfareCompiler.ASSET, plan.spec.assets[ffClip.asset].path)
 
-            val rule = plan.spec.transitions.single {
-                it.sources == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_MAIN) &&
-                    it.destinations == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_FAST)
-            }
-            assertEquals(ff, rule.bridge)
-            assertEquals(G.SyncPoint.Immediate, rule.sync)
-            assertNull(rule.sourceCue)
-            assertTrue(rule.postExit)
-            assertFalse(rule.preEntry)
-            assertEquals(G.Fade(), rule.fadeOut)
-            assertEquals(G.Fade(), rule.fadeIn)
-            assertEquals(G.TransitionTimeline(0L, 188_880L, 188_880L, 0L), rule.timeline)
-
-            assertTrue(FinalLapFanfareCompiler.ASSET in plan.preparedAssets)
-            assertTrue(
-                FinalLapFanfareCompiler.ASSET in plan.entryPreparedAssets.getValue(ExtraInteractiveCompilers.TWO_STATE_SEG_MAIN),
-                "Switching back to Main must keep FinalLapFF prepared",
-            )
+        val rule = plan.spec.transitions.single {
+            it.sources == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_MAIN) &&
+                it.destinations == listOf(ExtraInteractiveCompilers.TWO_STATE_SEG_FAST)
         }
+        assertEquals(ff, rule.bridge)
+        assertEquals(G.SyncPoint.Immediate, rule.sync)
+        assertNull(rule.sourceCue)
+        assertTrue(rule.postExit)
+        assertFalse(rule.preEntry)
+        assertEquals(G.Fade(beats = FinalLapFanfareCompiler.FULL_FADE_OUT_SEC * plan.spec.bpm / 60.0), rule.fadeOut)
+        assertEquals(G.Fade(), rule.fadeIn)
+        assertEquals(
+            G.TransitionTimeline(
+                FinalLapFanfareCompiler.FANFARE_DELAY_FRAMES,
+                FinalLapFanfareCompiler.FAST_DELAY_FRAMES,
+                FinalLapFanfareCompiler.FAST_DELAY_FRAMES,
+                0L,
+            ),
+            rule.timeline,
+        )
+
+        assertTrue(FinalLapFanfareCompiler.ASSET in plan.preparedAssets)
+        assertTrue(
+            FinalLapFanfareCompiler.ASSET in plan.entryPreparedAssets.getValue(ExtraInteractiveCompilers.TWO_STATE_SEG_MAIN),
+            "Switching back to Main must keep FinalLapFF prepared",
+        )
     }
 }

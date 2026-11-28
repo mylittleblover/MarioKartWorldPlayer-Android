@@ -1,2149 +1,2033 @@
 {
- "schemaVersion": 1,
- "provenance": "STAGE_CONNECTIONS_FINAL",
- "provenanceNote": "Directed stage-to-stage connections exported from the game. Each row is one inter-stage route the game itself defines; 214 rows, 29 source stages, 30 destination stages. Rainbow appears only as a destination, which is preserved rather than given an invented outgoing edge.",
- "sourceFile": "Stage_Connections_Final.csv",
- "edgeCount": 214,
- "edges": [
-  {
-   "from": "AirshipFortress",
-   "to": "DinoBones",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_AirshipFortressToDinoBones_A_00",
-   "displayName": "ステ間Ex2 キラーシップ→ホネコース1周"
-  },
-  {
-   "from": "AirshipFortress",
-   "to": "Lava",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_AirshipFortressToLava_A_00",
-   "displayName": "ステ間Ex1 キラーシップ→クッパ城1周"
-  },
-  {
-   "from": "AirshipFortress",
-   "to": "ShyGuyBazaar",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_AirshipFortressToShyGuyBazaar_A_00",
-   "displayName": "ステ間Ex1 キラーシップ→ヘイホーカーニバル 1周"
-  },
-  {
-   "from": "AirshipFortress",
-   "to": "StormClouds",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_AirshipFortressToStormClouds_A_00",
-   "displayName": "サバイバル GP(キラーシップ→くもコース)"
-  },
-  {
-   "from": "AirshipFortress",
-   "to": "ToadFactory",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_AirshipFortressToToadFactory_A_00",
-   "displayName": "ステ間Ex2 キラーシップ→キノピオファクトリー1周"
-  },
-  {
-   "from": "AirshipFortress",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_AirshipFortressToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 キラーシップ→ワリオスタジアム 1周"
-  },
-  {
-   "from": "BigTree",
-   "to": "AirshipFortress",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_BigTreeToAirshipFortress_A_00",
-   "displayName": "サバイバル GP(大樹→キラーシップ)"
-  },
-  {
-   "from": "BigTree",
-   "to": "Cave",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_BigTreeToCave_A_00",
-   "displayName": "ステ間Ex2 大樹→鍾乳洞1周"
-  },
-  {
-   "from": "BigTree",
-   "to": "Cinema",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_BigTreeToCinema_A_00",
-   "displayName": "ステ間Ex1 大樹→映画館1周"
-  },
-  {
-   "from": "BigTree",
-   "to": "DinoBones",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_BigTreeToDinoBones_A_00",
-   "displayName": "ステ間Ex1 大樹→ホネコース1周"
-  },
-  {
-   "from": "BigTree",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_BigTreeToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 大樹→マリオサーキット1周"
-  },
-  {
-   "from": "BigTree",
-   "to": "ToadFactory",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_BigTreeToToadFactory_A_00",
-   "displayName": "ステ間Ex2 大樹→キノピオファクトリー１周"
-  },
-  {
-   "from": "Cave",
-   "to": "BigTree",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_CaveToBigTree_A_00",
-   "displayName": "ステ間Ex2 鍾乳洞→大樹1周"
-  },
-  {
-   "from": "Cave",
-   "to": "Cinema",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CaveToCinema_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→映画館1周"
-  },
-  {
-   "from": "Cave",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CaveToDKPass_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→DKスノーマウンテン1周"
-  },
-  {
-   "from": "Cave",
-   "to": "IceBuildings",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_CaveToIceBuildings_A_00",
-   "displayName": "ステ間Ex2 鍾乳洞→アイスビル1周"
-  },
-  {
-   "from": "Cave",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CaveToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→モーモーカントリー1周"
-  },
-  {
-   "from": "Cave",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CaveToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→激流下り1周"
-  },
-  {
-   "from": "Cave",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CaveToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→マリオサーキット1周"
-  },
-  {
-   "from": "Cave",
-   "to": "SnowMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CaveToSnowMountain_A_00",
-   "displayName": "ステ間Ex1 鍾乳洞→雪山頂上1周"
-  },
-  {
-   "from": "Cave",
-   "to": "ToadFactory",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_CaveToToadFactory_A_00",
-   "displayName": "ステ間Ex2 鍾乳洞→キノピオファクトリー1周"
-  },
-  {
-   "from": "Central",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CentralToChocoMountain_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→チョコマウンテン1周"
-  },
-  {
-   "from": "Central",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CentralToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→DKジャングルパーク1周"
-  },
-  {
-   "from": "Central",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CentralToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→ノコノコビーチ2周"
-  },
-  {
-   "from": "Central",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CentralToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→モーモーカントリー1周"
-  },
-  {
-   "from": "Central",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CentralToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→激流下り1周"
-  },
-  {
-   "from": "Central",
-   "to": "Rainbow",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CentralToRainbow_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→レインボー1周"
-  },
-  {
-   "from": "Central",
-   "to": "ToadFactory",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_CentralToToadFactory_A_00",
-   "displayName": "ステ間Ex2 ピーチ城→キノピオファクトリー1周"
-  },
-  {
-   "from": "Central",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CentralToWestCity_A_00",
-   "displayName": "ステ間Ex1 ピーチ城→シティ1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ChocoMountainToCentral_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→ピーチ城1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "Coaster",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_ChocoMountainToCoaster_A_00",
-   "displayName": "ステ間Ex2 チョコマウンテン→コースター1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ChocoMountainToFirstCircuit_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→荒野サーキット1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "Lava",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ChocoMountainToLava_A_00",
-   "displayName": "ステ間Ex2 チョコマウンテン→クッパ城1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_ChocoMountainToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→モーモーカントリー 1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ChocoMountainToRaftingRiver_A_00",
-   "displayName": "ステ間Ex2 チョコマウンテン→激流下り1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "ShyGuyBazaar",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ChocoMountainToShyGuyBazaar_A_00",
-   "displayName": "ステ間Ex2 チョコマウンテン→ヘイホーカーニバル1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ChocoMountainToToadFactory_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→キノピオファクトリー1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ChocoMountainToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→ワリオスタジアム1周"
-  },
-  {
-   "from": "ChocoMountain",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ChocoMountainToWestCity_A_00",
-   "displayName": "ステ間Ex1 チョコマウンテン→シティ1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "BigTree",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CinemaToBigTree_A_00",
-   "displayName": "ステ間Ex1 映画館→大樹1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CinemaToCave_A_00",
-   "displayName": "ステ間Ex1 映画館→鍾乳洞1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "DinoBones",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_CinemaToDinoBones_A_00",
-   "displayName": "ステ間Ex2 映画館→ホネコース1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CinemaToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 映画館→マリオサーキット1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "SnowMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CinemaToSnowMountain_A_00",
-   "displayName": "ステ間Ex1 映画館→雪山頂上1周"
-  },
-  {
-   "from": "Cinema",
-   "to": "WarioShipyard",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_CinemaToWarioShipyard_A_00",
-   "displayName": "サバイバル GP(映画館コース→ワリオシップコース)"
-  },
-  {
-   "from": "Coaster",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_CoasterToChocoMountain_A_00",
-   "displayName": "ステ間Ex2 コースター→チョコマウンテン1周"
-  },
-  {
-   "from": "Coaster",
-   "to": "DesertHills",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_CoasterToDesertHills_A_00",
-   "displayName": "ステ間Ex1 コースター→サンサンさばく1周"
-  },
-  {
-   "from": "Coaster",
-   "to": "DonkeyKong",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_CoasterToDonkeyKong_A_00",
-   "displayName": "ステ間Ex1 コースター→ドンキーコース1周"
-  },
-  {
-   "from": "Coaster",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_CoasterToFirstCircuit_A_00",
-   "displayName": "ステ間Ex1 コースター→荒野サーキット1周"
-  },
-  {
-   "from": "Coaster",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_CoasterToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex2 コースター→ノコノコビーチ2周"
-  },
-  {
-   "from": "Coaster",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_CoasterToWestCity_A_00",
-   "displayName": "ステ間Ex1 コースター→シティ1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKJungleParkwayToCentral_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→ピーチ城1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "DinoDinoJungle",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DKJungleParkwayToDinoDinoJungle_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→ディノディノジャングル1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DKJungleParkwayToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→ノコノコビーチ2周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKJungleParkwayToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→水街1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "PeachBeach",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DKJungleParkwayToPeachBeach_A_00",
-   "displayName": "ステ間Ex2 DKジャングルパーク→ピーチビーチ1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKJungleParkwayToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→激流下り1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "StormClouds",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DKJungleParkwayToStormClouds_A_00",
-   "displayName": "ステ間Ex1 DKジャングルパーク→くもコース1周"
-  },
-  {
-   "from": "DKJungleParkway",
-   "to": "WestCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "GimmickFull",
-   "rowId": "InterStageEx2_DKJungleParkwayToWestCity_A_01",
-   "displayName": "ステ間Ex2 DKジャングルパーク→シティ0.9周"
-  },
-  {
-   "from": "DKPass",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKPassToCave_A_00",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→鍾乳洞1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "IceBuildings",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DKPassToIceBuildings_A_01",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→アイスビル1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKPassToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→水街1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DKPassToMooMooFarm_A_00",
-   "displayName": "ステ間Ex2 DKスノーマウンテン→モーモーカントリー1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKPassToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→激流下り1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "ShyGuyBazaar",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_DKPassToShyGuyBazaar_A_00",
-   "displayName": "サバイバル GP(DKスノーマウンテン→ヘイホーカーニバル)"
-  },
-  {
-   "from": "DKPass",
-   "to": "SnowMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DKPassToSnowMountain_A_00",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→雪山頂上1周"
-  },
-  {
-   "from": "DKPass",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DKPassToWarioShipyard_A_00",
-   "displayName": "ステ間Ex1 DKスノーマウンテン→ワリオシップ1周"
-  },
-  {
-   "from": "DesertHills",
-   "to": "BigTree",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_DesertHillsToBigTree_A_00",
-   "displayName": "サバイバル GP(サンサンさばく→大樹)"
-  },
-  {
-   "from": "DesertHills",
-   "to": "Coaster",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DesertHillsToCoaster_A_00",
-   "displayName": "ステ間Ex1 サンサンさばく→コースター1周"
-  },
-  {
-   "from": "DesertHills",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DesertHillsToFirstCircuit_A_00",
-   "displayName": "ステ間Ex1 サンサンさばく→荒野サーキット1周"
-  },
-  {
-   "from": "DesertHills",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DesertHillsToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex2 サンサンさばく→ノコノコビーチ2周"
-  },
-  {
-   "from": "DesertHills",
-   "to": "ShyGuyBazaar",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DesertHillsToShyGuyBazaar_A_00",
-   "displayName": "ステ間Ex1 サンサンさばく→ヘイホーカーニバル1周"
-  },
-  {
-   "from": "DesertHills",
-   "to": "WestCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DesertHillsToWestCity_A_00",
-   "displayName": "ステ間Ex2 サンサンさばく→シティ1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "AirshipFortress",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_DinoBonesToAirshipFortress_A_00",
-   "displayName": "ステ間Ex2 ホネコース→キラーシップ1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "BigTree",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_DinoBonesToBigTree_A_00",
-   "displayName": "ステ間Ex1 ホネコース→大樹1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "Cinema",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DinoBonesToCinema_A_00",
-   "displayName": "ステ間Ex2 ホネコース→映画館1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "Lava",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DinoBonesToLava_A_00",
-   "displayName": "ステ間Ex1 ホネコース→クッパ城1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DinoBonesToMooMooFarm_A_00",
-   "displayName": "ステ間Ex2 ホネコース→モーモーカントリー1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DinoBonesToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 ホネコース→マリオサーキット1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DinoBonesToToadFactory_A_00",
-   "displayName": "ステ間Ex1 ホネコース→キノピオファクトリー1周"
-  },
-  {
-   "from": "DinoBones",
-   "to": "WarioStadium",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DinoBonesToWarioStadium_A_00",
-   "displayName": "ステ間Ex2 ホネコース→ワリオスタジアム1周"
-  },
-  {
-   "from": "DinoDinoJungle",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DinoDinoJungleToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 ディノディノジャングル→DKジャングルパーク1周"
-  },
-  {
-   "from": "DinoDinoJungle",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DinoDinoJungleToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex1 ディノディノジャングル→ノコノコビーチ2周"
-  },
-  {
-   "from": "DinoDinoJungle",
-   "to": "LagoonCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DinoDinoJungleToLagoonCity_A_00",
-   "displayName": "ステ間Ex2 ディノディノジャングル→水街１周"
-  },
-  {
-   "from": "DinoDinoJungle",
-   "to": "PeachBeach",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DinoDinoJungleToPeachBeach_A_00",
-   "displayName": "ステ間Ex2 ディノディノジャングル→ピーチビーチ1周"
-  },
-  {
-   "from": "DinoDinoJungle",
-   "to": "StormClouds",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DinoDinoJungleToStormClouds_A_00",
-   "displayName": "ステ間Ex1 ディノディノジャングル→くもコース1周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "Central",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_DonkeyKongToCentral_A_00",
-   "displayName": "ステ間Ex2 ドンキーコース→ピーチ城1周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "Coaster",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DonkeyKongToCoaster_A_00",
-   "displayName": "ステ間Ex1 ドンキーコース→コースター1周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "DesertHills",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_DonkeyKongToDesertHills_A_00",
-   "displayName": "ステ間Ex2 ドンキーコース→サンサンさばく1周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_DonkeyKongToFirstCircuit_A_00",
-   "displayName": "ステ間Ex2 ドンキーコース→荒野サーキット1周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_DonkeyKongToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex1 ドンキーコース→ノコノコビーチ2周"
-  },
-  {
-   "from": "DonkeyKong",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_DonkeyKongToWestCity_A_00",
-   "displayName": "ステ間Ex1 ドンキーコース→シティ1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_FirstCircuitToChocoMountain_A_00",
-   "displayName": "ステ間Ex1 荒野サーキット→チョコマウンテン1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "Coaster",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_FirstCircuitToCoaster_A_00",
-   "displayName": "ステ間Ex1 荒野サーキット→コースター1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "DesertHills",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_FirstCircuitToDesertHills_A_00",
-   "displayName": "ステ間Ex1 荒野サーキット→サンサンさばく1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "ShyGuyBazaar",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_FirstCircuitToShyGuyBazaar_A_00",
-   "displayName": "ステ間Ex1 荒野サーキット→ヘイホーカーニバル1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "ToadFactory",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_FirstCircuitToToadFactory_A_00",
-   "displayName": "ステ間Ex2 荒野サーキット→キノピオファクトリー1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_FirstCircuitToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 荒野サーキット→ワリオスタジアム1周"
-  },
-  {
-   "from": "FirstCircuit",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_FirstCircuitToWestCity_B_00",
-   "displayName": "ステ間Ex1 荒野サーキット→シティ3順走1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "Cave",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_IceBuildingsToCave_A_00",
-   "displayName": "ステ間Ex2 アイスビル→鍾乳洞1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_IceBuildingsToDKPass_A_00",
-   "displayName": "ステ間Ex1 アイスビル→DKスノーマウンテン1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "LagoonCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_IceBuildingsToLagoonCity_A_00",
-   "displayName": "ステ間Ex2 アイスビル→水街1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_IceBuildingsToRaftingRiver_A_00",
-   "displayName": "ステ間Ex2 アイスビル→激流下り1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "SnowMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_IceBuildingsToSnowMountain_A_00",
-   "displayName": "ステ間Ex1 アイスビル→雪山頂上1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_IceBuildingsToWarioShipyard_A_00",
-   "displayName": "ステ間Ex1 アイスビル→ワリオシップ1周"
-  },
-  {
-   "from": "IceBuildings",
-   "to": "WestCity",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_IceBuildingsToWestCity_A_00",
-   "displayName": "サバイバル GP(アイスビル→シティ)"
-  },
-  {
-   "from": "KoopaTroopaBeach",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_KoopaTroopaBeachToCentral_A_00",
-   "displayName": "ステ間Ex1 ノコノコビーチ→ピーチ城1周"
-  },
-  {
-   "from": "KoopaTroopaBeach",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_KoopaTroopaBeachToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 ノコノコビーチ→DKジャングルパーク1周"
-  },
-  {
-   "from": "KoopaTroopaBeach",
-   "to": "DinoDinoJungle",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_KoopaTroopaBeachToDinoDinoJungle_A_00",
-   "displayName": "ステ間Ex1 ノコノコビーチ→ディノディノジャングル1周"
-  },
-  {
-   "from": "KoopaTroopaBeach",
-   "to": "DonkeyKong",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_KoopaTroopaBeachToDonkeyKong_A_00",
-   "displayName": "ステ間Ex1 ノコノコビーチ→ドンキーコース1周"
-  },
-  {
-   "from": "KoopaTroopaBeach",
-   "to": "WestCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_KoopaTroopaBeachToWestCity_A_00",
-   "displayName": "ステ間Ex1 ノコノコビーチ→シティ1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "Coaster",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_LagoonCityToCoaster_A_00",
-   "displayName": "サバイバル GP(水街→コースター)"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_LagoonCityToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 水街→DKジャングルパーク1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_LagoonCityToDKPass_A_00",
-   "displayName": "ステ間Ex1 水街→DKスノーマウンテン1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "DinoDinoJungle",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_LagoonCityToDinoDinoJungle_A_00",
-   "displayName": "ステ間Ex2 水街→ディノディノジャングル"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "PeachBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_LagoonCityToPeachBeach_A_00",
-   "displayName": "ステ間Ex1 水街→ピーチビーチ1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_LagoonCityToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 水街→激流下り1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "StormClouds",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_LagoonCityToStormClouds_A_00",
-   "displayName": "ステ間Ex1 水街→くもコース1周"
-  },
-  {
-   "from": "LagoonCity",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_LagoonCityToWarioShipyard_A_00",
-   "displayName": "ステ間Ex1 水街→ワリオシップ1周"
-  },
-  {
-   "from": "Lava",
-   "to": "AirshipFortress",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_LavaToAirshipFortress_A_00",
-   "displayName": "ステ間Ex1 クッパ城→キラーシップ1周"
-  },
-  {
-   "from": "Lava",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_LavaToChocoMountain_A_00",
-   "displayName": "ステ間Ex2 クッパ城→チョコマウンテン1周"
-  },
-  {
-   "from": "Lava",
-   "to": "DKJungleParkway",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_LavaToDKJungleParkway_A_00",
-   "displayName": "サバイバル GP(クッパ城→DKジャングルパーク)"
-  },
-  {
-   "from": "Lava",
-   "to": "DinoBones",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_LavaToDinoBones_A_00",
-   "displayName": "ステ間Ex1 クッパ城→ホネコース1周"
-  },
-  {
-   "from": "Lava",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_LavaToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex2 クッパ城→マリオサーキット1周"
-  },
-  {
-   "from": "Lava",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_LavaToToadFactory_A_00",
-   "displayName": "ステ間Ex1 クッパ城→キノピオファクトリー1周"
-  },
-  {
-   "from": "Lava",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_LavaToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 クッパ城→ワリオスタジアム1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_MooMooFarmToCave_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→鍾乳洞1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_MooMooFarmToCentral_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→ピーチ城1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_MooMooFarmToChocoMountain_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→チョコマウンテン1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "DKPass",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_MooMooFarmToDKPass_A_00",
-   "displayName": "ステ間Ex2 モーモーカントリー→DKスノーマウンテン1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "DinoBones",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_MooMooFarmToDinoBones_A_00",
-   "displayName": "ステ間Ex2 モーモーカントリー→ホネコース1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_MooMooFarmToRaftingRiver_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→激流下り 1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_MooMooFarmToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→マリオサーキット1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_MooMooFarmToToadFactory_A_00",
-   "displayName": "ステ間Ex1 モーモーカントリー→キノピオファクトリー1周"
-  },
-  {
-   "from": "MooMooFarm",
-   "to": "WestCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_MooMooFarmToWestCity_A_00",
-   "displayName": "ステ間Ex2 モーモーカントリー→シティ1周"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_PeachBeachToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex2 ピーチビーチ→DKジャングルパーク1周"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "DesertHills",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_PeachBeachToDesertHills_A_00",
-   "displayName": "サバイバル GP(ピーチビーチ→サンサンさばく)"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "DinoDinoJungle",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_PeachBeachToDinoDinoJungle_A_00",
-   "displayName": "ステ間Ex2 ピーチビーチ→ディノディノジャングル"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_PeachBeachToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 ピーチビーチ→水街1周"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "StormClouds",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_PeachBeachToStormClouds_A_00",
-   "displayName": "ステ間Ex1 ピーチビーチ→くもコース1周"
-  },
-  {
-   "from": "PeachBeach",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_PeachBeachToWarioShipyard_A_00",
-   "displayName": "ステ間Ex1 ピーチビーチ→ワリオシップ1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_RaftingRiverToCave_A_00",
-   "displayName": "ステ間Ex1 激流下り→鍾乳洞1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_RaftingRiverToCentral_A_00",
-   "displayName": "ステ間Ex1 激流下り→ピーチ城1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_RaftingRiverToChocoMountain_A_00",
-   "displayName": "ステ間Ex2 激流下り→チョコマウンテン1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_RaftingRiverToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 激流下り→DKジャングルパーク1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_RaftingRiverToDKPass_A_00",
-   "displayName": "ステ間Ex1 激流下り→DKスノーマウンテン1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_RaftingRiverToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 激流下り→水街1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx1_RaftingRiverToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 激流下り→モーモーカントリー 1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "SnowMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_RaftingRiverToSnowMountain_A_00",
-   "displayName": "ステ間Ex2 激流下り→雪山頂上1周"
-  },
-  {
-   "from": "RaftingRiver",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_RaftingRiverToWarioShipyard_A_00",
-   "displayName": "ステ間Ex2 激流下り→ワリオシップ1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "BigTree",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_SFCMarioCircuitToBigTree_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→大樹１周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SFCMarioCircuitToCave_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→鍾乳洞1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "Central",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SFCMarioCircuitToCentral_A_00",
-   "displayName": "ステ間Ex2 マリオサーキット→ピーチ城1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "Cinema",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SFCMarioCircuitToCinema_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→映画館1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "DinoBones",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SFCMarioCircuitToDinoBones_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→ホネコース 1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "Lava",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SFCMarioCircuitToLava_A_00",
-   "displayName": "ステ間Ex2 マリオサーキット→クッパ城1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SFCMarioCircuitToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→モーモーカントリー1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "SnowMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SFCMarioCircuitToSnowMountain_A_00",
-   "displayName": "ステ間Ex2 マリオサーキット→雪山頂上1周"
-  },
-  {
-   "from": "SFCMarioCircuit",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SFCMarioCircuitToToadFactory_A_00",
-   "displayName": "ステ間Ex1 マリオサーキット→キノピオファクトリー1周"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "AirshipFortress",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ShyGuyBazaarToAirshipFortress_A_00",
-   "displayName": "ステ間Ex1 ヘイホーカーニバル→キラーシップ 1周"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "Central",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_ShyGuyBazaarToCentral_A_00",
-   "displayName": "サバイバル GP(ヘイホーカーニバル→ピーチ城)"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ShyGuyBazaarToChocoMountain_A_00",
-   "displayName": "ステ間Ex2 ヘイホーカーニバル→チョコマウンテン1周"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "DesertHills",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ShyGuyBazaarToDesertHills_A_00",
-   "displayName": "ステ間Ex1 ヘイホーカーニバル→サンサンさばく1周"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ShyGuyBazaarToFirstCircuit_A_00",
-   "displayName": "ステ間Ex1 ヘイホーカーニバル→荒野サーキット1周"
-  },
-  {
-   "from": "ShyGuyBazaar",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ShyGuyBazaarToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 ヘイホーカーニバル→ワリオスタジアム1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "Cave",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_SnowMountainToCave_A_00",
-   "displayName": "ステ間Ex1 雪山頂上→鍾乳洞1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "Cinema",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_SnowMountainToCinema_A_00",
-   "displayName": "ステ間Ex1 雪山頂上→映画館1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_SnowMountainToDKPass_A_00",
-   "displayName": "ステ間Ex1 雪山頂上→DKスノーマウンテン1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "IceBuildings",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_SnowMountainToIceBuildings_A_00",
-   "displayName": "ステ間Ex1 雪山頂上→アイスビル1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SnowMountainToRaftingRiver_A_00",
-   "displayName": "ステ間Ex2 雪山頂上→激流下り1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SnowMountainToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex2 雪山頂上→マリオサーキット1周"
-  },
-  {
-   "from": "SnowMountain",
-   "to": "WarioShipyard",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_SnowMountainToWarioShipyard_A_00",
-   "displayName": "ステ間Ex2 雪山頂上→ワリオシップ1周"
-  },
-  {
-   "from": "StormClouds",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_StormCloudsToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex1 くもコース→DKジャングルパーク1周"
-  },
-  {
-   "from": "StormClouds",
-   "to": "DinoDinoJungle",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_StormCloudsToDinoDinoJungle_A_00",
-   "displayName": "ステ間Ex1 くもコース→ディノディノジャングル1周"
-  },
-  {
-   "from": "StormClouds",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_StormCloudsToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex2 くもコース→ノコノコビーチ2周"
-  },
-  {
-   "from": "StormClouds",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_StormCloudsToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 くもコース→水街1周"
-  },
-  {
-   "from": "StormClouds",
-   "to": "PeachBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_StormCloudsToPeachBeach_A_00",
-   "displayName": "ステ間Ex1 くもコース→ピーチビーチ1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "AirshipFortress",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx2_ToadFactoryToAirshipFortress_A_00",
-   "displayName": "ステ間Ex2 キノピオファクトリー→キラーシップ1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "BigTree",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_ToadFactoryToBigTree_A_00",
-   "displayName": "ステ間Ex2 キノピオファクトリー→大樹１周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "Cave",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ToadFactoryToCave_A_00",
-   "displayName": "ステ間Ex2 キノピオファクトリー→鍾乳洞1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "Central",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ToadFactoryToCentral_A_00",
-   "displayName": "ステ間Ex2 キノピオファクトリー→ピーチ城1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ToadFactoryToChocoMountain_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→チョコマウンテン1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "DKPass",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_ToadFactoryToDKPass_A_00",
-   "displayName": "サバイバル GP(キノピオファクトリー→DKスノー)"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "DinoBones",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_ToadFactoryToDinoBones_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→ホネコース1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_ToadFactoryToFirstCircuit_A_00",
-   "displayName": "ステ間Ex2 キノピオファクトリー→荒野サーキット1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "Lava",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_ToadFactoryToLava_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→クッパ城1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ToadFactoryToMooMooFarm_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→モーモーカントリー1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "SFCMarioCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_ToadFactoryToSFCMarioCircuit_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→マリオサーキット1周"
-  },
-  {
-   "from": "ToadFactory",
-   "to": "WarioStadium",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_ToadFactoryToWarioStadium_A_00",
-   "displayName": "ステ間Ex1 キノピオファクトリー→ワリオスタジアム 1周"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "DKPass",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioShipyardToDKPass_A_00",
-   "displayName": "ステ間Ex1 ワリオシップ→DKスノーマウンテン1周"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "IceBuildings",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioShipyardToIceBuildings_A_01",
-   "displayName": "ステ間Ex1 ワリオシップ→アイスビル1周(新)"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "LagoonCity",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_WarioShipyardToLagoonCity_A_00",
-   "displayName": "ステ間Ex1 ワリオシップ→水街1周"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "Lava",
-   "kind": "LongRally",
-   "rule": "Survival",
-   "start": "Rolling",
-   "traffic": "Default",
-   "rowId": "LongRally_WarioShipyardToLava_A_00",
-   "displayName": "サバイバル GP(ワリオシップ→クッパ城)"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "PeachBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_WarioShipyardToPeachBeach_A_00",
-   "displayName": "ステ間Ex1 ワリオシップ→ピーチビーチ1周"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "RaftingRiver",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_WarioShipyardToRaftingRiver_A_00",
-   "displayName": "ステ間Ex2 ワリオシップ→激流下り1周"
-  },
-  {
-   "from": "WarioShipyard",
-   "to": "SnowMountain",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_WarioShipyardToSnowMountain_A_00",
-   "displayName": "ステ間Ex2 ワリオシップ→雪山頂上1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "AirshipFortress",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioStadiumToAirshipFortress_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→キラーシップ 1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioStadiumToChocoMountain_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→チョコマウンテン1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "DinoBones",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_WarioStadiumToDinoBones_A_00",
-   "displayName": "ステ間Ex2 ワリオスタジアム→ホネコース1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioStadiumToFirstCircuit_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→荒野サーキット1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "Lava",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioStadiumToLava_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→クッパ城1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "ShyGuyBazaar",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WarioStadiumToShyGuyBazaar_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→ヘイホーカーニバル1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "ToadFactory",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_WarioStadiumToToadFactory_A_00",
-   "displayName": "ステ間Ex1 ワリオスタジアム→キノピオファクトリー 1周"
-  },
-  {
-   "from": "WarioStadium",
-   "to": "WestCity",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_WarioStadiumToWestCity_A_00",
-   "displayName": "ステ間Ex2 ワリオスタジアム→シティ1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "Central",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WestCityToCentral_A_01",
-   "displayName": "ステ間Ex1 シティ→ピーチ城駅1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "ChocoMountain",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WestCityToChocoMountain_A_01",
-   "displayName": "ステ間Ex1 シティ→チョコマウンテン1周(新)"
-  },
-  {
-   "from": "WestCity",
-   "to": "Coaster",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WestCityToCoaster_A_00",
-   "displayName": "ステ間Ex1 シティ→コースター1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "DKJungleParkway",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "GimmickFull",
-   "rowId": "InterStageEx2_WestCityToDKJungleParkway_A_00",
-   "displayName": "ステ間Ex2 シティ→DKジャングルパーク1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "DesertHills",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Default",
-   "rowId": "InterStageEx2_WestCityToDesertHills_A_00",
-   "displayName": "ステ間Ex2 シティ→サンサンさばく1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "DonkeyKong",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WestCityToDonkeyKong_A_00",
-   "displayName": "ステ間Ex1 シティ→ドンキーコース1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "FirstCircuit",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Default",
-   "rowId": "InterStageEx1_WestCityToFirstCircuit_A_01",
-   "displayName": "ステ間Ex1 シティ→荒野サーキット逆走1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "KoopaTroopaBeach",
-   "kind": "InterStageEx1",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "Nothing",
-   "rowId": "InterStageEx1_WestCityToKoopaTroopaBeach_A_00",
-   "displayName": "ステ間Ex1 シティ→ノコノコビーチ2周"
-  },
-  {
-   "from": "WestCity",
-   "to": "MooMooFarm",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "Default",
-   "traffic": "RaceSparse",
-   "rowId": "InterStageEx2_WestCityToMooMooFarm_A_00",
-   "displayName": "ステ間Ex2 シティ→モーモーカントリー1周"
-  },
-  {
-   "from": "WestCity",
-   "to": "WarioStadium",
-   "kind": "InterStageEx2",
-   "rule": "NormalRace",
-   "start": "RollingFork",
-   "traffic": "Race",
-   "rowId": "InterStageEx2_WestCityToWarioStadium_A_00",
-   "displayName": "ステ間Ex2 シティ→ワリオスタジアム1周"
-  }
- ]
+  "schemaVersion": 1,
+  "provenance": "MKW_V180_INTERSTAGE_202",
+  "provenanceNote": "Directed inter-stage connections verified from Mario Kart World v1.8.0 (RSDB/Course.Product.180.rstbl & CourseAreaGParam.CourseEx): 202 edges (137 InterStageEx1 + 65 InterStageEx2; 96 bidirectional pairs + 10 strictly one-way edges), 29 source stages, 30 destination stages. Rainbow is the sole sink with 1 incoming edge (Central -> Rainbow). The 12 multi-stop LongRally Knockout Tour course IDs are excluded because they are 6-stage rallies, not direct edges.",
+  "sourceFile": "REPORT_TRACK_CONNECTIONS.md / interstage_routes_202.csv (MKW v1.8.0)",
+  "edgeCount": 202,
+  "edges": [
+    {
+      "from": "AirshipFortress",
+      "to": "DinoBones",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_AirshipFortressToDinoBones_A_00",
+      "displayName": "ステ間Ex2 キラーシップ→ホネコース1周"
+    },
+    {
+      "from": "AirshipFortress",
+      "to": "Lava",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_AirshipFortressToLava_A_00",
+      "displayName": "ステ間Ex1 キラーシップ→クッパ城1周"
+    },
+    {
+      "from": "AirshipFortress",
+      "to": "ShyGuyBazaar",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_AirshipFortressToShyGuyBazaar_A_00",
+      "displayName": "ステ間Ex1 キラーシップ→ヘイホーカーニバル 1周"
+    },
+    {
+      "from": "AirshipFortress",
+      "to": "ToadFactory",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_AirshipFortressToToadFactory_A_00",
+      "displayName": "ステ間Ex2 キラーシップ→キノピオファクトリー1周"
+    },
+    {
+      "from": "AirshipFortress",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_AirshipFortressToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 キラーシップ→ワリオスタジアム 1周"
+    },
+    {
+      "from": "BigTree",
+      "to": "Cave",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_BigTreeToCave_A_00",
+      "displayName": "ステ間Ex2 大樹→鍾乳洞1周"
+    },
+    {
+      "from": "BigTree",
+      "to": "Cinema",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_BigTreeToCinema_A_00",
+      "displayName": "ステ間Ex1 大樹→映画館1周"
+    },
+    {
+      "from": "BigTree",
+      "to": "DinoBones",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_BigTreeToDinoBones_A_00",
+      "displayName": "ステ間Ex1 大樹→ホネコース1周"
+    },
+    {
+      "from": "BigTree",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_BigTreeToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 大樹→マリオサーキット1周"
+    },
+    {
+      "from": "BigTree",
+      "to": "ToadFactory",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_BigTreeToToadFactory_A_00",
+      "displayName": "ステ間Ex2 大樹→キノピオファクトリー１周"
+    },
+    {
+      "from": "Cave",
+      "to": "BigTree",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_CaveToBigTree_A_00",
+      "displayName": "ステ間Ex2 鍾乳洞→大樹1周"
+    },
+    {
+      "from": "Cave",
+      "to": "Cinema",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CaveToCinema_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→映画館1周",
+      "overrideJukeBoxEndRatio": 0.8
+    },
+    {
+      "from": "Cave",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CaveToDKPass_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→DKスノーマウンテン1周"
+    },
+    {
+      "from": "Cave",
+      "to": "IceBuildings",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_CaveToIceBuildings_A_00",
+      "displayName": "ステ間Ex2 鍾乳洞→アイスビル1周"
+    },
+    {
+      "from": "Cave",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CaveToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→モーモーカントリー1周"
+    },
+    {
+      "from": "Cave",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CaveToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→激流下り1周"
+    },
+    {
+      "from": "Cave",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CaveToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→マリオサーキット1周"
+    },
+    {
+      "from": "Cave",
+      "to": "SnowMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CaveToSnowMountain_A_00",
+      "displayName": "ステ間Ex1 鍾乳洞→雪山頂上1周"
+    },
+    {
+      "from": "Cave",
+      "to": "ToadFactory",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_CaveToToadFactory_A_00",
+      "displayName": "ステ間Ex2 鍾乳洞→キノピオファクトリー1周"
+    },
+    {
+      "from": "Central",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CentralToChocoMountain_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→チョコマウンテン1周"
+    },
+    {
+      "from": "Central",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CentralToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→DKジャングルパーク1周"
+    },
+    {
+      "from": "Central",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CentralToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→ノコノコビーチ2周"
+    },
+    {
+      "from": "Central",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CentralToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→モーモーカントリー1周"
+    },
+    {
+      "from": "Central",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CentralToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→激流下り1周"
+    },
+    {
+      "from": "Central",
+      "to": "Rainbow",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CentralToRainbow_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→レインボー1周"
+    },
+    {
+      "from": "Central",
+      "to": "ToadFactory",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_CentralToToadFactory_A_00",
+      "displayName": "ステ間Ex2 ピーチ城→キノピオファクトリー1周"
+    },
+    {
+      "from": "Central",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CentralToWestCity_A_00",
+      "displayName": "ステ間Ex1 ピーチ城→シティ1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ChocoMountainToCentral_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→ピーチ城1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "Coaster",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_ChocoMountainToCoaster_A_00",
+      "displayName": "ステ間Ex2 チョコマウンテン→コースター1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ChocoMountainToFirstCircuit_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→荒野サーキット1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "Lava",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ChocoMountainToLava_A_00",
+      "displayName": "ステ間Ex2 チョコマウンテン→クッパ城1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_ChocoMountainToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→モーモーカントリー 1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ChocoMountainToRaftingRiver_A_00",
+      "displayName": "ステ間Ex2 チョコマウンテン→激流下り1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "ShyGuyBazaar",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ChocoMountainToShyGuyBazaar_A_00",
+      "displayName": "ステ間Ex2 チョコマウンテン→ヘイホーカーニバル1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ChocoMountainToToadFactory_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→キノピオファクトリー1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ChocoMountainToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→ワリオスタジアム1周"
+    },
+    {
+      "from": "ChocoMountain",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ChocoMountainToWestCity_A_00",
+      "displayName": "ステ間Ex1 チョコマウンテン→シティ1周"
+    },
+    {
+      "from": "Cinema",
+      "to": "BigTree",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CinemaToBigTree_A_00",
+      "displayName": "ステ間Ex1 映画館→大樹1周"
+    },
+    {
+      "from": "Cinema",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CinemaToCave_A_00",
+      "displayName": "ステ間Ex1 映画館→鍾乳洞1周"
+    },
+    {
+      "from": "Cinema",
+      "to": "DinoBones",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_CinemaToDinoBones_A_00",
+      "displayName": "ステ間Ex2 映画館→ホネコース1周"
+    },
+    {
+      "from": "Cinema",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CinemaToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 映画館→マリオサーキット1周"
+    },
+    {
+      "from": "Cinema",
+      "to": "SnowMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CinemaToSnowMountain_A_00",
+      "displayName": "ステ間Ex1 映画館→雪山頂上1周"
+    },
+    {
+      "from": "Coaster",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_CoasterToChocoMountain_A_00",
+      "displayName": "ステ間Ex2 コースター→チョコマウンテン1周"
+    },
+    {
+      "from": "Coaster",
+      "to": "DesertHills",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_CoasterToDesertHills_A_00",
+      "displayName": "ステ間Ex1 コースター→サンサンさばく1周"
+    },
+    {
+      "from": "Coaster",
+      "to": "DonkeyKong",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_CoasterToDonkeyKong_A_00",
+      "displayName": "ステ間Ex1 コースター→ドンキーコース1周"
+    },
+    {
+      "from": "Coaster",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_CoasterToFirstCircuit_A_00",
+      "displayName": "ステ間Ex1 コースター→荒野サーキット1周"
+    },
+    {
+      "from": "Coaster",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_CoasterToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex2 コースター→ノコノコビーチ2周"
+    },
+    {
+      "from": "Coaster",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_CoasterToWestCity_A_00",
+      "displayName": "ステ間Ex1 コースター→シティ1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKJungleParkwayToCentral_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→ピーチ城1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "DinoDinoJungle",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DKJungleParkwayToDinoDinoJungle_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→ディノディノジャングル1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DKJungleParkwayToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→ノコノコビーチ2周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKJungleParkwayToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→水街1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "PeachBeach",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DKJungleParkwayToPeachBeach_A_00",
+      "displayName": "ステ間Ex2 DKジャングルパーク→ピーチビーチ1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKJungleParkwayToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→激流下り1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "StormClouds",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DKJungleParkwayToStormClouds_A_00",
+      "displayName": "ステ間Ex1 DKジャングルパーク→くもコース1周"
+    },
+    {
+      "from": "DKJungleParkway",
+      "to": "WestCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "GimmickFull",
+      "rowId": "InterStageEx2_DKJungleParkwayToWestCity_A_01",
+      "displayName": "ステ間Ex2 DKジャングルパーク→シティ0.9周"
+    },
+    {
+      "from": "DKPass",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKPassToCave_A_00",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→鍾乳洞1周"
+    },
+    {
+      "from": "DKPass",
+      "to": "IceBuildings",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DKPassToIceBuildings_A_01",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→アイスビル1周"
+    },
+    {
+      "from": "DKPass",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKPassToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→水街1周"
+    },
+    {
+      "from": "DKPass",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DKPassToMooMooFarm_A_00",
+      "displayName": "ステ間Ex2 DKスノーマウンテン→モーモーカントリー1周"
+    },
+    {
+      "from": "DKPass",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKPassToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→激流下り1周"
+    },
+    {
+      "from": "DKPass",
+      "to": "SnowMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DKPassToSnowMountain_A_00",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→雪山頂上1周",
+      "overrideJukeBoxEndRatio": 0.75
+    },
+    {
+      "from": "DKPass",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DKPassToWarioShipyard_A_00",
+      "displayName": "ステ間Ex1 DKスノーマウンテン→ワリオシップ1周"
+    },
+    {
+      "from": "DesertHills",
+      "to": "Coaster",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DesertHillsToCoaster_A_00",
+      "displayName": "ステ間Ex1 サンサンさばく→コースター1周"
+    },
+    {
+      "from": "DesertHills",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DesertHillsToFirstCircuit_A_00",
+      "displayName": "ステ間Ex1 サンサンさばく→荒野サーキット1周"
+    },
+    {
+      "from": "DesertHills",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DesertHillsToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex2 サンサンさばく→ノコノコビーチ2周"
+    },
+    {
+      "from": "DesertHills",
+      "to": "ShyGuyBazaar",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DesertHillsToShyGuyBazaar_A_00",
+      "displayName": "ステ間Ex1 サンサンさばく→ヘイホーカーニバル1周"
+    },
+    {
+      "from": "DesertHills",
+      "to": "WestCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DesertHillsToWestCity_A_00",
+      "displayName": "ステ間Ex2 サンサンさばく→シティ1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "AirshipFortress",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_DinoBonesToAirshipFortress_A_00",
+      "displayName": "ステ間Ex2 ホネコース→キラーシップ1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "BigTree",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_DinoBonesToBigTree_A_00",
+      "displayName": "ステ間Ex1 ホネコース→大樹1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "Cinema",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DinoBonesToCinema_A_00",
+      "displayName": "ステ間Ex2 ホネコース→映画館1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "Lava",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DinoBonesToLava_A_00",
+      "displayName": "ステ間Ex1 ホネコース→クッパ城1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DinoBonesToMooMooFarm_A_00",
+      "displayName": "ステ間Ex2 ホネコース→モーモーカントリー1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DinoBonesToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 ホネコース→マリオサーキット1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DinoBonesToToadFactory_A_00",
+      "displayName": "ステ間Ex1 ホネコース→キノピオファクトリー1周"
+    },
+    {
+      "from": "DinoBones",
+      "to": "WarioStadium",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DinoBonesToWarioStadium_A_00",
+      "displayName": "ステ間Ex2 ホネコース→ワリオスタジアム1周"
+    },
+    {
+      "from": "DinoDinoJungle",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DinoDinoJungleToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 ディノディノジャングル→DKジャングルパーク1周"
+    },
+    {
+      "from": "DinoDinoJungle",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DinoDinoJungleToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex1 ディノディノジャングル→ノコノコビーチ2周"
+    },
+    {
+      "from": "DinoDinoJungle",
+      "to": "LagoonCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DinoDinoJungleToLagoonCity_A_00",
+      "displayName": "ステ間Ex2 ディノディノジャングル→水街１周"
+    },
+    {
+      "from": "DinoDinoJungle",
+      "to": "PeachBeach",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DinoDinoJungleToPeachBeach_A_00",
+      "displayName": "ステ間Ex2 ディノディノジャングル→ピーチビーチ1周"
+    },
+    {
+      "from": "DinoDinoJungle",
+      "to": "StormClouds",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DinoDinoJungleToStormClouds_A_00",
+      "displayName": "ステ間Ex1 ディノディノジャングル→くもコース1周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "Central",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_DonkeyKongToCentral_A_00",
+      "displayName": "ステ間Ex2 ドンキーコース→ピーチ城1周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "Coaster",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DonkeyKongToCoaster_A_00",
+      "displayName": "ステ間Ex1 ドンキーコース→コースター1周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "DesertHills",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_DonkeyKongToDesertHills_A_00",
+      "displayName": "ステ間Ex2 ドンキーコース→サンサンさばく1周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_DonkeyKongToFirstCircuit_A_00",
+      "displayName": "ステ間Ex2 ドンキーコース→荒野サーキット1周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_DonkeyKongToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex1 ドンキーコース→ノコノコビーチ2周"
+    },
+    {
+      "from": "DonkeyKong",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_DonkeyKongToWestCity_A_00",
+      "displayName": "ステ間Ex1 ドンキーコース→シティ1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_FirstCircuitToChocoMountain_A_00",
+      "displayName": "ステ間Ex1 荒野サーキット→チョコマウンテン1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "Coaster",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_FirstCircuitToCoaster_A_00",
+      "displayName": "ステ間Ex1 荒野サーキット→コースター1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "DesertHills",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_FirstCircuitToDesertHills_A_00",
+      "displayName": "ステ間Ex1 荒野サーキット→サンサンさばく1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "ShyGuyBazaar",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_FirstCircuitToShyGuyBazaar_A_00",
+      "displayName": "ステ間Ex1 荒野サーキット→ヘイホーカーニバル1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "ToadFactory",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_FirstCircuitToToadFactory_A_00",
+      "displayName": "ステ間Ex2 荒野サーキット→キノピオファクトリー1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_FirstCircuitToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 荒野サーキット→ワリオスタジアム1周"
+    },
+    {
+      "from": "FirstCircuit",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_FirstCircuitToWestCity_B_00",
+      "displayName": "ステ間Ex1 荒野サーキット→シティ3順走1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "Cave",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_IceBuildingsToCave_A_00",
+      "displayName": "ステ間Ex2 アイスビル→鍾乳洞1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_IceBuildingsToDKPass_A_00",
+      "displayName": "ステ間Ex1 アイスビル→DKスノーマウンテン1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "LagoonCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_IceBuildingsToLagoonCity_A_00",
+      "displayName": "ステ間Ex2 アイスビル→水街1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_IceBuildingsToRaftingRiver_A_00",
+      "displayName": "ステ間Ex2 アイスビル→激流下り1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "SnowMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_IceBuildingsToSnowMountain_A_00",
+      "displayName": "ステ間Ex1 アイスビル→雪山頂上1周"
+    },
+    {
+      "from": "IceBuildings",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_IceBuildingsToWarioShipyard_A_00",
+      "displayName": "ステ間Ex1 アイスビル→ワリオシップ1周"
+    },
+    {
+      "from": "KoopaTroopaBeach",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_KoopaTroopaBeachToCentral_A_00",
+      "displayName": "ステ間Ex1 ノコノコビーチ→ピーチ城1周"
+    },
+    {
+      "from": "KoopaTroopaBeach",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_KoopaTroopaBeachToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 ノコノコビーチ→DKジャングルパーク1周"
+    },
+    {
+      "from": "KoopaTroopaBeach",
+      "to": "DinoDinoJungle",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_KoopaTroopaBeachToDinoDinoJungle_A_00",
+      "displayName": "ステ間Ex1 ノコノコビーチ→ディノディノジャングル1周"
+    },
+    {
+      "from": "KoopaTroopaBeach",
+      "to": "DonkeyKong",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_KoopaTroopaBeachToDonkeyKong_A_00",
+      "displayName": "ステ間Ex1 ノコノコビーチ→ドンキーコース1周"
+    },
+    {
+      "from": "KoopaTroopaBeach",
+      "to": "WestCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_KoopaTroopaBeachToWestCity_A_00",
+      "displayName": "ステ間Ex1 ノコノコビーチ→シティ1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_LagoonCityToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 水街→DKジャングルパーク1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_LagoonCityToDKPass_A_00",
+      "displayName": "ステ間Ex1 水街→DKスノーマウンテン1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "DinoDinoJungle",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_LagoonCityToDinoDinoJungle_A_00",
+      "displayName": "ステ間Ex2 水街→ディノディノジャングル"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "PeachBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_LagoonCityToPeachBeach_A_00",
+      "displayName": "ステ間Ex1 水街→ピーチビーチ1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_LagoonCityToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 水街→激流下り1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "StormClouds",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_LagoonCityToStormClouds_A_00",
+      "displayName": "ステ間Ex1 水街→くもコース1周"
+    },
+    {
+      "from": "LagoonCity",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_LagoonCityToWarioShipyard_A_00",
+      "displayName": "ステ間Ex1 水街→ワリオシップ1周"
+    },
+    {
+      "from": "Lava",
+      "to": "AirshipFortress",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_LavaToAirshipFortress_A_00",
+      "displayName": "ステ間Ex1 クッパ城→キラーシップ1周"
+    },
+    {
+      "from": "Lava",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_LavaToChocoMountain_A_00",
+      "displayName": "ステ間Ex2 クッパ城→チョコマウンテン1周"
+    },
+    {
+      "from": "Lava",
+      "to": "DinoBones",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_LavaToDinoBones_A_00",
+      "displayName": "ステ間Ex1 クッパ城→ホネコース1周"
+    },
+    {
+      "from": "Lava",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_LavaToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex2 クッパ城→マリオサーキット1周"
+    },
+    {
+      "from": "Lava",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_LavaToToadFactory_A_00",
+      "displayName": "ステ間Ex1 クッパ城→キノピオファクトリー1周"
+    },
+    {
+      "from": "Lava",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_LavaToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 クッパ城→ワリオスタジアム1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_MooMooFarmToCave_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→鍾乳洞1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_MooMooFarmToCentral_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→ピーチ城1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_MooMooFarmToChocoMountain_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→チョコマウンテン1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "DKPass",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_MooMooFarmToDKPass_A_00",
+      "displayName": "ステ間Ex2 モーモーカントリー→DKスノーマウンテン1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "DinoBones",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_MooMooFarmToDinoBones_A_00",
+      "displayName": "ステ間Ex2 モーモーカントリー→ホネコース1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_MooMooFarmToRaftingRiver_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→激流下り 1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_MooMooFarmToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→マリオサーキット1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_MooMooFarmToToadFactory_A_00",
+      "displayName": "ステ間Ex1 モーモーカントリー→キノピオファクトリー1周"
+    },
+    {
+      "from": "MooMooFarm",
+      "to": "WestCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_MooMooFarmToWestCity_A_00",
+      "displayName": "ステ間Ex2 モーモーカントリー→シティ1周"
+    },
+    {
+      "from": "PeachBeach",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_PeachBeachToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex2 ピーチビーチ→DKジャングルパーク1周"
+    },
+    {
+      "from": "PeachBeach",
+      "to": "DinoDinoJungle",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_PeachBeachToDinoDinoJungle_A_00",
+      "displayName": "ステ間Ex2 ピーチビーチ→ディノディノジャングル"
+    },
+    {
+      "from": "PeachBeach",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_PeachBeachToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 ピーチビーチ→水街1周"
+    },
+    {
+      "from": "PeachBeach",
+      "to": "StormClouds",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_PeachBeachToStormClouds_A_00",
+      "displayName": "ステ間Ex1 ピーチビーチ→くもコース1周"
+    },
+    {
+      "from": "PeachBeach",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_PeachBeachToWarioShipyard_A_00",
+      "displayName": "ステ間Ex1 ピーチビーチ→ワリオシップ1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_RaftingRiverToCave_A_00",
+      "displayName": "ステ間Ex1 激流下り→鍾乳洞1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_RaftingRiverToCentral_A_00",
+      "displayName": "ステ間Ex1 激流下り→ピーチ城1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_RaftingRiverToChocoMountain_A_00",
+      "displayName": "ステ間Ex2 激流下り→チョコマウンテン1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_RaftingRiverToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 激流下り→DKジャングルパーク1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_RaftingRiverToDKPass_A_00",
+      "displayName": "ステ間Ex1 激流下り→DKスノーマウンテン1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_RaftingRiverToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 激流下り→水街1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx1_RaftingRiverToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 激流下り→モーモーカントリー 1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "SnowMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_RaftingRiverToSnowMountain_A_00",
+      "displayName": "ステ間Ex2 激流下り→雪山頂上1周"
+    },
+    {
+      "from": "RaftingRiver",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_RaftingRiverToWarioShipyard_A_00",
+      "displayName": "ステ間Ex2 激流下り→ワリオシップ1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "BigTree",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_SFCMarioCircuitToBigTree_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→大樹１周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SFCMarioCircuitToCave_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→鍾乳洞1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "Central",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SFCMarioCircuitToCentral_A_00",
+      "displayName": "ステ間Ex2 マリオサーキット→ピーチ城1周",
+      "overrideJukeBoxEndRatio": 0.8
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "Cinema",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SFCMarioCircuitToCinema_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→映画館1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "DinoBones",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SFCMarioCircuitToDinoBones_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→ホネコース 1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "Lava",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SFCMarioCircuitToLava_A_00",
+      "displayName": "ステ間Ex2 マリオサーキット→クッパ城1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SFCMarioCircuitToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→モーモーカントリー1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "SnowMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SFCMarioCircuitToSnowMountain_A_00",
+      "displayName": "ステ間Ex2 マリオサーキット→雪山頂上1周"
+    },
+    {
+      "from": "SFCMarioCircuit",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SFCMarioCircuitToToadFactory_A_00",
+      "displayName": "ステ間Ex1 マリオサーキット→キノピオファクトリー1周"
+    },
+    {
+      "from": "ShyGuyBazaar",
+      "to": "AirshipFortress",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ShyGuyBazaarToAirshipFortress_A_00",
+      "displayName": "ステ間Ex1 ヘイホーカーニバル→キラーシップ 1周"
+    },
+    {
+      "from": "ShyGuyBazaar",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ShyGuyBazaarToChocoMountain_A_00",
+      "displayName": "ステ間Ex2 ヘイホーカーニバル→チョコマウンテン1周"
+    },
+    {
+      "from": "ShyGuyBazaar",
+      "to": "DesertHills",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ShyGuyBazaarToDesertHills_A_00",
+      "displayName": "ステ間Ex1 ヘイホーカーニバル→サンサンさばく1周"
+    },
+    {
+      "from": "ShyGuyBazaar",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ShyGuyBazaarToFirstCircuit_A_00",
+      "displayName": "ステ間Ex1 ヘイホーカーニバル→荒野サーキット1周"
+    },
+    {
+      "from": "ShyGuyBazaar",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ShyGuyBazaarToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 ヘイホーカーニバル→ワリオスタジアム1周",
+      "overrideJukeBoxEndRatio": 0.75
+    },
+    {
+      "from": "SnowMountain",
+      "to": "Cave",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_SnowMountainToCave_A_00",
+      "displayName": "ステ間Ex1 雪山頂上→鍾乳洞1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "Cinema",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_SnowMountainToCinema_A_00",
+      "displayName": "ステ間Ex1 雪山頂上→映画館1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_SnowMountainToDKPass_A_00",
+      "displayName": "ステ間Ex1 雪山頂上→DKスノーマウンテン1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "IceBuildings",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_SnowMountainToIceBuildings_A_00",
+      "displayName": "ステ間Ex1 雪山頂上→アイスビル1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SnowMountainToRaftingRiver_A_00",
+      "displayName": "ステ間Ex2 雪山頂上→激流下り1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SnowMountainToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex2 雪山頂上→マリオサーキット1周"
+    },
+    {
+      "from": "SnowMountain",
+      "to": "WarioShipyard",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_SnowMountainToWarioShipyard_A_00",
+      "displayName": "ステ間Ex2 雪山頂上→ワリオシップ1周"
+    },
+    {
+      "from": "StormClouds",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_StormCloudsToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex1 くもコース→DKジャングルパーク1周"
+    },
+    {
+      "from": "StormClouds",
+      "to": "DinoDinoJungle",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_StormCloudsToDinoDinoJungle_A_00",
+      "displayName": "ステ間Ex1 くもコース→ディノディノジャングル1周"
+    },
+    {
+      "from": "StormClouds",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_StormCloudsToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex2 くもコース→ノコノコビーチ2周"
+    },
+    {
+      "from": "StormClouds",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_StormCloudsToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 くもコース→水街1周"
+    },
+    {
+      "from": "StormClouds",
+      "to": "PeachBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_StormCloudsToPeachBeach_A_00",
+      "displayName": "ステ間Ex1 くもコース→ピーチビーチ1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "AirshipFortress",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx2_ToadFactoryToAirshipFortress_A_00",
+      "displayName": "ステ間Ex2 キノピオファクトリー→キラーシップ1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "BigTree",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_ToadFactoryToBigTree_A_00",
+      "displayName": "ステ間Ex2 キノピオファクトリー→大樹１周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "Cave",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ToadFactoryToCave_A_00",
+      "displayName": "ステ間Ex2 キノピオファクトリー→鍾乳洞1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "Central",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ToadFactoryToCentral_A_00",
+      "displayName": "ステ間Ex2 キノピオファクトリー→ピーチ城1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ToadFactoryToChocoMountain_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→チョコマウンテン1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "DinoBones",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_ToadFactoryToDinoBones_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→ホネコース1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_ToadFactoryToFirstCircuit_A_00",
+      "displayName": "ステ間Ex2 キノピオファクトリー→荒野サーキット1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "Lava",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_ToadFactoryToLava_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→クッパ城1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ToadFactoryToMooMooFarm_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→モーモーカントリー1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "SFCMarioCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_ToadFactoryToSFCMarioCircuit_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→マリオサーキット1周"
+    },
+    {
+      "from": "ToadFactory",
+      "to": "WarioStadium",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_ToadFactoryToWarioStadium_A_00",
+      "displayName": "ステ間Ex1 キノピオファクトリー→ワリオスタジアム 1周"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "DKPass",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioShipyardToDKPass_A_00",
+      "displayName": "ステ間Ex1 ワリオシップ→DKスノーマウンテン1周"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "IceBuildings",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioShipyardToIceBuildings_A_01",
+      "displayName": "ステ間Ex1 ワリオシップ→アイスビル1周(新)"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "LagoonCity",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_WarioShipyardToLagoonCity_A_00",
+      "displayName": "ステ間Ex1 ワリオシップ→水街1周"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "PeachBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_WarioShipyardToPeachBeach_A_00",
+      "displayName": "ステ間Ex1 ワリオシップ→ピーチビーチ1周"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "RaftingRiver",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_WarioShipyardToRaftingRiver_A_00",
+      "displayName": "ステ間Ex2 ワリオシップ→激流下り1周"
+    },
+    {
+      "from": "WarioShipyard",
+      "to": "SnowMountain",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_WarioShipyardToSnowMountain_A_00",
+      "displayName": "ステ間Ex2 ワリオシップ→雪山頂上1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "AirshipFortress",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioStadiumToAirshipFortress_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→キラーシップ 1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioStadiumToChocoMountain_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→チョコマウンテン1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "DinoBones",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_WarioStadiumToDinoBones_A_00",
+      "displayName": "ステ間Ex2 ワリオスタジアム→ホネコース1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioStadiumToFirstCircuit_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→荒野サーキット1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "Lava",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioStadiumToLava_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→クッパ城1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "ShyGuyBazaar",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WarioStadiumToShyGuyBazaar_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→ヘイホーカーニバル1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "ToadFactory",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_WarioStadiumToToadFactory_A_00",
+      "displayName": "ステ間Ex1 ワリオスタジアム→キノピオファクトリー 1周"
+    },
+    {
+      "from": "WarioStadium",
+      "to": "WestCity",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_WarioStadiumToWestCity_A_00",
+      "displayName": "ステ間Ex2 ワリオスタジアム→シティ1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "Central",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WestCityToCentral_A_01",
+      "displayName": "ステ間Ex1 シティ→ピーチ城駅1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "ChocoMountain",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WestCityToChocoMountain_A_01",
+      "displayName": "ステ間Ex1 シティ→チョコマウンテン1周(新)"
+    },
+    {
+      "from": "WestCity",
+      "to": "Coaster",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WestCityToCoaster_A_00",
+      "displayName": "ステ間Ex1 シティ→コースター1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "DKJungleParkway",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "GimmickFull",
+      "rowId": "InterStageEx2_WestCityToDKJungleParkway_A_00",
+      "displayName": "ステ間Ex2 シティ→DKジャングルパーク1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "DesertHills",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Default",
+      "rowId": "InterStageEx2_WestCityToDesertHills_A_00",
+      "displayName": "ステ間Ex2 シティ→サンサンさばく1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "DonkeyKong",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WestCityToDonkeyKong_A_00",
+      "displayName": "ステ間Ex1 シティ→ドンキーコース1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "FirstCircuit",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Default",
+      "rowId": "InterStageEx1_WestCityToFirstCircuit_A_01",
+      "displayName": "ステ間Ex1 シティ→荒野サーキット逆走1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "KoopaTroopaBeach",
+      "kind": "InterStageEx1",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "Nothing",
+      "rowId": "InterStageEx1_WestCityToKoopaTroopaBeach_A_00",
+      "displayName": "ステ間Ex1 シティ→ノコノコビーチ2周"
+    },
+    {
+      "from": "WestCity",
+      "to": "MooMooFarm",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "Default",
+      "traffic": "RaceSparse",
+      "rowId": "InterStageEx2_WestCityToMooMooFarm_A_00",
+      "displayName": "ステ間Ex2 シティ→モーモーカントリー1周"
+    },
+    {
+      "from": "WestCity",
+      "to": "WarioStadium",
+      "kind": "InterStageEx2",
+      "rule": "NormalRace",
+      "start": "RollingFork",
+      "traffic": "Race",
+      "rowId": "InterStageEx2_WestCityToWarioStadium_A_00",
+      "displayName": "ステ間Ex2 シティ→ワリオスタジアム1周"
+    }
+  ]
 }

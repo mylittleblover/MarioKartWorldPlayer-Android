@@ -57,6 +57,7 @@ internal class LinearQueue(
         val sourceTrackKey: String? = null,
         val roadCandidateVariants: List<Entry> = emptyList(),
         val roadCandidateWeights: List<Int> = emptyList(),
+        val roadCandidatePicker: (() -> Entry?)? = null,
     )
 
     data class Snapshot(
@@ -442,8 +443,18 @@ internal class LinearQueue(
 
     private fun resolveRoundEntry(template: Entry): Entry {
         val pool = template.roadCandidateVariants
-        if (pool.isEmpty()) return template
         val weights = template.roadCandidateWeights
+        val picker = template.roadCandidatePicker
+        if (picker != null) {
+            picker.invoke()?.let { chosen ->
+                return chosen.copy(
+                    roadCandidateVariants = pool,
+                    roadCandidateWeights = weights,
+                    roadCandidatePicker = picker,
+                )
+            }
+        }
+        if (pool.isEmpty()) return template
         val picked = if (weights.size == pool.size && weights.any { it > 0 }) {
             val totalWeight = weights.sumOf { it.coerceAtLeast(0) }
             if (totalWeight > 0) {
@@ -464,7 +475,11 @@ internal class LinearQueue(
         } else {
             pool[random.nextInt(pool.size)]
         }
-        return picked.copy(roadCandidateVariants = pool, roadCandidateWeights = weights)
+        return picked.copy(
+            roadCandidateVariants = pool,
+            roadCandidateWeights = weights,
+            roadCandidatePicker = picker,
+        )
     }
 
     private fun rebuildUpcomingAfterStart(startIndex: Int) {

@@ -1,5 +1,26 @@
 package com.mylittleblover.mkwplayer.ui.home
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BeachAccess
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Landscape
+import androidx.compose.material.icons.rounded.LocalCafe
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Nightlife
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.Park
+import androidx.compose.material.icons.rounded.Piano
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.mylittleblover.mkwplayer.library.BrowseCatalog
 import com.mylittleblover.mkwplayer.pack.PackManifest
 import com.mylittleblover.mkwplayer.pack.PackRegistry
@@ -10,7 +31,63 @@ import java.io.File
 import java.util.Locale
 
 /**
- * The jukebox, arranged according to the official OST hierarchy and chronological source games.
+ * Distinct Material Design 3 icon registry for every canonical Free Roam jukebox genre.
+ * Every icon resolves to a verified symbol in `androidx.compose.material.icons.rounded`.
+ */
+internal enum class JukeboxGenreIcon(val key: String) {
+    JAZZ_FUSION("jazz_fusion"),
+    JAZZ("jazz"),
+    SWING("swing"),
+    FUNK("funk"),
+    SOUL("soul"),
+    ROCK("rock"),
+    METAL("metal"),
+    BLUES("blues"),
+    LATIN("latin"),
+    BOSSA_NOVA("bossa_nova"),
+    SKA_REGGAE("ska_reggae"),
+    COUNTRY("country"),
+    FOLK("folk"),
+    ELECTRONIC("electronic"),
+    LOFI("lofi"),
+    POP_LOUNGE("pop_lounge"),
+    DISCO("disco"),
+    DEFAULT("music_note");
+
+    val imageVector: ImageVector
+        get() = when (this) {
+            JAZZ_FUSION -> Icons.Rounded.AutoAwesome
+            JAZZ -> Icons.Rounded.Piano
+            SWING -> Icons.Rounded.Nightlife
+            FUNK -> Icons.Rounded.GraphicEq
+            SOUL -> Icons.Rounded.Favorite
+            ROCK -> Icons.Rounded.Bolt
+            METAL -> Icons.Rounded.LocalFireDepartment
+            BLUES -> Icons.Rounded.NightsStay
+            LATIN -> Icons.Rounded.Celebration
+            BOSSA_NOVA -> Icons.Rounded.BeachAccess
+            SKA_REGGAE -> Icons.Rounded.WbSunny
+            COUNTRY -> Icons.Rounded.Landscape
+            FOLK -> Icons.Rounded.Park
+            ELECTRONIC -> Icons.Rounded.Memory
+            LOFI -> Icons.Rounded.Headphones
+            POP_LOUNGE -> Icons.Rounded.LocalCafe
+            DISCO -> Icons.Rounded.Album
+            DEFAULT -> Icons.Rounded.MusicNote
+        }
+
+    companion object {
+        private val byKey: Map<String, JukeboxGenreIcon> = entries.associateBy { it.key }
+
+        fun fromKey(key: String): JukeboxGenreIcon? = byKey[key.trim().lowercase(Locale.ROOT)]
+
+        fun resolveImageVector(key: String): ImageVector = (fromKey(key) ?: DEFAULT).imageVector
+    }
+}
+
+/**
+ * The jukebox, arranged according to the official OST hierarchy, chronological source games,
+ * and verified Super Mario Wiki musical genres.
  *
  * Key invariants:
  * - Reads every verified installed `.mkwpack`, never only the single "active" pack.
@@ -21,9 +98,41 @@ import java.util.Locale
  * - Groups primarily by original source game ordered chronologically by release date (`gameOrder`),
  *   and orders arrangements within each game strictly by official OST track order (`jukeboxOrder`),
  *   keeping every distinct arrangement as an independent item (#98-#104).
- * - Only shows source games for which at least one track is actually installed in a pack.
+ * - Keeps song titles clean and free of genre suffixes (`displayTitle` / `localizedTitle`),
+ *   exposing verified genre metadata separately via `genreId`, `subGenre`, `genre`, and `displayGenre`.
+ * - Only shows source games and genres for which at least one track is actually installed in a pack.
  */
 internal object JukeboxCatalog {
+
+    data class GenreInfo(
+        val id: String,
+        val names: Map<String, String>,
+        val colorArgb: Long,
+        val tintArgb: Long,
+        val iconKey: String,
+        val order: Int = Int.MAX_VALUE,
+    ) {
+        val icon: JukeboxGenreIcon
+            get() = JukeboxGenreIcon.fromKey(iconKey) ?: JukeboxGenreIcon.DEFAULT
+
+        val color: Color
+            get() = Color(colorArgb)
+
+        val tint: Color
+            get() = Color(tintArgb)
+
+        fun displayName(localeTag: String): String {
+            val lang = normalizeLanguage(localeTag)
+            return names[lang] ?: names["en"] ?: id
+        }
+
+        fun localizedName(languageTag: String): String = displayName(languageTag)
+
+        fun searchTerms(): List<String> = buildList {
+            add(id)
+            addAll(names.values)
+        }
+    }
 
     data class GameMetadata(
         val id: String,
@@ -70,13 +179,17 @@ internal object JukeboxCatalog {
         val localizedTitles: Map<String, String> = emptyMap(),
         val localizedArrangements: Map<String, String> = emptyMap(),
         val searchAliases: List<String> = emptyList(),
+        val genreId: String = "",
+        val subGenre: String? = null,
     )
 
     data class Metadata(
         val games: List<GameMetadata>,
         val tracks: List<TrackMetadata>,
+        val genres: List<GenreInfo> = emptyList(),
     ) {
         val gamesById: Map<String, GameMetadata> = games.associateBy { it.id }
+        val genresById: Map<String, GenreInfo> = genres.associateBy { it.id }
         private val bySha256: Map<String, TrackMetadata> = tracks.associateBy { it.sha256.lowercase(Locale.ROOT) }
         private val byPackKey: Map<String, TrackMetadata> = tracks.associateBy { it.packTrackKey }
         private val byStem: Map<String, TrackMetadata> = tracks.associateBy { it.bwavStem }
@@ -85,6 +198,10 @@ internal object JukeboxCatalog {
             bySha256[track.primary.sha256.lowercase(Locale.ROOT)]
                 ?: byPackKey[track.key]
                 ?: byStem[track.title]
+
+        fun genre(id: String): GenreInfo? = genresById[id]
+
+        fun tracksByGenre(genreId: String): List<TrackMetadata> = tracks.filter { it.genreId == genreId }
     }
 
     /** A resolved jukebox entry pairing a pack track with its verified OST metadata (when known). */
@@ -105,22 +222,46 @@ internal object JukeboxCatalog {
         val localizedTitles: Map<String, String> = emptyMap(),
         val localizedArrangements: Map<String, String> = emptyMap(),
         val searchAliases: List<String> = emptyList(),
+        val genreId: String = "",
+        val subGenre: String? = null,
+        val genre: GenreInfo? = null,
     ) {
         val key: String get() = track.key
 
         val durationFormatted: String
             get() = formatDurationMs(durationMs)
 
-        fun localizedDisplayName(languageTag: String): String {
-            val lang = normalizeLanguage(languageTag)
+        /**
+         * Clean localized song title without any genre suffix.
+         * Preserves only non-genre disambiguators (`(Ver. 1)` / `(Ver. 2)` for identical title+game
+         * numbered variants, and `(Humming)` for Luigi's Mansion).
+         */
+        fun displayTitle(localeTag: String): String {
+            val lang = normalizeLanguage(localeTag)
             return localizedNames[lang] ?: localizedNames["en"] ?: displayName
         }
 
+        /** Backward-compatible alias for [displayTitle]; never embeds genre labels into the song title. */
+        fun localizedDisplayName(languageTag: String): String = displayTitle(languageTag)
+
+        /** Pure base song title without version disambiguators or genre suffixes. */
         fun localizedTitle(languageTag: String): String {
             val lang = normalizeLanguage(languageTag)
             return localizedTitles[lang] ?: localizedTitles["en"] ?: title
         }
 
+        /** Localized primary musical genre name from the verified Mario Wiki catalog (all 227 tracks). */
+        fun displayGenre(localeTag: String): String? = genre?.displayName(localeTag)
+
+        /**
+         * Recommended secondary style subtitle for PlayScreen, Queue, and Track rows.
+         * Prefers the verified localized primary genre (available on all 227 tracks) and falls back
+         * to [localizedArrangement] for unmapped pack tracks.
+         */
+        fun displayArrangement(localeTag: String): String? =
+            displayGenre(localeTag) ?: localizedArrangement(localeTag)
+
+        /** Legacy official OST arrangement label (only present on the 44 multi-arrangement OST entries). */
         fun localizedArrangement(languageTag: String): String? {
             val lang = normalizeLanguage(languageTag)
             return localizedArrangements[lang] ?: localizedArrangements["en"] ?: arrangement
@@ -135,6 +276,9 @@ internal object JukeboxCatalog {
                 add(displayName)
                 add(title)
                 arrangement?.let { add(it) }
+                if (genreId.isNotBlank()) add(genreId)
+                subGenre?.let { add(it) }
+                genre?.let { addAll(it.searchTerms()) }
                 addAll(localizedNames.values)
                 addAll(localizedTitles.values)
                 addAll(localizedArrangements.values)
@@ -202,16 +346,31 @@ internal object JukeboxCatalog {
         val trackHits: List<Pair<Game, TrackItem>>,
     )
 
-    /** Every jukebox track in every installed pack, grouped by source game. */
+    /** Every jukebox track in every installed pack, grouped by source game and indexed by genre. */
     data class Catalog(
         val games: List<Game>,
         val tracksByKey: Map<String, PackManifest.Track>,
         /** Which pack directory each track lives in, so opening it reads the right file. */
         val packByKey: Map<String, File> = emptyMap(),
         val itemsByKey: Map<String, TrackItem> = games.flatMap { it.items }.associateBy { it.key },
+        val genres: List<GenreInfo> = emptyList(),
     ) {
+        val genresById: Map<String, GenreInfo> = genres.associateBy { it.id }
+
         val allItems: List<Pair<TrackItem, Game>> by lazy(LazyThreadSafetyMode.PUBLICATION) {
             games.flatMap { game -> game.items.map { item -> item to game } }
+        }
+
+        /** All genres that have at least one installed track in this catalog, in canonical display order. */
+        val allGenres: List<GenreInfo> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            val presentIds = itemsByKey.values
+                .asSequence()
+                .map { it.genreId }
+                .filter { it.isNotBlank() }
+                .toHashSet()
+            genres
+                .filter { it.id in presentIds }
+                .sortedWith(compareBy<GenreInfo> { it.order }.thenBy { it.id })
         }
 
         val isEmpty: Boolean get() = games.isEmpty()
@@ -226,6 +385,20 @@ internal object JukeboxCatalog {
         }
 
         fun itemForTrack(key: String): TrackItem? = itemsByKey[key]
+
+        fun genre(id: String): GenreInfo? = genresById[id]
+
+        fun entriesByGenre(genreId: String): List<TrackItem> =
+            allItems.asSequence()
+                .map { it.first }
+                .filter { it.genreId == genreId }
+                .toList()
+
+        fun itemsWithGamesByGenre(genreId: String): List<Pair<TrackItem, Game>> =
+            allItems.filter { it.first.genreId == genreId }
+
+        fun trackCountByGenre(genreId: String): Int =
+            itemsByKey.values.count { it.genreId == genreId }
 
         fun search(query: String): SearchResult {
             val trimmed = query.trim()
@@ -254,6 +427,33 @@ internal object JukeboxCatalog {
         val root = JSONObject(json)
         val gamesJson = root.optJSONArray("games") ?: return@runCatching null
         val tracksJson = root.optJSONArray("tracks") ?: return@runCatching null
+        val genresJson = root.optJSONArray("genres")
+
+        val genres = buildList {
+            if (genresJson != null) {
+                for (i in 0 until genresJson.length()) {
+                    val g = genresJson.getJSONObject(i)
+                    val colorArgb = when {
+                        g.has("colorArgb") -> g.optLong("colorArgb", DEFAULT_GENRE_COLOR_ARGB)
+                        else -> parseArgbHex(g.optString("colorHex", ""), DEFAULT_GENRE_COLOR_ARGB)
+                    }
+                    val tintArgb = when {
+                        g.has("tintArgb") -> g.optLong("tintArgb", DEFAULT_GENRE_TINT_ARGB)
+                        else -> parseArgbHex(g.optString("tintHex", ""), DEFAULT_GENRE_TINT_ARGB)
+                    }
+                    add(
+                        GenreInfo(
+                            id = g.getString("id"),
+                            names = readStringMap(g.optJSONObject("names")),
+                            colorArgb = colorArgb,
+                            tintArgb = tintArgb,
+                            iconKey = g.optString("iconKey", JukeboxGenreIcon.DEFAULT.key),
+                            order = g.optInt("order", i + 1),
+                        ),
+                    )
+                }
+            }
+        }
 
         val games = buildList {
             for (i in 0 until gamesJson.length()) {
@@ -278,6 +478,9 @@ internal object JukeboxCatalog {
                 val t = tracksJson.getJSONObject(i)
                 val arrRaw = if (t.isNull("ostArrangement")) null else t.optString("ostArrangement", "")
                     .takeIf { it.isNotBlank() }
+                val subGenreRaw = if (t.isNull("subGenre")) null else t.optString("subGenre", "")
+                    .trim()
+                    .takeIf { it.isNotEmpty() }
                 add(
                     TrackMetadata(
                         jukeboxOrder = t.getInt("jukeboxOrder"),
@@ -299,11 +502,13 @@ internal object JukeboxCatalog {
                         localizedTitles = readStringMap(t.optJSONObject("titles")),
                         localizedArrangements = readStringMap(t.optJSONObject("arrangements")),
                         searchAliases = readStringList(t.optJSONArray("searchAliases")),
+                        genreId = t.optString("genreId", "").trim(),
+                        subGenre = subGenreRaw,
                     ),
                 )
             }
         }
-        Metadata(games = games, tracks = tracks)
+        Metadata(games = games, tracks = tracks, genres = genres)
     }.getOrNull()
 
     private fun readStringMap(obj: JSONObject?): Map<String, String> {
@@ -398,6 +603,9 @@ internal object JukeboxCatalog {
                     localizedTitles = meta.localizedTitles,
                     localizedArrangements = meta.localizedArrangements,
                     searchAliases = meta.searchAliases,
+                    genreId = meta.genreId,
+                    subGenre = meta.subGenre,
+                    genre = metadata?.genre(meta.genreId),
                 )
             } else {
                 val fallbackGame = sourceGameOf(track.title)
@@ -450,6 +658,7 @@ internal object JukeboxCatalog {
             tracksByKey = tracksMap,
             packByKey = packByKey,
             itemsByKey = itemsByKey,
+            genres = metadata?.genres.orEmpty(),
         )
     }
 
@@ -494,6 +703,19 @@ internal object JukeboxCatalog {
     /** The browse catalogue's name for a course code, or the code itself. */
     fun name(catalog: BrowseCatalog?, code: String, language: String): String =
         catalog?.displayName(code, language) ?: code
+
+    private const val DEFAULT_GENRE_COLOR_ARGB = 0xFF565A66L
+    private const val DEFAULT_GENRE_TINT_ARGB = 0xFFF5F5F8L
+
+    internal fun parseArgbHex(hex: String, fallback: Long): Long {
+        val clean = hex.trim().removePrefix("#")
+        val parsed = clean.toLongOrNull(16) ?: return fallback
+        return when (clean.length) {
+            6 -> 0xFF000000L or parsed
+            8 -> parsed
+            else -> fallback
+        }
+    }
 
     internal fun normalizeLanguage(languageTag: String): String {
         val lower = languageTag.lowercase(Locale.ROOT)

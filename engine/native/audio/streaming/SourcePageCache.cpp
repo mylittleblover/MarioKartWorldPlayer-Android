@@ -102,10 +102,13 @@ SourceStatus SourcePageCache::bind(int asset,std::unique_ptr<AudioFrameSource> s
         if(keyCount==pageCount_)return false;
         keys[keyCount++]=key;return true;
     };
-    if(count==0){for(std::int64_t p=0;p<4;++p){if(!append(p) && p>=2)return SourceStatus::ResourceLimit;}}
+    if(count==0){for(std::int64_t p=0;p<4;++p){if(!append(p) && p<2)return SourceStatus::ResourceLimit;}}
     for(std::size_t n=0;n<count;++n) {
         const auto page=warm[n].value/static_cast<std::int64_t>(FramesPerPage);
         if(!append(page) || !append(page+1))return SourceStatus::ResourceLimit;
+    }
+    for(std::size_t n=0;n<count;++n) {
+        const auto page=warm[n].value/static_cast<std::int64_t>(FramesPerPage);
         append(page+2);
         append(page+3);
     }
@@ -176,6 +179,12 @@ SourceStatus SourcePageCache::prepare(int asset,SourceSamplePosition position) n
     if(asset<0 || asset>=4096 || !sources_[asset].frames || position.value<0 || position.value>=duration(asset).value)return SourceStatus::InvalidRequest;
     if(!paused_.load(std::memory_order_acquire) || !idle_.load(std::memory_order_acquire))return SourceStatus::InvalidRequest;
     return load({asset,position.value/static_cast<std::int64_t>(FramesPerPage)});
+}
+void SourcePageCache::clearPendingRequests() noexcept {
+    if(!paused_.load(std::memory_order_acquire) || !idle_.load(std::memory_order_acquire))return;
+    requests_.clearStopped();
+    completed_.clearStopped();
+    pendingCount_=0;
 }
 SourceStatus SourcePageCache::prepareLinearRepeat(int asset,std::optional<SourceLoopMetadata> range)noexcept {
     pauseWorker();const auto previousAsset=repeatAsset_;const auto previousFirst=repeatFirst_,previousLast=repeatLast_,previousEnd=repeatEndPage_;
